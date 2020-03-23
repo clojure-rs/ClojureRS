@@ -1,0 +1,23 @@
+* ClojureRS 
+
+  Put simply, Clojure implemented atop Rust! My main goals here are 
+
+** Project Goals:
+  1. To create a version of Clojure that gets to exist independent of a particular platform  
+  2. To explore a Clojure that, being more indepdent, has
+     a. Proper tail call elimination 
+     b. Conditions / Restarts 
+     c. Any other feature it might not normally be able to indulge 
+  3. To, should the project progress,  begin looking more serious into advanced compilation techniques,
+     to create a serious Clojure implementation 
+
+     Check clojureRS.org (the file, not website) for more notes about
+     the design of the language, which should grow as the program
+     grows.
+
+** Personal Goals:
+  1. Work a bit closer to the metal, and do so with Rust, two pleaures of mine
+  2. Work more with compilation, another pleasure  
+  3. Give myself a functional lisp to script with -- but not
+     necessarily because of any issue with our other clojure-scripting
+     options

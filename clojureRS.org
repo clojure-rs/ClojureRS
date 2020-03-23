@@ -1,0 +1,102 @@
+* Design Notes 
+** Dynamic Typing 
+   Let's say we have a function like the invoke function (check out
+   clojure.lang.IFn) for function-like types, which takes a variable
+   number of arguments whose types are not known at compile time.  In
+   Java, this looks like
+   
+   #+BEGIN_SRC java
+   public Object invoke(Object arg1,Object arg2 ...)  
+    #+END_SRC
+
+   In Rust, for now to my knowledge our two options for dynamic typing 
+   are to 
+
+   1. Use trait objects (combined with the Any trait specifically), something like 
+   #+BEGIN_SRC rust
+      fn invoke<'a>(arg1: &'a dyn Any, ..) -> &'a dyn Any 
+   #+END_SRC 
+
+      (But, considering that really we want to be often returning a
+      new value with invoke, and thus our 'reference', despite
+      starting in the function, should be existing beyond the function
+      itself, we'd more so probably need to return a proper pointer on
+      the heap, perhaps a Box<dyn Any>.  When I was experimenting with
+      this approach, I ended up using a Rc<dyn Any>, which fit better
+      with some other implementation details and was 'easier', but there 
+      was still a lot to explore there)
+   
+   or  
+
+   2. To have a wrapper ADT (enum) that knows all possible types ahead of time; ie, something like 
+      #+BEGIN_SRC rust 
+      fn invoke(arg1: &Value,..) -> Value  
+
+      enum Value { 
+        I32(i32),
+        Symbol(Symbol),
+        Keyword(Keyword), 
+        .. 
+      }
+      #+END_SRC
+
+   For now, I have moved forward with #2, as there appear to be some
+   major issues one runs into with #1,  although I am open to hearing 
+   from others wiser than I in Rust 
+*** TODO Document problem with #1  
+   
+** Exceptions 
+   How best represent exceptions? 
+*** Conditions 
+    First off, I'd like to play with having flat out Conditions, as
+    you have in something like Common Lisp, over Exceptions.  This
+    would be a difference from Clojure, so I'm not sure if this
+    sort of divergence would require me not call this Clojure (at the
+    same time, 'a full on Clojure that gets to live on its own, and be
+    all that it wants to be without inheriting the restrictions of the
+    JVM' is part of what I want to play with here).
+*** Implementation 
+    There's a few things to think about here, for now let's just have
+    erroneous situations flat out return a Condition type, and start
+    adding more behavior when we get back to this.
+
+** Keeping the codebase close 
+   Originally, at least ,the goal was to keep the Rust base as similar
+   to the Java / C# codebase as possible for consistency, but now I am
+   thinking the program may just as easily end up split up and
+   designed completely differently. 
+
+   Either way, each part in common will try to be as consistent with
+   the original Java version as possible -- and sometimes this will
+   involve not going quite with Rust conventions, as is the example of
+   the IFn trait, which for now is keeping the IFn name. See notes at 
+   top of  IFn for more info
+
+** Explore more the idea of a clean rust FFI / interop, in the usual spirit of Clojure 
+   I get the impression that runtime reflection in Rust would be difficult if not downright
+   impossible,  so for now I would like to look into producing our interop functions at compile time
+   (or rather, 'pre compile time'; parsing our rust files,  producing the appropriate ClojureRS rust code bridging
+   the two, and the compiling the entire project after)
+
+** Clojure map comments  
+   For now, I decided to add some meta data to some of the Rust-Clojure functions as an actual map in the comment
+   (ie, 
+#+BEGIN_SRC rust 
+/*
+{:clojure-fn "+"} 
+*/
+struct AddFn { 
+}
+#+END_SRC 
+  I am not 100% I have a conscious reasoning yet, but I often like
+  expressing data just as data, this is one of the draws of Clojure
+  for me as it is. The map here is explicit, it is human readable, but
+  also easily reflected read and manipulated by software. And it is
+  expressed with the same, to-the-point language you can use to
+  express any other information.
+
+  Anyways, for now I am only listing the Var this function should
+  correspond to, as all other information can be found on said Var,
+  although if I later realize it helps to have this information on
+  the Rust implementation of a function at a glance , I'm not against
+  adding it there, even if its repeat information
