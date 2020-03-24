@@ -4,7 +4,7 @@
 
 ** Project Goals:
   1. To create a version of Clojure that gets to exist independent of a particular platform  
-  2. To explore a Clojure that, being more indepdent, has
+  2. To explore a Clojure that, being more independent, has
      a. Proper tail call elimination 
      b. Conditions / Restarts 
      c. Any other feature it might not normally be able to indulge 
