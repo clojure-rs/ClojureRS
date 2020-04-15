@@ -1,10 +1,17 @@
+
 * Design Notes 
 ** Dynamic Typing 
    Let's say we have a function like the invoke function (check out
-   clojure.lang.IFn) for function-like types, which takes a variable
-   number of arguments whose types are not known at compile time.  In
-   Java, this looks like
+   clojure.lang.IFn) for function-like types, that is meant to invoked on 
+   an certain number of arguments whose types are not known at compile time. 
+#+BEGIN_SRC clojure
+;; Example of a 'function like type'; {}, an IFn that is not a function that can nontheless
+;; be invoked on arguments 
+({:name "Cameron"
+   :age 100} :name) => "Cameron"
+#+END_SRC
    
+   In Java, this invoke function looks something like
    #+BEGIN_SRC java
    public Object invoke(Object arg1,Object arg2 ...)  
     #+END_SRC
@@ -16,16 +23,6 @@
    #+BEGIN_SRC rust
       fn invoke<'a>(arg1: &'a dyn Any, ..) -> &'a dyn Any 
    #+END_SRC 
-
-      (But, considering that really we want to be often returning a
-      new value with invoke, and thus our 'reference', despite
-      starting in the function, should be existing beyond the function
-      itself, we'd more so probably need to return a proper pointer on
-      the heap, perhaps a Box<dyn Any>.  When I was experimenting with
-      this approach, I ended up using a Rc<dyn Any>, which fit better
-      with some other implementation details and was 'easier', but there 
-      was still a lot to explore there)
-   
    or  
 
    2. To have a wrapper ADT (enum) that knows all possible types ahead of time; ie, something like 
@@ -41,10 +38,9 @@
       #+END_SRC
 
    For now, I have moved forward with #2, as there appear to be some
-   major issues one runs into with #1,  although I am open to hearing 
-   from others wiser than I in Rust 
-*** TODO Document problem with #1  
-   
+   major issues one runs into with #1,  although, like with all decisions on 
+   this sheet, I am open to hearing from others wiser than I in Rust.  
+*** TODO Document problem with #1     
 ** Exceptions 
    How best represent exceptions? 
 *** Conditions 
@@ -59,7 +55,6 @@
     There's a few things to think about here, for now let's just have
     erroneous situations flat out return a Condition type, and start
     adding more behavior when we get back to this.
-
 ** Keeping the codebase close 
    Originally, at least ,the goal was to keep the Rust base as similar
    to the Java / C# codebase as possible for consistency, but now I am
@@ -72,31 +67,59 @@
    the IFn trait, which for now is keeping the IFn name. See notes at 
    top of  IFn for more info
 
+*** 4/14/2020 Note
+    One glitch in my thinking that didn't really compute when I wrote this
+    is that the, say, Java version looks pretty straightforward underneath
+    -- if you want a hashmap, for instance, its just implemented in Java --
+    but I am forgetting that, by virtue of the JVM, it is sort of
+    automatically getting an efficient bytecode to evaluate to.  Without
+    that luxury, we likely do not want to just likewise implement things
+    outright, we will likely also want to add an additional step where everything
+    too perhaps compiles to a more efficient bytecode -- or we might
+    implement some sort of JIT action. In the long run, I'd love for this
+    to be like SBCL, although I imagine that might take a few decades
 ** Explore more the idea of a clean rust FFI / interop, in the usual spirit of Clojure 
    I get the impression that runtime reflection in Rust would be difficult if not downright
    impossible,  so for now I would like to look into producing our interop functions at compile time
    (or rather, 'pre compile time'; parsing our rust files,  producing the appropriate ClojureRS rust code bridging
    the two, and the compiling the entire project after)
 
-** Clojure map comments  
-   For now, I decided to add some meta data to some of the Rust-Clojure functions as an actual map in the comment
-   (ie, 
-#+BEGIN_SRC rust 
-/*
-{:clojure-fn "+"} 
-*/
-struct AddFn { 
-}
-#+END_SRC 
-  I am not 100% I have a conscious reasoning yet, but I often like
-  expressing data just as data, this is one of the draws of Clojure
-  for me as it is. The map here is explicit, it is human readable, but
-  also easily reflected read and manipulated by software. And it is
-  expressed with the same, to-the-point language you can use to
-  express any other information.
+*** 4/14/2020 Note 
+    At the very least, we are closer,  as we have some intermediate Rust traits and types we can use to create
+    Rust values that can live inside ClojureRS.  Perhaps the next step might be some derive macros, 
+    and then generation itself might become a lot easier, as the bulk of it would be carried out 
+    from within Rust itself 
+** TypeTag 
+   Put in separate file as Value or same? Let's keep it separate and see how its used as the program progresses 
+** IFn Values
+   If we notice, our Value enum, which just wraps all potential types (this is how we're implementing dynamic typing), has some 'types' that are not concretions but interfaces. And then it has some types that are more 
+   complicated yet, like Conditions (Conditions technically are a value with a type,  but are they exactly
+   returned in the same 'expression space', or aren't they sort of returned to this separate 'exception channel',
+   and not to the environment where it was written but to a handler anywhere higher up awaiting it) 
 
-  Anyways, for now I am only listing the Var this function should
-  correspond to, as all other information can be found on said Var,
-  although if I later realize it helps to have this information on
-  the Rust implementation of a function at a glance , I'm not against
-  adding it there, even if its repeat information
+   Anyways,  I just want to keep this in mind.  Right now Value wraps *everything* in a flat sort of way,
+   but they aren't all quite on the same 'level'.
+
+** Conditions
+Perhaps they could look like 
+#+BEGIN_SRC clojure
+(defn div [x y]
+  (restart-case 
+    (if (not= y 0)
+      (/ x y)
+      ;; Oh yeah this looks sexy 
+      (error :divide-by-zero {:message "Tried to divide by zero"}))
+    (return-zero [] 0)
+    (return-value [r] r)
+    (div-new-vals [x y] (/ x y))
+    (div-new-denominator [v] (/ x v))))
+
+(defn test-div-error
+  (handler-bind 
+    :on-zero-denominator 
+    (fn [cond] 
+      (println (:message cond))
+      (invoke-restart :return-value 10))
+
+    (div 5 0)))
+#+END_SRC
