@@ -41,6 +41,20 @@
    major issues one runs into with #1,  although, like with all decisions on 
    this sheet, I am open to hearing from others wiser than I in Rust.  
 *** TODO Document problem with #1     
+*** 4/15/2020 Note
+    It occured to me I forgot to mention a static dispatching situation like 
+    fn do_to_thing<T: Any>(thing: T) 
+
+    Although I don't think it matters, as we need heterogenous dynamic typing situations, and although
+    that might work for a fixed argument function like 
+
+    fn do_to_things<T: Any, T2: Any>(thing: T, thing2: T2)
+
+    or a fixed size data type like 
+
+    Vec2<T: Any, T2: Any>(1,"cat")
+
+    Clojure does not live in a world of fixed size anything  
 ** Exceptions 
    How best represent exceptions? 
 *** Conditions 
