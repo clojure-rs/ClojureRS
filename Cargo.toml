@@ -8,3 +8,7 @@ edition = "2018"
 
 [dependencies]
 dyn-clone = "*"
+pest = "*"
+pest_derive = "*"
+nom = "*"
+text_io = "*"
