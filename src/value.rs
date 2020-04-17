@@ -230,7 +230,6 @@ impl Value {
 		];
 		// vec![do expr1 expr2 expr3]
 		macro_invokable_body_vec.extend_from_slice(macro_body_exprs);
-		println!("{:?}",macro_invokable_body_vec);
 		let macro_invokable_body = macro_invokable_body_vec.into_list().eval(Rc::clone(&environment));
 		let macro_value = match &macro_invokable_body {
 		    Value::IFn(ifn) => Rc::new(Value::Macro(Rc::clone(&ifn))),
