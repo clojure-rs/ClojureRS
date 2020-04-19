@@ -1,4 +1,5 @@
 * ClojureRS 
+[[https://i.imgur.com/rpioVBP.png]]
 
   Put simply, Clojure implemented atop Rust! My main goals here are 
 
