@@ -12,17 +12,23 @@ extern crate nom;
 use nom::{
     IResult,
     branch::alt,
+    error::convert_error,
     character::{is_alphabetic,is_alphanumeric},
     character::complete::multispace0,
     character::is_digit,
-    bytes::complete::{take_while1,take_until},
+    bytes::complete::{take_while1,take_until,tag},
     combinator::map_res,
-    sequence::preceded};
+    sequence::{preceded,terminated}};
 
 use crate::value::{Value,ToValue};
 use crate::persistent_list::{ToPersistentList};
 use crate::persistent_vector::{ToPersistentVector};
+use crate::persistent_list_map::{PersistentListMap,ToPersistentListMap};
+use crate::maps::MapEntry;
 use crate::symbol::Symbol;
+use std::rc::Rc;
+
+use std::fs::File;
 
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
@@ -87,7 +93,7 @@ pub fn to_value_parser<I,O: ToValue>(parser: impl Fn(I) -> IResult<I,O>) -> impl
 ///    1231415 => Value::I32(1231415)
 /// Example Failures:
 ///    1.5,  7.1321 , 1423152621625226126431525
-pub fn try_read_i32(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
+pub fn try_read_i32(input: &[u8]) -> IResult<&[u8],Value> {
     to_value_parser(integer)(input)
 }
 
@@ -98,50 +104,79 @@ pub fn try_read_i32(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
 ///    +common-lisp-global+ => Value::Symbol(Symbol { name: "+common-lisp-global+" })
 /// Example Failures:
 ///    12cat,  'quoted,  @at-is-for-references 
-pub fn try_read_symbol(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
+pub fn try_read_symbol(input: &[u8]) -> IResult<&[u8],Value> {
     to_value_parser(symbol_parser)(input)
 }
+
 // @TODO allow escaped strings 
 /// Tries to parse &[u8] into Value::String
 /// Example Successes:
 ///    "this is pretty straightforward" => Value::String("this is pretty straightforward")
-pub fn try_read_string(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
+pub fn try_read_string(input: &[u8]) -> IResult<&[u8],Value> {
     named!(quotation,
 	   ws!(tag!("\"")));
     let (rest_input,_) = quotation(input)?;
     to_value_parser(
 	map_res(
-	    take_until("\""),
+	    terminated(
+		take_until("\""),
+		tag("\"")),
 	    |bytes: &[u8]| String::from_utf8(bytes.to_vec())))(rest_input)
 }
+
+// @TODO Perhaps generalize this, or even generalize it as a reader macro 
+/// Tries to parse &[u8] into Value::PersistentListMap, or some other Value::..Map   
+/// Example Successes:
+///    {:a 1} => Value::PersistentListMap {PersistentListMap { MapEntry { :a, 1} .. ]})
+pub fn try_read_map(input: &[u8]) -> IResult<&[u8],Value> {
+    named!(lbracep,
+	   ws!(tag!("{")));
+    named!(rbracep,
+	   ws!(tag!("}")));
+    let (map_inner_input,_) = lbracep(input)?;
+    let mut map_as_vec : Vec<MapEntry> = vec![];
+    let mut rest_input = map_inner_input;
+    loop {
+	let right_brace = rbracep(rest_input);
+	match right_brace {
+	    Ok((after_map_input,_)) => {
+		break Ok((after_map_input,map_as_vec.into_list_map().to_value()));
+	    },
+	    _ => {
+		let (_rest_input,next_key) = try_read(rest_input)?;
+		let (_rest_input,next_val) = try_read(_rest_input)?;
+		map_as_vec.push(MapEntry { key: Rc::new(next_key) , val:Rc::new(next_val)});
+		rest_input = _rest_input;
+	    }
+	}
+    }
+}
+
 // @TODO remove ws!, use nom functions in place of macro 
 /// Tries to parse &[u8] into Value::PersistentVector 
 /// Example Successes:
 ///    [1 2 3] => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) ... ]})
 ///    [1 2 [5 10 15] 3]
 ///      => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) .. Rc(Value::PersistentVector..)]})
-pub fn try_read_vector(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
+pub fn try_read_vector(input: &[u8]) -> IResult<&[u8],Value> {
     named!(lbracketp,
 	   ws!(tag!("[")));
     named!(rbracketp,
 	   ws!(tag!("]")));
-    // Consume [ 
     let (vector_inner_input,_) = lbracketp(input)?;
-    // We will read all members of our PersistentVector and save them here 
     let mut vector_as_vec = vec![];
     // What's left of our input as we read more of our PersistentVector 
     let mut rest_input = vector_inner_input;
     loop {
-	// We're gonna try to consume a closing bracket 
+	// Try parse end of vector
 	let right_paren = rbracketp(rest_input);
 	match right_paren {
-	    // If we succeeded,  we can convert our vector of values in a PersistentVector and return our success
+	    // If we succeeded,  we can convert our vector of values into a PersistentVector and return our success
 	    Ok((after_vector_input,_)) => {
 		break Ok((after_vector_input,vector_as_vec.into_vector().to_value()));
 	    },
-	    // Otherwise, we need to keep reading until we get a closing bracket letting us know we're finished
+	    // Otherwise, we need to keep reading until we get that closing bracket letting us know we're finished
 	    _ => {
-		// Read next .. anything 
 		let next_form_parse = try_read(rest_input);
 		match next_form_parse {
 		    // Normal behavior;  read our next element in the PersistentVector
@@ -159,7 +194,8 @@ pub fn try_read_vector(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
 	}
     }
 }
-pub fn try_read_list(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
+
+pub fn try_read_list(input: &[u8]) -> IResult<&[u8],Value> {
     named!(lparenp,
 	   ws!(tag!("(")));
     named!(rparenp,
@@ -191,11 +227,18 @@ pub fn try_read_list(input: &[u8]/*changed*/) -> IResult<&[u8],Value> {
 	}
     }
 }
-pub fn try_read(input: &[u8]/*changed*/) -> IResult<&[u8], Value> {
-    
-    preceded(multispace0,alt((try_read_string,try_read_symbol,try_read_i32,try_read_list,try_read_vector)))(input)
+
+pub fn try_read(input: &[u8]) -> IResult<&[u8], Value> {
+    preceded(multispace0,alt(
+	(try_read_map,
+	 try_read_string,
+	 try_read_symbol,
+	 try_read_i32,
+	 try_read_list,
+	 try_read_vector)))(input)
 }
-pub fn debug_try_read(input: &[u8]/*changed*/) -> IResult<&[u8], Value> {
+
+pub fn debug_try_read(input: &[u8]) -> IResult<&[u8], Value> {
     
     let reading = try_read(input);
     match &reading {
@@ -204,3 +247,4 @@ pub fn debug_try_read(input: &[u8]/*changed*/) -> IResult<&[u8], Value> {
     };
     reading
 }
+

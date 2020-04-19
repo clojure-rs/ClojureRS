@@ -4,13 +4,18 @@ use std::fmt::Debug;
 use std::iter::FromIterator;
 
 use crate::value::{Value,ToValue};
+use std::hash::{Hash,Hasher};
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq,Hash)]
 pub enum PersistentList {
     // @TODO refactor i32 (our len) into a usize
     Cons(Rc<Value>,Rc<PersistentList>,i32),
     Empty
 }
+// @TODO definitely don't do this
+#[derive(Debug,Clone,Hash)]
+struct EmptyHash {}
+
 use crate::persistent_list::PersistentList::{Empty,Cons};
 pub fn cons_rc(head: Rc<Value>, tail: Rc<PersistentList>) -> PersistentList
 {
@@ -151,3 +156,32 @@ impl FromIterator<Rc<Value>> for PersistentList {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+#[cfg(test)]
+mod tests { 
+    use crate::persistent_list::*;
+    #[test]
+    fn test_persistent_list_count()
+    {
+	let plist = cons(1_i32.to_value(),cons(2_i32.to_value(),Empty));
+	let plist2 = cons(1_i32.to_value(),cons(2_i32.to_value(),cons(3_i32.to_value(),Empty)));
+	let plist3 = Empty;
+	let plist4 = cons_rc(4_i32.to_rc_value(),Rc::new(plist2.clone()));
+	let rc_plist4 = Rc::new(plist4.clone());
+	let plist5 = cons_rc(5_i32.to_rc_value(),Rc::clone(&rc_plist4));
+
+	let vec6 = vec![1_i32.to_rc_value(),2_i32.to_rc_value(),3_i32.to_rc_value(),4_i32.to_rc_value(),5_i32.to_rc_value(),6_i32.to_rc_value()];
+	let plist6 = vec6.into_iter().collect::<PersistentList>();
+	let plist6_2 = Rc::new(plist6.clone()).iter().map(|rc_val| {
+	    Rc::clone(&rc_val)
+	}).collect::<PersistentList>();
+	
+
+	assert_eq!(plist.len(),2);
+	assert_eq!(plist2.len(),3);
+	assert_eq!(plist3.len(),0);
+	assert_eq!(plist4.len(),4);
+	assert_eq!(plist5.len(),5);
+	assert_eq!(plist6.len(),6);
+	assert_eq!(plist6_2.len(),6);
+    }
+}

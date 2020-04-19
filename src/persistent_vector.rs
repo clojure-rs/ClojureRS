@@ -2,10 +2,12 @@ use std::rc::Rc;
 use std::fmt;
 use std::fmt::Debug;
 use std::iter::FromIterator;
+use std::hash::{Hash,Hasher};
+use std::convert::From;
 
 use crate::value::{Value,ToValue};
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq,Hash)]
 pub struct PersistentVector {
     pub vals: Vec<Rc<Value>>
 }
@@ -17,11 +19,22 @@ impl fmt::Display for PersistentVector {
 	write!(f, "[{}]",str)
     }
 }
+
+impl From<Vec<Rc<Value>>> for  PersistentVector {
+    fn from(item: Vec<Rc<Value>>) -> Self {
+	item.into_iter().collect::<PersistentVector>()
+    }
+}
+// impl Hash for PersistentVector { 
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+// 	let as_vec = Rc::new(self.clone()).iter().collect::<Vec<Rc<Value>>>();
+// 	as_vec.hash(state)
+//     }
+// }
 //
 // Mostly to just make some code more concise
-// @TODO lookup proper rust conversion traits
-//
-/// Converts into a PersistentVector 
+// @TODO ~lookup proper rust conversion traits~
+// @TODO ok, proper conversions found, start removing these
 pub trait ToPersistentVector {
     // Uses 'into' instead of typical 'to_..' because this is actually meant to be
     // (into [] self), a sort of building block of our eventual `into` function 

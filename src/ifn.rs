@@ -11,8 +11,11 @@
 //!    ({:name "Blah" :age 20} :name)
 //! As well as a few more types. 
 use crate::value::Value;
+
 use dyn_clone::DynClone;
+
 use std::fmt::Debug;
+use std::hash::Hash;
 
 //
 // Based on: clojure.lang.IFn 

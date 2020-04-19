@@ -5,16 +5,21 @@ use crate::ifn::IFn;
 use crate::persistent_list::{ToPersistentList,ToPersistentListIter,PersistentList};
 use crate::persistent_list::PersistentList::{Empty,Cons};
 use crate::persistent_vector::{ToPersistentVector,ToPersistentVectorIter,PersistentVector};
-use crate::lambda; 
+use crate::persistent_list_map::{PersistentListMap,ToPersistentListMapIter};
+use crate::lambda;
+use crate::maps::MapEntry;
+
+extern crate rand;
+use rand::Rng;
 
 use std::collections::HashMap;
+use std::hash::{Hash,Hasher};
 use std::rc::Rc;
 use std::fmt::Debug;
 use std::iter::FromIterator;
 use std::fmt;
 
 use std::ops::Deref;
-
 
 // @TODO Change IFn's name -- IFn is a function, not an IFn.
 //       The body it executes just happens to be an the IFn.  
@@ -27,8 +32,18 @@ pub enum Value {
     I32(i32),
     Symbol(Symbol),
     IFn(Rc<dyn IFn>),
+    //
+    // Special case functions
+    //
+    
+    // I don't know if this exists in any particular Lisp,
+    // but it allows me to reach into our local environment through an invoke
+    LexicalEvalFn,
+    
     PersistentList(PersistentList),
     PersistentVector(PersistentVector),
+    PersistentListMap(PersistentListMap),
+    
     Condition(std::string::String),
     // Macro body is still a function, that will be applied to our unevaled arguments 
     Macro(Rc<dyn IFn>),
@@ -46,14 +61,162 @@ pub enum Value {
 }
 use crate::value::Value::*;
 
+// @TODO since I have already manually defined hash,  surely this should just be defined
+//       in terms of that?
+impl PartialEq for Value {
+    // @TODO derive from Hash in some way?  Note; can't derive with derive because of
+    //       our trait objects in IFn and Macro
+    // @TODO implement our generic IFns some other way? After all, again, this isn't Java 
+    fn eq(&self, other: &Value) -> bool {
+	// 
+	if let I32(i) = self {
+	    if let I32(i2) = other {
+		return i == i2 
+	    }    
+	}
+
+	if let Symbol(sym) = self {
+	    if let Symbol(sym2) = other {
+		return sym == sym2;
+	    }
+	}
+	// Equality not defined on functions, similar to Clojure
+	// Change this perhaps? Diverge?
+	if let IFn(ifn) = self {
+	    if let IFn(ifn2) = other {
+		return false;
+	    }
+	}
+	// Is it misleading for equality to sometimes work?
+	if let LexicalEvalFn = self {
+	    if let LexicalEvalFn = other {
+		return true;
+	    }
+	}
+
+	if let PersistentList(plist) = self {
+	    if let PersistentList(plist2) = other {
+		return plist == plist2;
+	    }
+	}
+
+	if let PersistentVector(pvector) = self {
+	    if let PersistentVector(pvector2) = other {
+		return *pvector == *pvector2;
+	    }
+	}
+
+	if let PersistentListMap(plistmap) = self {
+	    if let PersistentListMap(plistmap2) = other {
+		return *plistmap == *plistmap2;
+	    }
+	}
+
+	if let Condition(msg) = self {
+	    if let Condition(msg2) = other {
+		return msg == msg2;
+	    }
+	}
+
+	if let QuoteMacro = self {
+	    if let QuoteMacro = other {
+		return true;
+	    }
+	}
+
+	if let DefmacroMacro = self {
+	    if let DefmacroMacro = other {
+		return true;
+	    }
+	}
+
+	if let DefMacro = self {
+	    if let DefMacro = other {
+		return true;
+	    }
+	}
+
+	if let LetMacro = self {
+	    if let LetMacro = other {
+		return true;
+	    }
+	}
+
+	if let String(string) = self {
+	    if let String(string2) = other {
+		return string == string2;
+	    }
+	}
+
+	if let Nil = self {
+	    if let Nil = other {
+		return true;
+	    }
+	}
+	
+	false
+	
+    }
+}
+
+// Again, this is certainly not the right away to do this
+// @FIXME remove this entire monstrocity 
+#[derive(Debug,Clone,Hash)]
+enum ValueHash {
+    LexicalEvalFn,
+    QuoteMacro,
+    DefmacroMacro,
+    DefMacro,
+    FnMacro,
+    LetMacro,
+    Nil
+}
+impl Eq for Value {}
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+	match self {
+	    I32(i) => i.hash(state),
+	    Symbol(sym) => sym.hash(state),
+	    IFn(_) => {
+		let mut rng = rand::thread_rng();
+		let n2: u16 = rng.gen();
+		n2.hash(state)
+	    },
+	    LexicalEvalFn => (ValueHash::LexicalEvalFn).hash(state),
+	    PersistentList(plist) => plist.hash(state),
+	    PersistentVector(pvector) => pvector.hash(state),
+	    PersistentListMap(plistmap) => plistmap.hash(state),
+	    Condition(msg) => msg.hash(state),
+	    // Random hash is temporary;
+	    // @TODO implement hashing for functions / macros 
+	    Macro(_) => {
+		let mut rng = rand::thread_rng();
+		let n2: u16 = rng.gen();
+		n2.hash(state)
+	    },
+	    QuoteMacro => ValueHash::QuoteMacro.hash(state),
+	    DefmacroMacro => ValueHash::DefmacroMacro.hash(state),
+	    DefMacro => ValueHash::DefMacro.hash(state),
+	    FnMacro => ValueHash::FnMacro.hash(state),
+	    LetMacro => ValueHash::LetMacro.hash(state),
+
+	    String(string) => string.hash(state),
+	    Nil => ValueHash::Nil.hash(state),
+	}
+         // self.id.hash(state);
+         // self.phone.hash(state);
+     }
+}
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 	let str = match self {
 	    I32(val) => val.to_string(),
 	    Symbol(sym) => sym.to_string(),
 	    IFn(_) => std::string::String::from("#function[]"),
+	    LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
 	    PersistentList(plist) => plist.to_string(),
 	    PersistentVector(pvector) => pvector.to_string(),
+	    PersistentListMap(plistmap) => plistmap.to_string(),
 	    Condition(msg) => format!("#Condition[\"{}\"]",msg),
 	    Macro(_) => std::string::String::from("#macro[]"),
 	    QuoteMacro => std::string::String::from("#macro[quote*]"),
@@ -87,7 +250,10 @@ impl Value {
             Value::I32(_) => TypeTag::I32,
             Value::Symbol(_) => TypeTag::Symbol,
             Value::IFn(_) => TypeTag::IFn,
+	    Value::LexicalEvalFn => TypeTag::IFn,
             Value::PersistentList(_) => TypeTag::PersistentList,
+	    Value::PersistentVector(_) => TypeTag::PersistentVector,
+	    Value::PersistentListMap(_) => TypeTag::PersistentListMap,
             Value::Condition(_) => TypeTag::Condition,
             // Note; normal Clojure cannot take the value of a macro, so I don't imagine this
 	    // having significance in the long run, but we will see 
@@ -97,7 +263,6 @@ impl Value {
 	    Value::DefmacroMacro => TypeTag::Macro,
 	    Value::LetMacro => TypeTag::Macro,
 	    Value::FnMacro => TypeTag::Macro,
-            Value::PersistentVector(_) => TypeTag::PersistentVector,
 	    Value::String(_) => TypeTag::String,
             Value::Nil => TypeTag::Nil 
 
@@ -138,7 +303,20 @@ impl Value {
 		}).collect::<Vec<&Value>>();
 		// Invoke fn on arguments 
 		Some(Rc::new(ifn.invoke(evaled_args_refs)))
-            },
+             },
+	    LexicalEvalFn => {
+		if args.len() != 1 {
+		    return Some(Rc::new(Value::Condition(format!("Wrong number of arguments (Given: {}, Expected: 1)",args.len()))));
+		}
+		// This should only be one value
+		let evaled_arg_values = PersistentList::iter(args).map(|rc_arg| {
+                    rc_arg.eval(Rc::clone(environment))
+		}).collect::<Vec<Value>>();
+
+		let evaled_arg = evaled_arg_values.get(0).unwrap();
+		
+		Some(evaled_arg.eval_to_rc(Rc::clone(environment)))
+	    },
 	    //
 	    // Unless I'm mistaken, this is incorrect; instead of having a phase where
 	    // the macro expands, and then another phase where the whole expanded form
@@ -415,6 +593,11 @@ impl ToValue for PersistentVector {
         Value::PersistentVector(self.clone())
     }
 }
+impl ToValue for PersistentListMap {
+    fn to_value(&self) -> Value {
+        Value::PersistentListMap(self.clone())
+    }
+}
 
 /// Allows a type to be evaluated, abstracts evaluation
 ///
@@ -445,8 +628,17 @@ impl Evaluable for Rc<Value> {
 		// and return a new PersistentVector wrapping the new evaluated Values 
 		let evaled_vals =  pvector.vals.iter().map(|rc_val| {
                     rc_val.eval_to_rc(Rc::clone(&environment))
-                }).collect::<Vec<Rc<Value>>>();
-		Rc::new(Value::PersistentVector(PersistentVector{vals: evaled_vals}))
+                }).collect::<PersistentVector>();
+		Rc::new(Value::PersistentVector(evaled_vals))
+	    },
+	    Value::PersistentListMap(plistmap) => {
+		// Evaluate each Rc<Value> our PersistentVector wraps
+		// and return a new PersistentVector wrapping the new evaluated Values 
+		let evaled_vals =  plistmap.iter().map(|map_entry| {
+		    MapEntry { key: map_entry.key.eval_to_rc(Rc::clone(&environment)),
+			       val: map_entry.val.eval_to_rc(Rc::clone(&environment))}
+                }).collect::<PersistentListMap>();
+		Rc::new(Value::PersistentListMap(evaled_vals))
 	    },
 	    // Evaluating a list (a b c) means calling a as a function or macro on arguments b and c 
             Value::PersistentList(plist) => match plist {
@@ -484,35 +676,5 @@ impl Evaluable for PersistentList {
 impl Evaluable for Value {
     fn eval_to_rc(&self, environment: Rc<Environment>) -> Rc<Value> {
         self.to_rc_value().eval_to_rc(environment)
-    }
-}
-#[cfg(test)]
-mod tests { 
-    use crate::value::*;
-    
-    #[test]
-    fn test_persistent_list_count()
-    {
-	let plist = cons(1_i32.to_value(),cons(2_i32.to_value(),Empty));
-	let plist2 = cons(1_i32.to_value(),cons(2_i32.to_value(),cons(3_i32.to_value(),Empty)));
-	let plist3 = Empty;
-	let plist4 = cons_rc(4_i32.to_rc_value(),Rc::new(plist2.clone()));
-	let rc_plist4 = Rc::new(plist4.clone());
-	let plist5 = cons_rc(5_i32.to_rc_value(),Rc::clone(&rc_plist4));
-
-	let vec6 = vec![1_i32.to_rc_value(),2_i32.to_rc_value(),3_i32.to_rc_value(),4_i32.to_rc_value(),5_i32.to_rc_value(),6_i32.to_rc_value()];
-	let plist6 = vec6.into_iter().collect::<PersistentList>();
-	let plist6_2 = Rc::new(plist6.clone()).iter().map(|rc_val| {
-	    Rc::clone(&rc_val)
-	}).collect::<PersistentList>();
-	
-
-	assert_eq!(plist.len(),2);
-	assert_eq!(plist2.len(),3);
-	assert_eq!(plist3.len(),0);
-	assert_eq!(plist4.len(),4);
-	assert_eq!(plist5.len(),5);
-	assert_eq!(plist6.len(),6);
-	assert_eq!(plist6_2.len(),6);
     }
 }

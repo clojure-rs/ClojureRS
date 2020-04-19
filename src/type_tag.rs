@@ -8,6 +8,7 @@ pub enum TypeTag {
     Condition,
     PersistentList,
     PersistentVector,
+    PersistentListMap,
     // Experimental; may make no sense at runtime, as we will likely be unable to take the value of a macro 
     Macro,
     String,
@@ -24,6 +25,7 @@ impl fmt::Display for TypeTag {
 	    Condition => std::string::String::from("clojure.lang.Condition"),
 	    PersistentList => std::string::String::from("clojure.lang.PersistentList"),
 	    PersistentVector => std::string::String::from("clojure.lang.PersistentVector"),
+	    PersistentListMap => std::string::String::from("clojure.lang.PersistentListMap"),
 	    Macro => std::string::String::from("clojure.lang.Macro"),
 	    TypeTag::String => std::string::String::from("rust.std.string.String"),
 	    Nil => std::string::String::from("clojure.lang.Nil")

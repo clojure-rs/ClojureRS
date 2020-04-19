@@ -12,7 +12,9 @@ mod lambda;
 mod reader;
 mod persistent_list;
 mod persistent_vector;
+mod persistent_list_map;
 mod repl;
+mod maps;
 
 use environment::Environment;
 
@@ -27,6 +29,8 @@ use rust_core::{AddFn,StrFn};
 use symbol::Symbol;
 use crate::value::{ToValue,Evaluable};
 use crate::persistent_list::{PersistentList,ToPersistentList};
+use crate::persistent_list_map::*;
+use crate::maps::*;
 use crate::persistent_vector::{PersistentVector,ToPersistentVector};
 use crate::value::Value;
 
