@@ -237,3 +237,23 @@ impl IFn for ConcatFn {
 	Value::PersistentList(concatted_vec.into_iter().collect::<PersistentList>())
     }
 }
+
+/// Primitive printing function;
+/// (defn print-string [string] .. prints single string .. ) 
+#[derive(Debug,Clone)]
+pub struct PrintStringFn {
+}
+impl ToValue for PrintStringFn {
+    fn to_value(&self) -> Value {
+        Value::IFn(Rc::new(self.clone()))
+    }
+}
+impl IFn for PrintStringFn {
+    fn invoke(&self,args: Vec<&Value>) -> Value {
+	if args.len() != 1 {
+	    return Value::Condition(format!("Wrong number of arguments given to function (Given: {}, Expected: {})",args.len(),args.len()));
+	}
+	println!("{}",args.get(0).unwrap().to_string());
+	Value::Nil 
+    }
+}
