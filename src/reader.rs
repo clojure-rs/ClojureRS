@@ -113,8 +113,7 @@ pub fn try_read_symbol(input: &[u8]) -> IResult<&[u8],Value> {
 /// Example Successes:
 ///    "this is pretty straightforward" => Value::String("this is pretty straightforward")
 pub fn try_read_string(input: &[u8]) -> IResult<&[u8],Value> {
-    named!(quotation,
-	   ws!(tag!("\"")));
+    named!(quotation, preceded!(consume_clojure_whitespaces, tag!("\"")));
     let (rest_input,_) = quotation(input)?;
     to_value_parser(
 	map_res(
@@ -129,10 +128,8 @@ pub fn try_read_string(input: &[u8]) -> IResult<&[u8],Value> {
 /// Example Successes:
 ///    {:a 1} => Value::PersistentListMap {PersistentListMap { MapEntry { :a, 1} .. ]})
 pub fn try_read_map(input: &[u8]) -> IResult<&[u8],Value> {
-    named!(lbracep,
-	   ws!(tag!("{")));
-    named!(rbracep,
-	   ws!(tag!("}")));
+    named!(lbracep, preceded!(consume_clojure_whitespaces, tag!("{")));
+    named!(rbracep, preceded!(consume_clojure_whitespaces, tag!("}")));
     let (map_inner_input,_) = lbracep(input)?;
     let mut map_as_vec : Vec<MapEntry> = vec![];
     let mut rest_input = map_inner_input;
@@ -152,17 +149,15 @@ pub fn try_read_map(input: &[u8]) -> IResult<&[u8],Value> {
     }
 }
 
-// @TODO remove ws!, use nom functions in place of macro 
+// @TODO use nom functions in place of macro
 /// Tries to parse &[u8] into Value::PersistentVector 
 /// Example Successes:
 ///    [1 2 3] => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) ... ]})
 ///    [1 2 [5 10 15] 3]
 ///      => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) .. Rc(Value::PersistentVector..)]})
 pub fn try_read_vector(input: &[u8]) -> IResult<&[u8],Value> {
-    named!(lbracketp,
-	   ws!(tag!("[")));
-    named!(rbracketp,
-	   ws!(tag!("]")));
+    named!(lbracketp, preceded!(consume_clojure_whitespaces, tag!("[")));
+    named!(rbracketp, preceded!(consume_clojure_whitespaces, tag!("]")));
     let (vector_inner_input,_) = lbracketp(input)?;
     let mut vector_as_vec = vec![];
     // What's left of our input as we read more of our PersistentVector 
@@ -196,11 +191,9 @@ pub fn try_read_vector(input: &[u8]) -> IResult<&[u8],Value> {
 }
 
 pub fn try_read_list(input: &[u8]) -> IResult<&[u8],Value> {
-    named!(lparenp,
-	   ws!(tag!("(")));
-    named!(rparenp,
-	   ws!(tag!(")")));
-    
+    named!(lparenp, preceded!(consume_clojure_whitespaces, tag!("(")));
+    named!(rparenp, preceded!(consume_clojure_whitespaces, tag!(")")));
+
     let (list_inner_input,_) = lparenp(input)?;
     let mut list_as_vec = vec![];
     let mut rest_input = list_inner_input;
