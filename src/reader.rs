@@ -248,3 +248,18 @@ pub fn debug_try_read(input: &[u8]) -> IResult<&[u8], Value> {
     reading
 }
 
+/// Consumes one or more whitespaces from the input.
+///
+/// A whitespace is either an ASCII whitespace or a comma.
+fn consume_clojure_whitespaces(input: &[u8]) -> IResult<&[u8], ()> {
+    named!(parser, take_while1!(is_clojure_whitespace));
+    parser(input).map(|(rest, _)| (rest, ()))
+}
+
+/// Returns whether if a given character is a whitespace.
+///
+/// Clojure defines a whitespace as either a comma or an ASCII whitespace.
+fn is_clojure_whitespace(c: u8) -> bool {
+    // ASCII symbol of `,` is 44.
+    c.is_ascii_whitespace() || c == 44
+}
