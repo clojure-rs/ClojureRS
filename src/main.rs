@@ -42,7 +42,7 @@ use nom::Needed::Size;
 fn main()
 {
     println!("Clojure RS 0.0.1");
-    
+
     // Register our macros / functions ahead of time
     let add_fn = rust_core::AddFn{};
     let str_fn = rust_core::StrFn{};
@@ -59,11 +59,11 @@ fn main()
     let def_macro = Value::DefMacro{};
     let fn_macro = Value::FnMacro{};
     let defmacro_macro = Value::DefmacroMacro{};
-    
+
     let environment = Rc::new(Environment::new_main_environment());
-    
+
     let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
-    
+
     environment.insert(Symbol::intern("+"),add_fn.to_rc_value());
     environment.insert(Symbol::intern("let"),let_macro.to_rc_value());
     environment.insert(Symbol::intern("str"),str_fn.to_rc_value());
@@ -87,33 +87,32 @@ fn main()
     //
     let stdin = io::stdin();
     print!("user=> ");
-    let mut remaining_input_buffer = String::from("");
+    let mut input_buffer = String::new();
     for line in stdin.lock().lines() {
-	let line = line.unwrap();
-	remaining_input_buffer.push_str(&line);
-	let mut remaining_input_bytes = remaining_input_buffer.as_bytes();
-	loop {
-	    let next_read_parse = reader::try_read(remaining_input_bytes);
-	    match next_read_parse {
-		Ok((_remaining_input_bytes,value)) => {
-		    print!("{} ",value.eval(Rc::clone(&environment)).to_string_explicit());
-		    remaining_input_bytes = _remaining_input_bytes;
-		},
-		Err(Incomplete(_)) => {
-		    remaining_input_buffer = String::from_utf8(remaining_input_bytes.to_vec()).unwrap();
-		    break;
-		},
-		err => {
-		    print!("{}",Value::Condition(format!("Reader Error: {:?}",err)));
-		    remaining_input_buffer = String::from("");
-		    break;
-		}
-	    }
-	}
-	println!();
-	print!("user=> ");
+        let line = line.unwrap();
+        input_buffer.push_str(&line);
+        let mut remaining_input = input_buffer.as_str();
+        loop {
+            let next_read_parse = reader::try_read(remaining_input);
+            match next_read_parse {
+                Ok((_remaining_input,value)) => {
+                    print!("{} ",value.eval(Rc::clone(&environment)).to_string_explicit());
+                    remaining_input = _remaining_input;
+                },
+                Err(Incomplete(_)) => {
+                    break;
+                },
+                err => {
+                    print!("{}",Value::Condition(format!("Reader Error: {:?}",err)));
+                    input_buffer.clear();
+                    break;
+                }
+            }
+        }
+        println!();
+        print!("user=> ");
     }
-    
+
 }
 
 
