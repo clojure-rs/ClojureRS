@@ -1,18 +1,19 @@
-use std::hash::{Hash,Hasher};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
-#[derive(Hash,PartialEq,Eq,Clone,Debug)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Symbol {
-    pub name: String
+    pub name: String,
 }
 impl Symbol {
-    pub fn intern(name: &str) -> Symbol 
-    {
-	Symbol {name: String::from(name)}
+    pub fn intern(name: &str) -> Symbol {
+        Symbol {
+            name: String::from(name),
+        }
     }
 }
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-	write!(f,"{}",self.name)
+        write!(f, "{}", self.name)
     }
 }
