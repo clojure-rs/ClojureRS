@@ -205,24 +205,20 @@ pub fn try_read_map(input: &str) -> IResult<&str, Value> {
     named!(lbracep<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("{")));
     named!(rbracep<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("}")));
     let (map_inner_input, _) = lbracep(input)?;
-    let mut map_as_vec: Vec<MapEntry> = vec![];
+    let mut map_as_vec: Vec<MapEntry> = Vec::new();
     let mut rest_input = map_inner_input;
     loop {
         let right_brace = rbracep(rest_input);
-        match right_brace {
-            Ok((after_map_input, _)) => {
-                break Ok((after_map_input, map_as_vec.into_list_map().to_value()));
-            }
-            _ => {
-                let (_rest_input, next_key) = try_read(rest_input)?;
-                let (_rest_input, next_val) = try_read(_rest_input)?;
-                map_as_vec.push(MapEntry {
-                    key: Rc::new(next_key),
-                    val: Rc::new(next_val),
-                });
-                rest_input = _rest_input;
-            }
+        if let Ok((after_map_input, _)) = right_brace {
+            return Ok((after_map_input, map_as_vec.into_list_map().to_value()));
         }
+        let (_rest_input, next_key) = try_read(rest_input)?;
+        let (_rest_input, next_val) = try_read(_rest_input)?;
+        map_as_vec.push(MapEntry {
+            key: Rc::new(next_key),
+            val: Rc::new(next_val),
+        });
+        rest_input = _rest_input;
     }
 }
 
@@ -236,33 +232,20 @@ pub fn try_read_vector(input: &str) -> IResult<&str, Value> {
     named!(lbracketp<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("[")));
     named!(rbracketp<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("]")));
     let (vector_inner_input, _) = lbracketp(input)?;
-    let mut vector_as_vec = vec![];
+    let mut vector_as_vec = Vec::new();
     // What's left of our input as we read more of our PersistentVector
     let mut rest_input = vector_inner_input;
     loop {
         // Try parse end of vector
-        let right_paren = rbracketp(rest_input);
-        match right_paren {
-            // If we succeeded,  we can convert our vector of values into a PersistentVector and return our success
-            Ok((after_vector_input, _)) => {
-                break Ok((after_vector_input, vector_as_vec.into_vector().to_value()));
-            }
-            // Otherwise, we need to keep reading until we get that closing bracket letting us know we're finished
-            _ => {
-                let next_form_parse = try_read(rest_input);
-                match next_form_parse {
-                    // Normal behavior;  read our next element in the PersistentVector
-                    Ok((_rest_input, form)) => {
-                        vector_as_vec.push(form.to_rc_value());
-                        rest_input = _rest_input;
-                    }
-                    // This parse failed, return overall read failure
-                    _ => {
-                        break next_form_parse;
-                    }
-                }
-            }
+        // If we succeeded,  we can convert our vector of values into a PersistentVector and return our success
+        if let Ok((after_vector_input, _)) = rbracketp(rest_input) {
+            return Ok((after_vector_input, vector_as_vec.into_vector().to_value()));
         }
+
+        // Otherwise, we need to keep reading until we get that closing bracket letting us know we're finished
+        let (_rest_input, form) = try_read(rest_input)?;
+        vector_as_vec.push(form.to_rc_value());
+        rest_input = _rest_input;
     }
 }
 
@@ -271,28 +254,15 @@ pub fn try_read_list(input: &str) -> IResult<&str, Value> {
     named!(rparenp<&str, &str>, preceded!(consume_clojure_whitespaces, tag!(")")));
 
     let (list_inner_input, _) = lparenp(input)?;
-    let mut list_as_vec = vec![];
+    let mut list_as_vec = Vec::new();
     let mut rest_input = list_inner_input;
     loop {
-        let right_paren = rparenp(rest_input);
-        match right_paren {
-            Ok((after_list_input, _)) => {
-                break Ok((after_list_input, list_as_vec.into_list().to_value()));
-            }
-            _ => {
-                let next_form_parse = try_read(rest_input);
-                match next_form_parse {
-                    Ok((_rest_input, form)) => {
-                        list_as_vec.push(form.to_rc_value());
-                        rest_input = _rest_input;
-                    }
-                    // This parse failed, forward failure
-                    _ => {
-                        break next_form_parse;
-                    }
-                }
-            }
+        if let Ok((after_list_input, _)) = rparenp(rest_input) {
+            return Ok((after_list_input, list_as_vec.into_list().to_value()));
         }
+        let (_rest_input, form) = try_read(rest_input)?;
+        list_as_vec.push(form.to_rc_value());
+        rest_input = _rest_input;
     }
 }
 
