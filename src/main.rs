@@ -38,7 +38,6 @@ use nom::Err::Incomplete;
 use nom::error::convert_error;
 use nom::Needed::Size;
 
-
 fn main()
 {
     println!("Clojure RS 0.0.1");
@@ -109,6 +108,7 @@ fn main()
                 }
             }
         }
+        input_buffer.clear();
         println!();
         print!("user=> ");
     }

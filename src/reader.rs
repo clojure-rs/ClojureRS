@@ -33,28 +33,101 @@ use std::{
 
 use std::fs::File;
 
+/// Returns the first character of a string slice.
+///
+/// If `input` is not empty, then its first char will be returned. Otherwise,
+/// `None` is returned.
+///
+/// # Panics
+///
+/// This function will panic if `input` is an empty string slice.
+fn first_char(input: &str) -> char {
+    input.chars().next().unwrap()
+}
+
+/// Same as Haskell cons operator, applied to rust strings.
+///
+/// Concatenates a `char` at the beginning of a `str`
+fn cons_str(head: char, tail: &str) -> String {
+    let cap = tail.len() + head.len_utf8();
+    let mut ret = String::with_capacity(cap);
+
+    ret.push(head);
+    ret.push_str(tail);
+
+    ret
+}
+
+/// Returns whether if a character can be in the tail of an identifier.
+///
+/// An identifier is composed of a head (its first char) and a tail (the other
+/// chars).
+///
+/// A character is an identifier char if it is alphanumeric or if it is one of:
+///   - `|`,
+///   - `?`,
+///   - `<`,
+///   - `>`,
+///   - `+`,
+///   - `-`,
+///   - `_`,
+///   - `=`,
+///   - `^`,
+///   - `%`,
+///   - `&`,
+///   - `$`,
+///   - `*`,
+///   - `!`,
+fn is_identifier_char(chr: char) -> bool {
+    chr.is_alphanumeric() || "|?<>+-_=^%&$*!".contains(chr)
+}
+
+/// Returns whether if a character can be in the head of an identifier.
+///
+/// An identifier is composed of a head (its first char) and a tail (the other
+/// chars).
+///
+/// A character is an identifier char if it is alphabetic or if it is one of:
+///   - `|`,
+///   - `?`,
+///   - `<`,
+///   - `>`,
+///   - `+`,
+///   - `-`,
+///   - `_`,
+///   - `=`,
+///   - `^`,
+///   - `%`,
+///   - `&`,
+///   - `$`,
+///   - `*`,
+///   - `!`,
+fn is_non_numeric_identifier_char(chr: char) -> bool {
+    chr.is_alphabetic() || "|?<>+-_=^%&$*!".contains(chr)
+}
+
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
 /// Example Failures:  'a,  12b,   ,cat  
 pub fn identifier_parser(input: &str) -> IResult<&str, String> {
-    named!( non_numeric_identifier_char<&str, char>,
-	    alt!( one_of!("|?<>+-_=^%&$*!") |
-		  map!(take_while_m_n!(1,1,char::is_alphabetic),|ls| ls.chars().next().unwrap())));
-    named!( identifier_char<&str, char>,
-	    alt!( one_of!("|?<>+-_=^%&$*!") |
-		  map!(take_while_m_n!(1,1,char::is_alphanumeric),|ls| ls.chars().next().unwrap())));
-    named!( identifier_ <&str, String> ,
+    named!(identifier_head<&str, char>,
+       map!(
+           take_while_m_n!(1, 1, is_non_numeric_identifier_char),
+           first_char
+       )
+    );
+
+    named!(identifier_tail<&str, &str>, take_while!(is_identifier_char));
+
+    named!(identifier_ <&str, String>,
 	    do_parse!(
-		head: non_numeric_identifier_char >>
-		rest_input:
-		map!(
-		    many0!(complete!(identifier_char)),
-		    String::from_iter) >>
-		(format!("{}{}",head as char,rest_input))
-	    ));
+		    head: identifier_head >>
+		    rest_input: identifier_tail >>
+		    (cons_str(head, rest_input))
+        )
+   );
 
     identifier_(input)
-
 }
 
 /// Parses valid Clojure symbols,  whose name is a valid identifier 
@@ -227,7 +300,7 @@ pub fn try_read_list(input: &str) -> IResult<&str, Value> {
 }
 
 pub fn try_read(input: &str) -> IResult<&str, Value> {
-    preceded(multispace0,alt(
+    preceded(consume_clojure_whitespaces,alt(
 	(try_read_map,
 	 try_read_string,
 	 try_read_symbol,
