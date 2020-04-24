@@ -149,7 +149,7 @@ pub fn integer(input: &str) -> IResult<&str, i32> {
 // reader functions, at least) that are basically composable InputType
 // -> IResult<InputType,Value> parsers, that our normal read function
 // / reader will wrap.
-/// Takes a parser, such as one that reads a &[u8] and returns an
+/// Takes a parser, such as one that reads a &str and returns an
 /// i32, and creates a new parser that instead returns a valid
 /// ClojureRS Value instead 
 pub fn to_value_parser<I,O: ToValue>(parser: impl Fn(I) -> IResult<I,O>) -> impl Fn(I) -> IResult<I,Value> {
@@ -158,7 +158,7 @@ pub fn to_value_parser<I,O: ToValue>(parser: impl Fn(I) -> IResult<I,O>) -> impl
 
 // @TODO make sure whitespace or 'nothing' is at the end, fail for
 // float like numbers 
-/// Tries to parse &[u8] into Value::I32
+/// Tries to parse &str into Value::I32
 /// Expects:
 ///   Integers
 /// Example Successes:
@@ -171,7 +171,7 @@ pub fn try_read_i32(input: &str) -> IResult<&str, Value> {
     to_value_parser(integer)(input)
 }
 
-/// Tries to parse &[u8] into Value::Symbol
+/// Tries to parse &str into Value::Symbol
 /// Example Successes:
 ///    a                    => Value::Symbol(Symbol { name: "a" })
 ///    cat-dog              => Value::Symbol(Symbol { name: "cat-dog" })
@@ -183,7 +183,7 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
 }
 
 // @TODO allow escaped strings 
-/// Tries to parse &[u8] into Value::String
+/// Tries to parse &str into Value::String
 /// Example Successes:
 ///    "this is pretty straightforward" => Value::String("this is pretty straightforward")
 pub fn try_read_string(input: &str) -> IResult<&str, Value> {
@@ -202,7 +202,7 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro 
-/// Tries to parse &[u8] into Value::PersistentListMap, or some other Value::..Map   
+/// Tries to parse &str into Value::PersistentListMap, or some other Value::..Map   
 /// Example Successes:
 ///    {:a 1} => Value::PersistentListMap {PersistentListMap { MapEntry { :a, 1} .. ]})
 pub fn try_read_map(input: &str) -> IResult<&str, Value> {
@@ -228,7 +228,7 @@ pub fn try_read_map(input: &str) -> IResult<&str, Value> {
 }
 
 // @TODO use nom functions in place of macro
-/// Tries to parse &[u8] into Value::PersistentVector 
+/// Tries to parse &str into Value::PersistentVector 
 /// Example Successes:
 ///    [1 2 3] => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) ... ]})
 ///    [1 2 [5 10 15] 3]
