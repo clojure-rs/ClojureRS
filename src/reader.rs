@@ -265,7 +265,7 @@ pub fn debug_try_read(input: &[u8]) -> IResult<&[u8], Value> {
 ///
 /// A whitespace is either an ASCII whitespace or a comma.
 fn consume_clojure_whitespaces(input: &[u8]) -> IResult<&[u8], ()> {
-    named!(parser, take_while1!(is_clojure_whitespace));
+    named!(parser, take_while!(is_clojure_whitespace));
     parser(input).map(|(rest, _)| (rest, ()))
 }
 
