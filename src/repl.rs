@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::{self};
 use std::io::Write;
+use std::io;
 
 use crate::environment::Environment;
 use crate::reader;
@@ -33,10 +33,10 @@ pub fn try_eval_file(environment: &Rc<Environment>, filepath: &str) -> Result<()
                     //print!("{} ",value.eval(Rc::clone(&environment)).to_string_explicit());
                     value.eval(Rc::clone(&environment));
                     remaining_input = _remaining_input;
-                },
+                }
                 Err(Incomplete(Size(1))) => {
                     break;
-                },
+                }
                 err => {
                     println!(
                         "Error evaluating file {}; {}",
@@ -44,7 +44,7 @@ pub fn try_eval_file(environment: &Rc<Environment>, filepath: &str) -> Result<()
                         Value::Condition(format!("Reader Error: {:?}", err))
                     );
                     input_buffer.clear();
-                    remaining_input = "";
+                    // remaining_input = "";
                     break;
                 }
             }
@@ -54,7 +54,7 @@ pub fn try_eval_file(environment: &Rc<Environment>, filepath: &str) -> Result<()
     Ok(())
 }
 // @TODO eventually, this will likely be implemented purely in Clojure
-/// Starts an entirely new session of Clojure RS 
+/// Starts an entirely new session of Clojure RS
 pub fn repl() {
     println!("Clojure RS 0.0.1");
 
@@ -91,6 +91,6 @@ pub fn repl() {
         input_buffer.clear();
         println!();
         print!("user=> ");
-	let _ = io::stdout().flush();
+        let _ = io::stdout().flush();
     }
 }

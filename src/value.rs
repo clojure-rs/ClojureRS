@@ -2,24 +2,20 @@ use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::lambda;
 use crate::maps::MapEntry;
-use crate::persistent_list::PersistentList::{Cons, Empty};
+use crate::persistent_list::PersistentList::Cons;
 use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListIter};
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
-use crate::persistent_vector::{PersistentVector, ToPersistentVector, ToPersistentVectorIter};
+use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
 
 extern crate rand;
 use rand::Rng;
 
-use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
 use std::rc::Rc;
-
-use std::ops::Deref;
 
 // @TODO Change IFn's name -- IFn is a function, not an IFn.
 //       The body it executes just happens to be an the IFn.
@@ -82,8 +78,8 @@ impl PartialEq for Value {
         }
         // Equality not defined on functions, similar to Clojure
         // Change this perhaps? Diverge?
-        if let IFn(ifn) = self {
-            if let IFn(ifn2) = other {
+        if let IFn(_) = self {
+            if let IFn(_) = other {
                 return false;
             }
         }

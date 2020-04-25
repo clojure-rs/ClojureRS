@@ -1,8 +1,8 @@
 use crate::namespace::{Namespace, Namespaces};
-use crate::rust_core;
-use crate::value::{ToValue, Value};
-use crate::Symbol;
 use crate::repl;
+use crate::rust_core;
+use crate::symbol::Symbol;
+use crate::value::{ToValue, Value};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -68,21 +68,21 @@ impl Environment {
     }
     pub fn clojure_core_environment() -> Rc<Environment> {
         // Register our macros / functions ahead of time
-	let add_fn = rust_core::AddFn {};
-	let str_fn = rust_core::StrFn {};
-	let do_fn = rust_core::DoFn {};
-	let nth_fn = rust_core::NthFn {};
-	let do_macro = rust_core::DoMacro {};
-	let concat_fn = rust_core::ConcatFn {};
-	let print_string_fn = rust_core::PrintStringFn {};
-	// Hardcoded fns
-	let lexical_eval_fn = Value::LexicalEvalFn {};
-	// Hardcoded macros
-	let let_macro = Value::LetMacro {};
-	let quote_macro = Value::QuoteMacro {};
-	let def_macro = Value::DefMacro {};
-	let fn_macro = Value::FnMacro {};
-	let defmacro_macro = Value::DefmacroMacro {};
+        let add_fn = rust_core::AddFn {};
+        let str_fn = rust_core::StrFn {};
+        let do_fn = rust_core::DoFn {};
+        let nth_fn = rust_core::NthFn {};
+        let do_macro = rust_core::DoMacro {};
+        let concat_fn = rust_core::ConcatFn {};
+        let print_string_fn = rust_core::PrintStringFn {};
+        // Hardcoded fns
+        let lexical_eval_fn = Value::LexicalEvalFn {};
+        // Hardcoded macros
+        let let_macro = Value::LetMacro {};
+        let quote_macro = Value::QuoteMacro {};
+        let def_macro = Value::DefMacro {};
+        let fn_macro = Value::FnMacro {};
+        let defmacro_macro = Value::DefmacroMacro {};
         let environment = Rc::new(Environment::new_main_environment());
 
         let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
@@ -96,33 +96,33 @@ impl Environment {
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
 
-	environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
-	environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
-	environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
-	environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
-	environment.insert(Symbol::intern("do-fn*"), do_fn.to_rc_value());
-	environment.insert(Symbol::intern("do"), do_macro.to_rc_value());
-	environment.insert(Symbol::intern("def"), def_macro.to_rc_value());
-	environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
-	environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
-	environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
-	environment.insert(
+        environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
+        environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
+        environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
+        environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
+        environment.insert(Symbol::intern("do-fn*"), do_fn.to_rc_value());
+        environment.insert(Symbol::intern("do"), do_macro.to_rc_value());
+        environment.insert(Symbol::intern("def"), def_macro.to_rc_value());
+        environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
+        environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
+        environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
+        environment.insert(
             Symbol::intern("lexical-eval"),
             lexical_eval_fn.to_rc_value(),
-	);
+        );
 
-	environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
-	environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
-	environment.insert(
+        environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
+        environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
+        environment.insert(
             Symbol::intern("print-string"),
             print_string_fn.to_rc_value(),
-	);
+        );
 
-	//
-	// Read in clojure.core
-	//
-	let _ = repl::try_eval_file(&environment, "./src/clojure/core.clj");
-	
-	environment 
+        //
+        // Read in clojure.core
+        //
+        let _ = repl::try_eval_file(&environment, "./src/clojure/core.clj");
+
+        environment
     }
 }

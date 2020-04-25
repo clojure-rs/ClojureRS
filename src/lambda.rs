@@ -26,7 +26,7 @@ impl IFn for Fn {
         let argc = self.arg_syms.len();
 
         let mut var_args = false;
-        if (argc >= 2) {
+        if argc >= 2 {
             if let Some(sym) = self.arg_syms.get(argc - 2) {
                 if sym.to_string() == "&" {
                     var_args = true;
@@ -48,7 +48,7 @@ impl IFn for Fn {
             let curr_sym = self.arg_syms.get(i).unwrap();
             // We can bind the rest of the arguments, then, to the next variable and blow this popsicle stand
             if curr_sym.to_string() == "&" {
-                if (!var_args) {
+                if !var_args {
                     return Value::Condition(String::from("Invalid function argument '&' in non-variable-argument function definition"));
                 }
                 let last_sym = self.arg_syms.get(i + 1).unwrap();

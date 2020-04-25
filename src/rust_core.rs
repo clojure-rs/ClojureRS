@@ -3,16 +3,14 @@ use std::rc::Rc;
 
 use crate::environment::Environment;
 use crate::ifn::IFn;
-use crate::lambda::Fn;
 use crate::persistent_list::{
     PersistentList,
     PersistentList::{Cons, Empty},
     ToPersistentList, ToPersistentListIter,
 };
-use crate::persistent_vector::{PersistentVector, ToPersistentVector, ToPersistentVectorIter};
+use crate::persistent_vector::{PersistentVector, ToPersistentVectorIter};
 use crate::symbol::Symbol;
 use crate::value::{Evaluable, ToValue};
-use std::collections::HashMap;
 
 //
 // This module will hold the core functions and macros that Clojure will

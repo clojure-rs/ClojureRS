@@ -4,7 +4,7 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use crate::value::{ToValue, Value};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum PersistentList {

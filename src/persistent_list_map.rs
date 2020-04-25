@@ -14,7 +14,6 @@
 //! b => {:a 1 :b 3}
 
 use crate::maps::MapEntry;
-use crate::symbol::Symbol;
 use crate::value::Value;
 
 use std::collections::HashMap;
