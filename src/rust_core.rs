@@ -149,7 +149,7 @@ impl ToValue for DoMacro {
 impl IFn for DoMacro {
     fn invoke(&self, args: Vec<&Value>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
-        if args.len() == 0 {
+        if args.is_empty() {
             return vec![Symbol::intern("do").to_rc_value(), Rc::new(Value::Nil)]
                 .into_list()
                 .to_value();
