@@ -67,16 +67,16 @@ pub fn repl() {
     for line in stdin.lock().lines() {
         let line = line.unwrap();
         input_buffer.push_str(&line);
-        let mut remaining_input = remaining_input_buffer.as_str();
+        let mut remaining_input = input_buffer.as_str();
         loop {
             let next_read_parse = reader::try_read(remaining_input);
             match next_read_parse {
-                Ok((_remaining_input_bytes, value)) => {
+                Ok((_remaining_input, value)) => {
                     print!(
                         "{} ",
                         value.eval(Rc::clone(&environment)).to_string_explicit()
                     );
-                    remaining_input_bytes = _remaining_input_bytes;
+                    remaining_input = _remaining_input;
                 }
                 Err(Incomplete(_)) => {
                     break;
