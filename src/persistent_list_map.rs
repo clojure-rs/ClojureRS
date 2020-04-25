@@ -172,6 +172,8 @@ impl fmt::Display for PersistentListMap {
 mod tests {
     use crate::persistent_list_map::*;
     use crate::value::ToValue;
+    use crate::symbol::Symbol;
+
     #[test]
     fn test_persistent_list_map() {
         let empty = PersistentListMap::Empty;
