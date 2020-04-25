@@ -178,25 +178,25 @@ mod tests {
         let empty = PersistentListMap::Empty;
         let map1 = vec![
             MapEntry {
-                key: Symbol::intern("a").to_value(),
+                key: Symbol::intern("a").to_rc_value(),
                 val: 15_i32.to_rc_value(),
             },
             MapEntry {
-                key: Symbol::intern("b").to_value(),
+                key: Symbol::intern("b").to_rc_value(),
                 val: "stuff".to_rc_value(),
             },
         ]
         .into_iter()
         .collect::<PersistentListMap>();
         println!("{}", map1);
-        let map2 = map1.assoc(Symbol::intern("c").to_value(), 100_i32.to_rc_value());
+        let map2 = map1.assoc(Symbol::intern("c").to_rc_value(), 100_i32.to_rc_value());
         println!("{}", map1);
         println!("{}", map2);
-        let map3 = map1.assoc(Symbol::intern("a").to_value(), 100_i32.to_rc_value());
+        let map3 = map1.assoc(Symbol::intern("a").to_rc_value(), 100_i32.to_rc_value());
         println!("{}", map1);
         println!("{}", map2);
         println!("{}", map3);
-        let map4 = map2.assoc(Symbol::intern("a").to_value(), 100_i32.to_rc_value());
+        let map4 = map2.assoc(Symbol::intern("a").to_rc_value(), 100_i32.to_rc_value());
         println!("{}", map1);
         println!("{}", map2);
         println!("{}", map3);
