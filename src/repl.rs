@@ -18,34 +18,33 @@ use nom::Needed::Size;
 //
 pub fn try_eval_file(environment: &Rc<Environment>, filepath: &str) -> Result<(), io::Error> {
     let core = File::open(filepath)?;
-
     let reader = BufReader::new(core);
 
-    let mut remaining_input_buffer = String::from("");
+    let mut input_buffer = String::new();
+
     for line in reader.lines() {
         let line = line?;
-        remaining_input_buffer.push_str(&line);
-        let mut remaining_input_bytes = remaining_input_buffer.as_bytes();
+        input_buffer.push_str(&line);
+        let mut remaining_input = input_buffer.as_str();
         loop {
-            let next_read_parse = reader::try_read(remaining_input_bytes);
+            let next_read_parse = reader::try_read(remaining_input);
             match next_read_parse {
                 Ok((_remaining_input, value)) => {
                     //print!("{} ",value.eval(Rc::clone(&environment)).to_string_explicit());
                     value.eval(Rc::clone(&environment));
-                    remaining_input_bytes = _remaining_input;
-                }
+                    remaining_input = _remaining_input;
+                },
                 Err(Incomplete(Size(1))) => {
-                    remaining_input_buffer =
-                        String::from_utf8(remaining_input_bytes.to_vec()).unwrap();
                     break;
-                }
+                },
                 err => {
                     println!(
                         "Error evaluating file {}; {}",
                         filepath,
                         Value::Condition(format!("Reader Error: {:?}", err))
                     );
-                    remaining_input_buffer = String::from("");
+                    input_buffer.clear();
+                    remaining_input = "";
                     break;
                 }
             }
@@ -64,33 +63,32 @@ pub fn repl() {
 
     print!("user=> ");
     let _ = io::stdout().flush();
-    let mut remaining_input_buffer = String::from("");
+    let mut input_buffer = String::new();
     for line in stdin.lock().lines() {
         let line = line.unwrap();
-        remaining_input_buffer.push_str(&line);
-        let mut remaining_input_bytes = remaining_input_buffer.as_bytes();
+        input_buffer.push_str(&line);
+        let mut remaining_input = input_buffer.as_str();
         loop {
-            let next_read_parse = reader::try_read(remaining_input_bytes);
+            let next_read_parse = reader::try_read(remaining_input);
             match next_read_parse {
-                Ok((_remaining_input_bytes, value)) => {
+                Ok((_remaining_input, value)) => {
                     print!(
                         "{} ",
                         value.eval(Rc::clone(&environment)).to_string_explicit()
                     );
-                    remaining_input_bytes = _remaining_input_bytes;
+                    remaining_input = _remaining_input;
                 }
                 Err(Incomplete(_)) => {
-                    remaining_input_buffer =
-                        String::from_utf8(remaining_input_bytes.to_vec()).unwrap();
                     break;
                 }
                 err => {
                     print!("{}", Value::Condition(format!("Reader Error: {:?}", err)));
-                    remaining_input_buffer = String::from("");
+                    input_buffer.clear();
                     break;
                 }
             }
         }
+        input_buffer.clear();
         println!();
         print!("user=> ");
 	let _ = io::stdout().flush();
