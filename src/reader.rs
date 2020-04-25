@@ -62,7 +62,7 @@ pub fn symbol_parser(input: &[u8]) -> IResult<&[u8], Symbol> {
 // @TODO add negatives
 /// Parses valid integers
 /// Example Successes: 1, 2, 4153,  -12421
-pub fn integer(input: &[u8]) -> IResult<&[u8], i32> {
+pub fn integer_parser(input: &[u8]) -> IResult<&[u8], i32> {
     map_res(take_while1(is_digit), |digits: &[u8]| {
         String::from_utf8(digits.to_vec()).map(|digit_string| digit_string.parse::<i32>().unwrap())
     })(input)
@@ -92,7 +92,7 @@ pub fn to_value_parser<I, O: ToValue>(
 /// Example Failures:
 ///    1.5,  7.1321 , 1423152621625226126431525
 pub fn try_read_i32(input: &[u8]) -> IResult<&[u8], Value> {
-    to_value_parser(integer)(input)
+    to_value_parser(integer_parser)(input)
 }
 
 /// Tries to parse &[u8] into Value::Symbol
