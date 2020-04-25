@@ -261,7 +261,8 @@ pub fn debug_try_read(input: &[u8]) -> IResult<&[u8], Value> {
     reading
 }
 
-/// Consumes one or more whitespaces from the input.
+/// Consumes any whitespace from input, if there is any.
+/// Always succeeds. 
 ///
 /// A whitespace is either an ASCII whitespace or a comma.
 fn consume_clojure_whitespaces(input: &[u8]) -> IResult<&[u8], ()> {
