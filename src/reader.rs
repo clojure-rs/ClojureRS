@@ -28,6 +28,23 @@ use crate::value::{ToValue, Value};
 use std::{iter::FromIterator, rc::Rc};
 
 use std::fs::File;
+//
+// Note; the difference between ours 'parsers'
+//   identifier_parser
+//   symbol_parser
+//   integer_parser
+// And our 'try readers'
+//   try_read_i32
+//   try_read_string
+//   try_read_map
+//   try_read_list
+//   try_read_vector
+//
+// Is our parsers are meant to be be nom parsers, and more primitive in that
+// they can parse any information that we can later use to create a value::Value
+// 
+// Our 'try readers' are a bit higher level, and are specifically supposed to be returning a valid // value::Value or some sort of failure.
+//
 
 /// Returns the first character of a string slice.
 ///
@@ -134,7 +151,7 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
 // @TODO add negatives
 /// Parses valid integers
 /// Example Successes: 1, 2, 4153,  -12421
-pub fn integer(input: &str) -> IResult<&str, i32> {
+pub fn integer_parser(input: &str) -> IResult<&str, i32> {
     named!(integer_lexer<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
 
     integer_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
@@ -164,7 +181,7 @@ pub fn to_value_parser<I, O: ToValue>(
 /// Example Failures:
 ///    1.5,  7.1321 , 1423152621625226126431525
 pub fn try_read_i32(input: &str) -> IResult<&str, Value> {
-    to_value_parser(integer)(input)
+    to_value_parser(integer_parser)(input)
 }
 
 /// Tries to parse &str into Value::Symbol
@@ -289,7 +306,8 @@ pub fn debug_try_read(input: &str) -> IResult<&str, Value> {
     reading
 }
 
-/// Consumes one or more whitespaces from the input.
+/// Consumes any whitespace from input, if there is any.
+/// Always succeeds. 
 ///
 /// A whitespace is either an ASCII whitespace or a comma.
 fn consume_clojure_whitespaces(input: &str) -> IResult<&str, ()> {
