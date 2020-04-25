@@ -30,6 +30,23 @@ use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 use std::fs::File;
+//
+// Note; the difference between ours 'parsers'
+//   identifier_parser
+//   symbol_parser
+//   integer_parser
+// And our 'try readers'
+//   try_read_i32
+//   try_read_string
+//   try_read_map
+//   try_read_list
+//   try_read_vector
+//
+// Is our parsers are meant to be be nom parsers, and more primitive in that
+// they can parse any information that we can later use to create a value::Value
+// 
+// Our 'try readers' are a bit higher level, and are specifically supposed to be returning a valid // value::Value or some sort of failure.
+//
 
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
