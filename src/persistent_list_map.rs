@@ -14,7 +14,6 @@
 //! b => {:a 1 :b 3}
 
 use crate::maps::MapEntry;
-use crate::symbol::Symbol;
 use crate::value::Value;
 
 use std::collections::HashMap;
@@ -172,7 +171,9 @@ impl fmt::Display for PersistentListMap {
 #[cfg(test)]
 mod tests {
     use crate::persistent_list_map::*;
+    use crate::symbol::Symbol;
     use crate::value::ToValue;
+
     #[test]
     fn test_persistent_list_map() {
         let empty = PersistentListMap::Empty;

@@ -1,5 +1,5 @@
 use std::fmt;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Symbol {

@@ -9,25 +9,17 @@
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_while1},
-    character::complete::multispace0,
-    combinator::map_res,
-    error::convert_error,
-    map,
-    sequence::{preceded, terminated},
-    take_until, terminated, IResult,
+    branch::alt, bytes::complete::tag, map, sequence::preceded, take_until, terminated, IResult,
 };
 
 use crate::maps::MapEntry;
 use crate::persistent_list::ToPersistentList;
-use crate::persistent_list_map::{PersistentListMap, ToPersistentListMap};
+use crate::persistent_list_map::ToPersistentListMap;
 use crate::persistent_vector::ToPersistentVector;
 use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
-use std::{iter::FromIterator, rc::Rc};
+use std::rc::Rc;
 
-use std::fs::File;
 //
 // Note; the difference between ours 'parsers'
 //   identifier_parser
@@ -42,7 +34,7 @@ use std::fs::File;
 //
 // Is our parsers are meant to be be nom parsers, and more primitive in that
 // they can parse any information that we can later use to create a value::Value
-// 
+//
 // Our 'try readers' are a bit higher level, and are specifically supposed to be returning a valid // value::Value or some sort of failure.
 //
 
@@ -203,6 +195,7 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
     named!(quotation<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("\"")));
 
     let (rest_input, _) = quotation(input)?;
+
     named!(
         string_parser<&str, String>,
         map!(
@@ -211,7 +204,7 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
         )
     );
 
-    to_value_parser(string_parser)(input)
+    to_value_parser(string_parser)(rest_input)
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
@@ -307,7 +300,7 @@ pub fn debug_try_read(input: &str) -> IResult<&str, Value> {
 }
 
 /// Consumes any whitespace from input, if there is any.
-/// Always succeeds. 
+/// Always succeeds.
 ///
 /// A whitespace is either an ASCII whitespace or a comma.
 fn consume_clojure_whitespaces(input: &str) -> IResult<&str, ()> {

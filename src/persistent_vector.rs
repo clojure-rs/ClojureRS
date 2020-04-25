@@ -1,7 +1,7 @@
 use std::convert::From;
 use std::fmt;
 use std::fmt::Debug;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::iter::FromIterator;
 use std::rc::Rc;
 

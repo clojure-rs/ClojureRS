@@ -15,7 +15,6 @@ use crate::value::Value;
 use dyn_clone::DynClone;
 
 use std::fmt::Debug;
-use std::hash::Hash;
 
 //
 // Based on: clojure.lang.IFn

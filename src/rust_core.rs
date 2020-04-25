@@ -3,16 +3,14 @@ use std::rc::Rc;
 
 use crate::environment::Environment;
 use crate::ifn::IFn;
-use crate::lambda::Fn;
 use crate::persistent_list::{
     PersistentList,
     PersistentList::{Cons, Empty},
     ToPersistentList, ToPersistentListIter,
 };
-use crate::persistent_vector::{PersistentVector, ToPersistentVector, ToPersistentVectorIter};
+use crate::persistent_vector::{PersistentVector, ToPersistentVectorIter};
 use crate::symbol::Symbol;
 use crate::value::{Evaluable, ToValue};
-use std::collections::HashMap;
 
 //
 // This module will hold the core functions and macros that Clojure will
@@ -151,7 +149,7 @@ impl ToValue for DoMacro {
 impl IFn for DoMacro {
     fn invoke(&self, args: Vec<&Value>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
-        if args.len() == 0 {
+        if args.is_empty() {
             return vec![Symbol::intern("do").to_rc_value(), Rc::new(Value::Nil)]
                 .into_list()
                 .to_value();

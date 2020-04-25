@@ -2,24 +2,21 @@ use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::lambda;
 use crate::maps::MapEntry;
-use crate::persistent_list::PersistentList::{Cons, Empty};
+use crate::persistent_list::PersistentList::Cons;
 use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListIter};
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
-use crate::persistent_vector::{PersistentVector, ToPersistentVector, ToPersistentVectorIter};
+use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
 
 extern crate rand;
 use rand::Rng;
 
-use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
 use std::rc::Rc;
-
-use std::ops::Deref;
+use std::cmp::{Ord, Ordering};
 
 // @TODO Change IFn's name -- IFn is a function, not an IFn.
 //       The body it executes just happens to be an the IFn.
@@ -82,8 +79,8 @@ impl PartialEq for Value {
         }
         // Equality not defined on functions, similar to Clojure
         // Change this perhaps? Diverge?
-        if let IFn(ifn) = self {
-            if let IFn(ifn2) = other {
+        if let IFn(_) = self {
+            if let IFn(_) = other {
                 return false;
             }
         }
@@ -445,7 +442,7 @@ impl Value {
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
 
-                if arg_rc_values.len() < 1 {
+                if arg_rc_values.is_empty() {
                     return Some(Rc::new(Value::Condition(format!(
                         "Wrong number of arguments (Given: {}, Expect: >=1",
                         arg_rc_values.len()
@@ -504,7 +501,8 @@ impl Value {
                 let arg_rc_values = PersistentList::iter(args)
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
-                if arg_rc_values.len() < 1 || arg_rc_values.len() > 2 {
+                if arg_rc_values.is_empty() || arg_rc_values.len() > 2 {
+                    // @TODO: we give 0 but it may be 3, 4, 5...
                     return Some(Rc::new(Value::Condition(std::string::String::from(
                         "Wrong number of arguments given to let (Given: 0, Expecting: 1 or 2)",
                     ))));
@@ -550,19 +548,16 @@ impl Value {
             // quote just involves an infinite loop of macroexpansion. Or so it seems
             //
             QuoteMacro => {
-                if args.len() > 1 {
-                    Some(Rc::new(Value::Condition(format!(
+                match args.len().cmp(&1) {
+                    Ordering::Greater => Some(Rc::new(Value::Condition(format!(
                         "Wrong number of arguments (Given: {}, Expected: 1)",
                         args.len()
-                    ))))
-                }
-                // @TODO define is_empty()
-                else if args.len() < 1 {
-                    Some(Rc::new(Value::Condition(std::string::String::from(
+                    )))),
+                    // @TODO define is_empty()
+                    Ordering::Less => Some(Rc::new(Value::Condition(std::string::String::from(
                         "Wrong number of arguments (Given: 0, Expected: 1)",
-                    ))))
-                } else {
-                    Some(args.nth(0))
+                    )))),
+                    Ordering::Equal => Some(args.nth(0)),
                 }
             }
             //
@@ -696,7 +691,7 @@ impl Evaluable for Rc<Value> {
                     //
                     // Sounds less correct but also seems clearer; the current error message relies on
                     // you pretty much already knowing when this error message is called
-                    try_apply_ifn.unwrap_or(Rc::new(Value::Condition(format!(
+                    try_apply_ifn.unwrap_or_else(|| Rc::new(Value::Condition(format!(
                         "Execution Error: {} cannot be cast to clojure.lang.IFn",
                         ifn.type_tag()
                     ))))
