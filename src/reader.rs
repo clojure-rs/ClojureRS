@@ -203,6 +203,7 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
     named!(quotation<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("\"")));
 
     let (rest_input, _) = quotation(input)?;
+
     named!(
         string_parser<&str, String>,
         map!(
@@ -211,7 +212,7 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
         )
     );
 
-    to_value_parser(string_parser)(input)
+    to_value_parser(string_parser)(rest_input)
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
