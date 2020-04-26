@@ -17,3 +17,6 @@ Put simply, Clojure implemented atop Rust!  For now, a Clojure interpreter imple
      Check clojureRS.org (the file, not website) for more notes about
      the design of the language, which should grow as the program
      grows.
+** Discussion
+  Come join us on discord!
+  [[https://discord.gg/aS5Sa8p]]
