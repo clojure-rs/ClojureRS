@@ -1,7 +1,9 @@
-* ClojureRS 
-[[https://i.imgur.com/rpioVBP.png]]
+[[https://i.imgur.com/SgRDG6z.png]]
 
-  Put simply, Clojure implemented atop Rust!  For now, a Clojure interpreter implemented in Rust. 
+Put simply, Clojure implemented atop Rust!  For now, a Clojure interpreter implemented in Rust. 
+** 
+[[https://i.imgur.com/rpioVBP.png]]
+/The repl in action/
 
 ** Project Goals:
   1. To create a version of Clojure that gets to exist independent of a particular platform  
@@ -15,3 +17,6 @@
      Check clojureRS.org (the file, not website) for more notes about
      the design of the language, which should grow as the program
      grows.
+** Discussion
+  Come join us on discord!
+  [[https://discord.gg/aS5Sa8p]]

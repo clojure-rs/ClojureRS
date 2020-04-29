@@ -1,8 +1,8 @@
 use std::fs::File;
+use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
-use std::io;
 
 use crate::environment::Environment;
 use crate::reader;

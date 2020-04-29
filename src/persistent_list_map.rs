@@ -171,8 +171,8 @@ impl fmt::Display for PersistentListMap {
 #[cfg(test)]
 mod tests {
     use crate::persistent_list_map::*;
-    use crate::value::ToValue;
     use crate::symbol::Symbol;
+    use crate::value::ToValue;
 
     #[test]
     fn test_persistent_list_map() {
