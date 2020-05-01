@@ -8,9 +8,7 @@
 //! not;  since this is about being a 'free-er' Clojure, especially since it can't compete with it in raw
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
-use nom::{
-    branch::alt, bytes::complete::tag, map, sequence::preceded, take_until, terminated, IResult,
-};
+use nom::{branch::alt, bytes::complete::tag, map, sequence::preceded, take_until, terminated, IResult, Needed};
 
 use crate::maps::MapEntry;
 use crate::persistent_list::ToPersistentList;
@@ -111,6 +109,12 @@ fn is_non_numeric_identifier_char(chr: char) -> bool {
     chr.is_alphabetic() || "|?<>+-_=^%&$*!".contains(chr)
 }
 
+/// Returns true if given character is a minus character
+///   - `-`,
+fn is_minus_char(chr: char) -> bool {
+    chr == '-'
+}
+
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
 /// Example Failures:  'a,  12b,   ,cat  
@@ -140,12 +144,25 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     identifier_parser(input).map(|(rest_input, name)| (rest_input, Symbol::intern(&name)))
 }
 
-// @TODO add negatives
 /// Parses valid integers
 /// Example Successes: 1, 2, 4153,  -12421
+///
+///
 pub fn integer_parser(input: &str) -> IResult<&str, i32> {
-    named!(integer_lexer<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
-
+    named!(integer_sign<&str, &str>,
+       map!(
+           opt!(take_while_m_n!(1, 1, is_minus_char)),
+           |maybe_minus| maybe_minus.unwrap_or("")
+       )
+    );
+    named!(integer_tail<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
+    named!(integer_lexer <&str, String>,
+         do_parse!(
+             sign: integer_sign >>
+             rest_input: integer_tail >>
+             (format!("{}{}",sign,rest_input))
+         )
+    );
     integer_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
 }
 // Currently used to create 'try_readers', which are readers (or
@@ -170,6 +187,7 @@ pub fn to_value_parser<I, O: ToValue>(
 ///    1 => Value::I32(1),
 ///    5 => Value::I32(5),
 ///    1231415 => Value::I32(1231415)
+///    -2 => Value::I32(-2)
 /// Example Failures:
 ///    1.5,  7.1321 , 1423152621625226126431525
 pub fn try_read_i32(input: &str) -> IResult<&str, Value> {
@@ -208,7 +226,7 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
-/// Tries to parse &str into Value::PersistentListMap, or some other Value::..Map   
+/// Tries to parse &str into Value::PersistentListMap, or some other Value::..Map
 /// Example Successes:
 ///    {:a 1} => Value::PersistentListMap {PersistentListMap { MapEntry { :a, 1} .. ]})
 pub fn try_read_map(input: &str) -> IResult<&str, Value> {
@@ -282,8 +300,8 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
         alt((
             try_read_map,
             try_read_string,
-            try_read_symbol,
             try_read_i32,
+            try_read_symbol,
             try_read_list,
             try_read_vector,
         )),
@@ -313,4 +331,220 @@ fn consume_clojure_whitespaces(input: &str) -> IResult<&str, ()> {
 /// Clojure defines a whitespace as either a comma or an unicode whitespace.
 fn is_clojure_whitespace(c: char) -> bool {
     c.is_whitespace() || c == ','
+}
+
+#[cfg(test)]
+mod tests {
+
+    mod first_char_tests {
+        use crate::reader::first_char;
+
+        #[test]
+        fn first_char_in_single_char_string() {
+            assert_eq!('s', first_char("s"));
+        }
+
+        #[test]
+        fn first_char_in_multi_char_string() {
+            assert_eq!('a', first_char("ab"));
+        }
+
+        #[test]
+        #[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
+        fn first_char_in_empty_string_panics() {
+            first_char("");
+        }
+    }
+
+    mod cons_str_tests {
+        use crate::reader::cons_str;
+
+        #[test]
+        fn concatenates_char_to_str_beginning() {
+            assert_eq!("str", cons_str('s', "tr"));
+        }
+    }
+
+    mod identifier_parser_tests {
+        use crate::reader::identifier_parser;
+
+        #[test]
+        fn identifier_parser_parses_valid_identifier() {
+            assert_eq!(Some((" this", String::from("input->output?"))), identifier_parser("input->output? this").ok());
+        }
+
+        #[test]
+        fn identifier_parser_does_not_parse_valid_identifier() {
+            assert_eq!(None, identifier_parser("1input->output? this").ok());
+        }
+
+        #[test]
+        fn identifier_parser_does_not_parse_empty_input() {
+            assert_eq!(None, identifier_parser("").ok());
+        }
+    }
+
+    mod symbol_parser_tests {
+        use crate::reader::symbol_parser;
+        use crate::symbol::Symbol;
+
+        #[test]
+        fn identifier_parser_parses_valid_identifier() {
+            assert_eq!(Some((" this", Symbol { name: String::from("input->output?")})), symbol_parser("input->output? this").ok());
+        }
+
+        #[test]
+        fn identifier_parser_does_not_parse_valid_identifier() {
+            assert_eq!(None, symbol_parser("1input->output? this").ok());
+        }
+
+        #[test]
+        fn identifier_parser_does_not_parse_empty_input() {
+            assert_eq!(None, symbol_parser("").ok());
+        }
+    }
+
+    mod integer_parser_tests {
+        use crate::reader::{integer_parser, debug_try_read};
+
+        #[test]
+        fn integer_parser_parses_integer_one() {
+            let s = "1 ";
+            assert_eq!(Some((" ", 1)), integer_parser(s).ok());
+        }
+
+        #[test]
+        fn integer_parser_parses_integer_zero() {
+            let s = "0 ";
+            assert_eq!(Some((" ", 0)), integer_parser(s).ok());
+        }
+
+        #[test]
+        fn integer_parser_parses_integer_negative_one() {
+            let s = "-1 ";
+            assert_eq!(Some((" ", -1)), integer_parser(s).ok());
+        }
+
+        #[test]
+        //#[should_panic(expected = "called `Result::unwrap()` on an `Err` value: ParseIntError { kind: InvalidDigit }")]
+        fn integer_parser_parses_and_fails() {
+            let s = "-1-2 ";
+            assert_eq!(Some(("-2 ", -1)), integer_parser(s).ok());
+        }
+
+    }
+
+    mod try_read_symbol_tests {
+        use crate::value::Value;
+        use crate::symbol::Symbol;
+        use crate::reader::try_read_symbol;
+
+        #[test]
+        fn try_read_minus_as_valid_symbol_test() {
+            assert_eq!(Value::Symbol(Symbol { name: String::from("-")}) , try_read_symbol("- ").unwrap().1);
+        }
+    }
+
+    mod try_read_tests {
+        use crate::reader::try_read;
+        use crate::value::{Value};
+        use crate::symbol::Symbol;
+        use crate::persistent_list_map;
+        use crate::persistent_list;
+        use crate::persistent_vector;
+        use crate::value::Value::{PersistentListMap, PersistentList, PersistentVector};
+        use crate::maps::MapEntry;
+        use std::rc::Rc;
+
+        #[test]
+        fn try_read_empty_map_test() {
+            assert_eq!(PersistentListMap(persistent_list_map::PersistentListMap::Empty), try_read("{} ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_string_test() {
+            assert_eq!(Value::String(String::from("a string")), try_read("\"a string\" ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_int_test() {
+            assert_eq!(Value::I32(1), try_read("1 ").ok().unwrap().1);
+
+        }
+
+        #[test]
+        fn try_read_negative_int_test() {
+            assert_eq!(Value::I32(-1), try_read("-1 ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_negative_int_with_second_dash_test() {
+            assert_eq!(Value::I32(-1), try_read("-1-2 ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_valid_symbol_test() {
+            assert_eq!(Value::Symbol(Symbol { name: String::from("my-symbol")}) , try_read("my-symbol ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_minus_as_valid_symbol_test() {
+            assert_eq!(Value::Symbol(Symbol { name: String::from("-")}) , try_read("- ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_minus_prefixed_as_valid_symbol_test() {
+            assert_eq!(Value::Symbol(Symbol { name: String::from("-prefixed")}) , try_read("-prefixed ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_empty_list_test() {
+            assert_eq!(PersistentList(persistent_list::PersistentList::Empty), try_read("() ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_empty_vector_test() {
+            assert_eq!(PersistentVector(persistent_vector::PersistentVector { vals: [].to_vec() }), try_read("[] ").ok().unwrap().1);
+        }
+
+
+    }
+
+    mod consume_clojure_whitespaces_tests {
+        use crate::reader::consume_clojure_whitespaces;
+        #[test]
+        fn consume_whitespaces_from_input() {
+            let s =  ", ,,  ,1, 2, 3, 4 5,,6 ";
+            assert_eq!(Some(("1, 2, 3, 4 5,,6 ", ())), consume_clojure_whitespaces(&s).ok());
+        }
+        #[test]
+        fn consume_whitespaces_from_empty_input() {
+            let s =  "";
+            assert_eq!(None, consume_clojure_whitespaces(&s).ok());
+        }
+        #[test]
+        fn consume_whitespaces_from_input_no_whitespace() {
+            let s =  "1, 2, 3";
+            assert_eq!(Some(("1, 2, 3", ())), consume_clojure_whitespaces(&s).ok());
+        }
+    }
+
+    mod is_clojure_whitespace_tests {
+        use crate::reader::is_clojure_whitespace;
+        #[test]
+        fn comma_is_clojure_whitespace() {
+            assert_eq!(true, is_clojure_whitespace(','));
+        }
+
+        #[test]
+        fn unicode_whitespace_is_clojure_whitespace() {
+            assert_eq!(true, is_clojure_whitespace(' '));
+        }
+
+        #[test]
+        fn character_is_not_clojure_whitespace() {
+            assert_eq!(false, is_clojure_whitespace('a'));
+        }
+    }
+
 }
