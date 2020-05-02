@@ -15,6 +15,7 @@ mod rust_core;
 mod symbol;
 mod type_tag;
 mod value;
+mod error_message;
 
 fn main() {
     //

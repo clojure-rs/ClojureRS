@@ -12,7 +12,9 @@ pub enum TypeTag {
     // Experimental; may make no sense at runtime, as we will likely be unable to take the value of a macro
     Macro,
     String,
-    Nil,
+    Integer,
+    ISeq,
+    Nil
 }
 use TypeTag::*;
 impl fmt::Display for TypeTag {
@@ -28,6 +30,8 @@ impl fmt::Display for TypeTag {
             PersistentListMap => std::string::String::from("clojure.lang.PersistentListMap"),
             Macro => std::string::String::from("clojure.lang.Macro"),
             TypeTag::String => std::string::String::from("rust.std.string.String"),
+            TypeTag::Integer => std::string::String::from("clojure.lang.Integer"),
+            ISeq => std::string::String::from("clojure.lang.ISeq"),
             Nil => std::string::String::from("clojure.lang.Nil"),
         };
         write!(f, "{}", str)
