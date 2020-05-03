@@ -18,6 +18,7 @@ use crate::persistent_list::ToPersistentList;
 use crate::persistent_list_map::ToPersistentListMap;
 use crate::persistent_vector::ToPersistentVector;
 use crate::symbol::Symbol;
+use crate::keyword::Keyword;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
@@ -198,6 +199,23 @@ pub fn try_read_i32(input: &str) -> IResult<&str, Value> {
     to_value_parser(integer_parser)(input)
 }
 
+// Perhaps generalize this into reader macros 
+/// Tries to parse &str into Value::Keyword 
+/// Example Successes:
+///    :a                    => Value::Keyword(Keyword { sym: Symbol { name: "a" })
+///    :cat-dog              => Value::Keyword(Keyword { sym: Symbol { name: "cat-dog" }) 
+/// Example Failures:
+///    :12 :'a 
+pub fn try_read_keyword(input: &str) -> IResult<&str, Value> {
+    named!(keyword_colon<&str, &str>, preceded!(consume_clojure_whitespaces, tag!(":")));
+
+    let (rest_input, _) = keyword_colon(input)?;
+    let (rest_input,symbol) = symbol_parser(rest_input)?;
+
+    let keyword_value = Keyword { sym: symbol }.to_value();
+    Ok((rest_input,keyword_value))
+}
+
 /// Tries to parse &str into Value::Symbol
 /// Example Successes:
 ///    a                    => Value::Symbol(Symbol { name: "a" })
@@ -306,6 +324,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_string,
             try_read_i32,
             try_read_symbol,
+	    try_read_keyword,
             try_read_list,
             try_read_vector,
         )),

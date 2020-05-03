@@ -7,6 +7,7 @@ use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListI
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
+use crate::keyword::Keyword;
 use crate::type_tag::TypeTag;
 
 extern crate rand;
@@ -28,6 +29,7 @@ use std::rc::Rc;
 pub enum Value {
     I32(i32),
     Symbol(Symbol),
+    Keyword(Keyword),
     IFn(Rc<dyn IFn>),
     //
     // Special case functions
@@ -75,6 +77,12 @@ impl PartialEq for Value {
         if let Symbol(sym) = self {
             if let Symbol(sym2) = other {
                 return sym == sym2;
+            }
+        }
+
+	if let Keyword(kw) = self {
+            if let Keyword(kw2) = other {
+                return kw == kw2;
             }
         }
         // Equality not defined on functions, similar to Clojure
@@ -173,6 +181,7 @@ impl Hash for Value {
         match self {
             I32(i) => i.hash(state),
             Symbol(sym) => sym.hash(state),
+	    Keyword(kw) => kw.hash(state),
             IFn(_) => {
                 let mut rng = rand::thread_rng();
                 let n2: u16 = rng.gen();
@@ -208,6 +217,7 @@ impl fmt::Display for Value {
         let str = match self {
             I32(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
+	    Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
             LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
             PersistentList(plist) => plist.to_string(),
@@ -245,6 +255,7 @@ impl Value {
         match self {
             Value::I32(_) => TypeTag::I32,
             Value::Symbol(_) => TypeTag::Symbol,
+	    Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
             Value::LexicalEvalFn => TypeTag::IFn,
             Value::PersistentList(_) => TypeTag::PersistentList,
@@ -592,6 +603,11 @@ impl ToValue for str {
 impl ToValue for Symbol {
     fn to_value(&self) -> Value {
         Value::Symbol(self.clone())
+    }
+}
+impl ToValue for Keyword {
+    fn to_value(&self) -> Value {
+        Value::Keyword(self.clone())
     }
 }
 impl ToValue for Rc<dyn IFn> {

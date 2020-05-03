@@ -4,6 +4,7 @@ use std::fmt;
 pub enum TypeTag {
     I32,
     Symbol,
+    Keyword,
     IFn,
     Condition,
     PersistentList,
@@ -21,6 +22,7 @@ impl fmt::Display for TypeTag {
         let str = match self {
             I32 => std::string::String::from("rust.std.i32"),
             Symbol => std::string::String::from("clojure.lang.Symbol"),
+	    Keyword => std::string::String::from("clojure.lang.Keyword"),
             IFn => std::string::String::from("clojure.lang.Function"),
             Condition => std::string::String::from("clojure.lang.Condition"),
             PersistentList => std::string::String::from("clojure.lang.PersistentList"),

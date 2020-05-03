@@ -14,6 +14,7 @@ mod reader;
 mod repl;
 mod rust_core;
 mod symbol;
+mod keyword;
 mod type_tag;
 mod util;
 mod value;
