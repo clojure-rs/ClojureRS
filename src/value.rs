@@ -12,11 +12,11 @@ use crate::type_tag::TypeTag;
 extern crate rand;
 use rand::Rng;
 
+use std::cmp::{Ord, Ordering};
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
-use std::cmp::{Ord, Ordering};
 
 // @TODO Change IFn's name -- IFn is a function, not an IFn.
 //       The body it executes just happens to be an the IFn.
@@ -691,10 +691,12 @@ impl Evaluable for Rc<Value> {
                     //
                     // Sounds less correct but also seems clearer; the current error message relies on
                     // you pretty much already knowing when this error message is called
-                    try_apply_ifn.unwrap_or_else(|| Rc::new(Value::Condition(format!(
-                        "Execution Error: {} cannot be cast to clojure.lang.IFn",
-                        ifn.type_tag()
-                    ))))
+                    try_apply_ifn.unwrap_or_else(|| {
+                        Rc::new(Value::Condition(format!(
+                            "Execution Error: {} cannot be cast to clojure.lang.IFn",
+                            ifn.type_tag()
+                        )))
+                    })
                 }
                 // () evals to ()
                 PersistentList::Empty => Rc::new(Value::PersistentList(PersistentList::Empty)),

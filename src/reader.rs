@@ -405,7 +405,10 @@ mod tests {
 
         #[test]
         fn identifier_parser_parses_valid_identifier() {
-            assert_eq!(Some((" this", String::from("input->output?"))), identifier_parser("input->output? this").ok());
+            assert_eq!(
+                Some((" this", String::from("input->output?"))),
+                identifier_parser("input->output? this").ok()
+            );
         }
 
         #[test]
@@ -425,7 +428,15 @@ mod tests {
 
         #[test]
         fn identifier_parser_parses_valid_identifier() {
-            assert_eq!(Some((" this", Symbol { name: String::from("input->output?")})), symbol_parser("input->output? this").ok());
+            assert_eq!(
+                Some((
+                    " this",
+                    Symbol {
+                        name: String::from("input->output?")
+                    }
+                )),
+                symbol_parser("input->output? this").ok()
+            );
         }
 
         #[test]
@@ -440,7 +451,7 @@ mod tests {
     }
 
     mod integer_parser_tests {
-        use crate::reader::{integer_parser, debug_try_read};
+        use crate::reader::{debug_try_read, integer_parser};
 
         #[test]
         fn integer_parser_parses_integer_one() {
@@ -466,45 +477,54 @@ mod tests {
             let s = "-1-2 ";
             assert_eq!(Some(("-2 ", -1)), integer_parser(s).ok());
         }
-
     }
 
     mod try_read_symbol_tests {
-        use crate::value::Value;
-        use crate::symbol::Symbol;
         use crate::reader::try_read_symbol;
+        use crate::symbol::Symbol;
+        use crate::value::Value;
 
         #[test]
         fn try_read_minus_as_valid_symbol_test() {
-            assert_eq!(Value::Symbol(Symbol { name: String::from("-")}) , try_read_symbol("- ").unwrap().1);
+            assert_eq!(
+                Value::Symbol(Symbol {
+                    name: String::from("-")
+                }),
+                try_read_symbol("- ").unwrap().1
+            );
         }
     }
 
     mod try_read_tests {
-        use crate::reader::try_read;
-        use crate::value::{Value};
-        use crate::symbol::Symbol;
-        use crate::persistent_list_map;
-        use crate::persistent_list;
-        use crate::persistent_vector;
-        use crate::value::Value::{PersistentListMap, PersistentList, PersistentVector};
         use crate::maps::MapEntry;
+        use crate::persistent_list;
+        use crate::persistent_list_map;
+        use crate::persistent_vector;
+        use crate::reader::try_read;
+        use crate::symbol::Symbol;
+        use crate::value::Value;
+        use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
         use std::rc::Rc;
 
         #[test]
         fn try_read_empty_map_test() {
-            assert_eq!(PersistentListMap(persistent_list_map::PersistentListMap::Empty), try_read("{} ").ok().unwrap().1);
+            assert_eq!(
+                PersistentListMap(persistent_list_map::PersistentListMap::Empty),
+                try_read("{} ").ok().unwrap().1
+            );
         }
 
         #[test]
         fn try_read_string_test() {
-            assert_eq!(Value::String(String::from("a string")), try_read("\"a string\" ").ok().unwrap().1);
+            assert_eq!(
+                Value::String(String::from("a string")),
+                try_read("\"a string\" ").ok().unwrap().1
+            );
         }
 
         #[test]
         fn try_read_int_test() {
             assert_eq!(Value::I32(1), try_read("1 ").ok().unwrap().1);
-
         }
 
         #[test]
@@ -519,47 +539,69 @@ mod tests {
 
         #[test]
         fn try_read_valid_symbol_test() {
-            assert_eq!(Value::Symbol(Symbol { name: String::from("my-symbol")}) , try_read("my-symbol ").ok().unwrap().1);
+            assert_eq!(
+                Value::Symbol(Symbol {
+                    name: String::from("my-symbol")
+                }),
+                try_read("my-symbol ").ok().unwrap().1
+            );
         }
 
         #[test]
         fn try_read_minus_as_valid_symbol_test() {
-            assert_eq!(Value::Symbol(Symbol { name: String::from("-")}) , try_read("- ").ok().unwrap().1);
+            assert_eq!(
+                Value::Symbol(Symbol {
+                    name: String::from("-")
+                }),
+                try_read("- ").ok().unwrap().1
+            );
         }
 
         #[test]
         fn try_read_minus_prefixed_as_valid_symbol_test() {
-            assert_eq!(Value::Symbol(Symbol { name: String::from("-prefixed")}) , try_read("-prefixed ").ok().unwrap().1);
+            assert_eq!(
+                Value::Symbol(Symbol {
+                    name: String::from("-prefixed")
+                }),
+                try_read("-prefixed ").ok().unwrap().1
+            );
         }
 
         #[test]
         fn try_read_empty_list_test() {
-            assert_eq!(PersistentList(persistent_list::PersistentList::Empty), try_read("() ").ok().unwrap().1);
+            assert_eq!(
+                PersistentList(persistent_list::PersistentList::Empty),
+                try_read("() ").ok().unwrap().1
+            );
         }
 
         #[test]
         fn try_read_empty_vector_test() {
-            assert_eq!(PersistentVector(persistent_vector::PersistentVector { vals: [].to_vec() }), try_read("[] ").ok().unwrap().1);
+            assert_eq!(
+                PersistentVector(persistent_vector::PersistentVector { vals: [].to_vec() }),
+                try_read("[] ").ok().unwrap().1
+            );
         }
-
-
     }
 
     mod consume_clojure_whitespaces_tests {
         use crate::reader::consume_clojure_whitespaces;
         #[test]
         fn consume_whitespaces_from_input() {
-            let s =  ", ,,  ,1, 2, 3, 4 5,,6 ";
-            assert_eq!(Some(("1, 2, 3, 4 5,,6 ", ())), consume_clojure_whitespaces(&s).ok());
+            let s = ", ,,  ,1, 2, 3, 4 5,,6 ";
+            assert_eq!(
+                Some(("1, 2, 3, 4 5,,6 ", ())),
+                consume_clojure_whitespaces(&s).ok()
+            );
         }
         #[test]
         fn consume_whitespaces_from_empty_input() {
-            let s =  "";
+            let s = "";
             assert_eq!(None, consume_clojure_whitespaces(&s).ok());
         }
         #[test]
         fn consume_whitespaces_from_input_no_whitespace() {
-            let s =  "1, 2, 3";
+            let s = "1, 2, 3";
             assert_eq!(Some(("1, 2, 3", ())), consume_clojure_whitespaces(&s).ok());
         }
     }
@@ -581,5 +623,4 @@ mod tests {
             assert_eq!(false, is_clojure_whitespace('a'));
         }
     }
-
 }
