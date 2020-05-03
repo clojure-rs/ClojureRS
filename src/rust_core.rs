@@ -281,7 +281,6 @@ impl IFn for AssocFn {
             for (key_value, val_value) in args.into_iter().skip(1).tuples() {
                 let key = key_value.to_rc_value();
                 let val = val_value.to_rc_value();
-                println!("key: {:?}, val: {:?}", key, val);
                 retval = pmap.assoc(key, val);
             }
             return Value::PersistentListMap(retval);

@@ -227,6 +227,18 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
     to_value_parser(symbol_parser)(input)
 }
 
+
+/// Tries to parse a &str that says 'nil' into Value::Nil
+/// Example Successes:
+///    nil => Value::Nil
+pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
+    named!(nil<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("nil")));
+
+    let (rest_input, _) = nil(input)?;
+    
+    Ok((rest_input,Value::Nil))
+}
+
 // @TODO allow escaped strings
 /// Tries to parse &str into Value::String
 /// Example Successes:
@@ -320,6 +332,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
     preceded(
         consume_clojure_whitespaces,
         alt((
+	    try_read_nil,
             try_read_map,
             try_read_string,
             try_read_i32,

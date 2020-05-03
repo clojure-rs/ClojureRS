@@ -85,6 +85,7 @@ impl Environment {
         let def_macro = Value::DefMacro {};
         let fn_macro = Value::FnMacro {};
         let defmacro_macro = Value::DefmacroMacro {};
+	let if_macro = Value::IfMacro {};
         let environment = Rc::new(Environment::new_main_environment());
 
         let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
@@ -106,6 +107,7 @@ impl Environment {
         environment.insert(Symbol::intern("do"), do_macro.to_rc_value());
         environment.insert(Symbol::intern("def"), def_macro.to_rc_value());
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
+	environment.insert(Symbol::intern("if"), if_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
         environment.insert(
