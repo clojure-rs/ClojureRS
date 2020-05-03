@@ -82,7 +82,7 @@ fn cons_str(head: char, tail: &str) -> String {
 ///   - `*`,
 ///   - `!`,
 fn is_identifier_char(chr: char) -> bool {
-    chr.is_alphanumeric() || "|?<>+-_=^%&$*!".contains(chr)
+    chr.is_alphanumeric() || "|?<>+-_=^%&$*!/".contains(chr)
 }
 
 /// Returns whether if a character can be in the head of an identifier.
