@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Read;
 use std::io::Write;
 
 use crate::environment::Environment;
@@ -11,86 +12,81 @@ use crate::value::Value;
 use std::rc::Rc;
 
 use nom::Err::Incomplete;
+use nom::IResult;
 use nom::Needed::Size;
 
-//
-// Will possibly just add this to our environment, or turn this into a parallel of clojure.lang.RT
-//
-pub fn try_eval_file(environment: &Rc<Environment>, filepath: &str) -> Result<(), io::Error> {
-    let core = File::open(filepath)?;
-    let reader = BufReader::new(core);
-
-    let mut input_buffer = String::new();
-
-    for line in reader.lines() {
-        let line = line?;
-        input_buffer.push_str(&line);
-        let mut remaining_input = input_buffer.as_str();
-        loop {
-            let next_read_parse = reader::try_read(remaining_input);
-            match next_read_parse {
-                Ok((_remaining_input, value)) => {
-                    //print!("{} ",value.eval(Rc::clone(&environment)).to_string_explicit());
-                    value.eval(Rc::clone(&environment));
-                    remaining_input = _remaining_input;
-                }
-                Err(Incomplete(Size(1))) => {
-                    break;
-                }
-                err => {
-                    println!(
-                        "Error evaluating file {}; {}",
-                        filepath,
-                        Value::Condition(format!("Reader Error: {:?}", err))
-                    );
-                    input_buffer.clear();
-                    // remaining_input = "";
-                    break;
-                }
-            }
-        }
+pub struct Repl {
+    environment: Rc<Environment>,
+}
+impl Repl {
+    pub fn new(environment: Rc<Environment>) -> Repl {
+        Repl { environment }
     }
 
-    Ok(())
-}
-// @TODO eventually, this will likely be implemented purely in Clojure
-/// Starts an entirely new session of Clojure RS
-pub fn repl() {
-    println!("Clojure RS 0.0.1");
+    // @TODO reconsider eval's signature;  since Value wraps all evaluables,  it might make more sense
+    // to frame eval as "environment.eval(value)", and then likewise define a
+    // 'repl.eval(value)', rather than 'value.eval(environment)'
+    pub fn eval(&self, value: &Value) -> Value {
+        value.eval(Rc::clone(&self.environment))
+    }
 
-    let environment = Environment::clojure_core_environment();
-    let stdin = io::stdin();
+    // Just wraps reader's read
+    pub fn read<R: BufRead>(reader: &mut R) -> Value {
+        reader::read(reader)
+    }
+    pub fn run(&self) {
+        let stdin = io::stdin();
+        let mut stdin_reader = stdin.lock();
 
-    print!("user=> ");
-    let _ = io::stdout().flush();
-    let mut input_buffer = String::new();
-    for line in stdin.lock().lines() {
-        let line = line.unwrap();
-        input_buffer.push_str(&line);
-        let mut remaining_input = input_buffer.as_str();
         loop {
-            let next_read_parse = reader::try_read(remaining_input);
-            match next_read_parse {
-                Ok((_remaining_input, value)) => {
-                    print!(
-                        "{} ",
-                        value.eval(Rc::clone(&environment)).to_string_explicit()
-                    );
-                    remaining_input = _remaining_input;
-                }
-                Err(Incomplete(_)) => {
-                    break;
-                }
-                err => {
-                    print!("{}", Value::Condition(format!("Reader Error: {:?}", err)));
-                    input_buffer.clear();
-                    break;
-                }
-            }
+            print!("user=> ");
+            let _ = io::stdout().flush();
+
+            // Read
+            let mut next = Repl::read(&mut stdin_reader);
+            // Eval
+            let evaled_next = self.eval(&next);
+            // Print
+            println!("{}", evaled_next);
+            // Loop
         }
-        input_buffer.clear();
-        println!();
-        print!("user=> ");
-        let _ = io::stdout().flush();
+    }
+    //
+    // Will possibly just add this to our environment, or turn this into a parallel of clojure.lang.RT
+    //
+    /// Reads the code in a file sequentially and evaluates the result
+    pub fn try_eval_file(&self, filepath: &str) -> Result<Value, std::io::Error> {
+        let core = File::open(filepath)?;
+        let mut reader = BufReader::new(core);
+
+        let mut last_val = Repl::read(&mut reader);
+        loop {
+            // @TODO this is hardcoded until we refactor Conditions to have keys, so that
+            //       we can properly identify them
+            // @FIXME
+            if let Value::Condition(cond) = &last_val {
+                if cond != "Tried to read empty stream; unexpected EOF" {
+                    println!("Error reading file: {}", cond);
+                }
+
+                return Ok(last_val);
+            }
+
+            let evaled_last_val = self.eval(&last_val);
+
+            if let Value::Condition(cond) = evaled_last_val {
+                println!("{}", cond);
+            }
+
+            last_val = Repl::read(&mut reader);
+        }
+    }
+}
+
+impl Default for Repl {
+    fn default() -> Repl {
+        Repl {
+            environment: Environment::clojure_core_environment(),
+        }
     }
 }

@@ -1,5 +1,6 @@
 use crate::namespace::{Namespace, Namespaces};
 use crate::repl;
+use crate::repl::Repl;
 use crate::rust_core;
 use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
@@ -121,7 +122,8 @@ impl Environment {
         //
         // Read in clojure.core
         //
-        let _ = repl::try_eval_file(&environment, "./src/clojure/core.clj");
+        // @TODO its time for a RT (runtime), which environment seems to be becoming
+        let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
 
         environment
     }

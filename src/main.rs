@@ -20,5 +20,6 @@ fn main() {
     //
     // Start repl
     //
-    repl::repl();
+    let repl = repl::Repl::default();
+    repl.run();
 }

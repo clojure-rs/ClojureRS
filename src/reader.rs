@@ -8,7 +8,10 @@
 //! not;  since this is about being a 'free-er' Clojure, especially since it can't compete with it in raw
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
-use nom::{branch::alt, bytes::complete::tag, map, sequence::preceded, take_until, terminated, IResult, Needed};
+use nom::{
+    branch::alt, bytes::complete::tag, map, sequence::preceded, take_until, terminated,
+    Err::Incomplete, IResult, Needed,
+};
 
 use crate::maps::MapEntry;
 use crate::persistent_list::ToPersistentList;
@@ -18,6 +21,7 @@ use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
+use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
 //   identifier_parser
@@ -315,6 +319,37 @@ pub fn debug_try_read(input: &str) -> IResult<&str, Value> {
         _ => println!("Reading: {:?}", reading),
     };
     reading
+}
+
+// This is the high level read function that Clojure RS wraps
+pub fn read<R: BufRead>(reader: &mut R) -> Value {
+    // This is a buffer that will accumulate if a read requires more
+    // text to make sense, such as trying to read (+ 1
+    let mut input_buffer = String::new();
+
+    // Ask for a line from the reader, try to read, and if unable (because we need more text),
+    // loop over and ask for more lines, accumulating them in input_buffer until we can read
+    loop {
+        let maybe_line = reader.by_ref().lines().next();
+        match maybe_line {
+            Some(Err(e)) => return Value::Condition(format!("Reader error: {}", e)),
+            Some(Ok(line)) => input_buffer.push_str(&line),
+            None => return Value::Condition(format!("Tried to read empty stream; unexpected EOF")),
+        }
+
+        let line_read = try_read(&input_buffer);
+        match line_read {
+            Ok((_, value)) => return value,
+            // Continue accumulating more input
+            Err(Incomplete(_)) => continue,
+            Err(err) => {
+                return Value::Condition(format!(
+                    "Reader Error: could not read next form; {:?}",
+                    err
+                ))
+            }
+        }
+    }
 }
 
 /// Consumes any whitespace from input, if there is any.
