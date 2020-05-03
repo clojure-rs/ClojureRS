@@ -77,6 +77,7 @@ impl Environment {
         let concat_fn = rust_core::ConcatFn {};
         let print_string_fn = rust_core::PrintStringFn {};
         let assoc_fn = rust_core::AssocFn {};
+	let get_fn = rust_core::GetFn {};
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros
@@ -116,6 +117,7 @@ impl Environment {
         );
         environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
 	environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
+	environment.insert(Symbol::intern("get"), get_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
         environment.insert(
             Symbol::intern("print-string"),
