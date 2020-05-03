@@ -8,21 +8,19 @@ use crate::persistent_list::{
     PersistentList::{Cons, Empty},
     ToPersistentList, ToPersistentListIter,
 };
+use crate::persistent_list_map::IPersistentListMap;
 use crate::persistent_vector::{PersistentVector, ToPersistentVectorIter};
+use crate::repl::Repl;
 use crate::symbol::Symbol;
+use crate::type_tag::TypeTag;
 use crate::value::{Evaluable, ToValue};
 
-//
-// This module will hold the core functions and macros that Clojure will
-// hook into; Functions / Macros like "+", "fn*", "let", "cond", etc
-//
-// This is still experimental, and we may instead undo this all and
-// represent fn* and let and the like the same it is done in ClojureJVM,
-// where I believe they are defined flat out in the Compiler class
-//
-// However, even in that case this may stick around to implement basic
-// functions like "+" that usually rely on interop
-//
+use itertools::Itertools;
+
+use crate::util::IsEven;
+
+// This module will hold core function and macro primitives that aren't special cases
+// (like the quote macro, or let), and can't be implemented in clojure itself
 
 #[derive(Debug, Clone)]
 pub struct StrFn {}
@@ -281,5 +279,45 @@ impl IFn for PrintStringFn {
         }
         println!("{}", args.get(0).unwrap().to_string());
         Value::Nil
+    }
+}
+// General assoc fn; however,  currently just implemented
+// for our one map type, PersistentListMap
+#[derive(Debug, Clone)]
+pub struct AssocFn {}
+impl ToValue for AssocFn {
+    fn to_value(&self) -> Value {
+        Value::IFn(Rc::new(self.clone()))
+    }
+}
+impl IFn for AssocFn {
+    fn invoke(&self, args: Vec<&Value>) -> Value {
+        // We don't want even args, because assoc works like
+        // (assoc {} :a 1) ;; 3 args
+        // (assoc {} :a 1 :b 2) ;; 5 args
+        // (assoc {} :a 1 :b 2 :c 3) ;; 7 args ...
+        if args.len() < 3 || args.len().is_even() {
+            return Value::Condition(format!(
+                "Wrong number of arguments given to function (Given: {}, Expected: 3 | 5 | 7 | ..)",
+                args.len()
+            ));
+        }
+
+        if let Value::PersistentListMap(pmap) = args.get(0).unwrap() {
+            let mut retval = pmap.clone();
+            for (key_value, val_value) in args.into_iter().skip(1).tuples() {
+                let key = key_value.to_rc_value();
+                let val = val_value.to_rc_value();
+		println!("key: {:?}, val: {:?}",key,val);
+                retval = pmap.assoc(key, val);
+            }
+            return Value::PersistentListMap(retval);
+        }
+
+        Value::Nil
+    }
+}
+
+        }
     }
 }

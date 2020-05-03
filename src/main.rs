@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate nom;
+extern crate itertools;
 
 mod environment;
 mod ifn;
@@ -14,6 +15,7 @@ mod repl;
 mod rust_core;
 mod symbol;
 mod type_tag;
+mod util;
 mod value;
 
 fn main() {
