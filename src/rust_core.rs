@@ -10,12 +10,12 @@ use crate::persistent_list::{
 };
 use crate::persistent_list_map::IPersistentListMap;
 use crate::persistent_vector::{PersistentVector, ToPersistentVectorIter};
-use crate::repl::Repl;
 use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
 use crate::value::{Evaluable, ToValue};
 
 use itertools::Itertools;
+use crate::error_message;
 
 use crate::util::IsEven;
 
@@ -70,12 +70,12 @@ impl IFn for AddFn {
         args.into_iter().fold(0_i32.to_value(), |a, b| match a {
             Value::I32(a_) => match *b {
                 Value::I32(b_) => Value::I32(a_ + b_),
-                _ => Value::Condition(format!(
+                _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
                     "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
                     b.type_tag()
                 )),
             },
-            _ => Value::Condition(format!(
+            _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
                 "Type mismatch: Expecting: (i32 | i64 | f32 | f64), Found: {}",
                 a.type_tag()
             )),
@@ -103,11 +103,7 @@ impl IFn for EvalFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 1 {
-            return Value::Condition(format!(
-                "Wrong number of arguments given to function (Given: {}, Expected: {})",
-                args.len(),
-                args.len()
-            ));
+            return error_message::wrong_arg_count(1, args.len())
         }
         let arg = args.get(0).unwrap();
         arg.eval(Rc::clone(&self.enclosing_environment))
@@ -176,16 +172,13 @@ impl IFn for NthFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 2 {
-            return Value::Condition(format!(
-                "Wrong number of arguments (Given: {}, Expected: 1-2)",
-                args.len()
-            ));
+            return error_message::wrong_varg_count(&[2,3], args.len())
         }
         // @TODO change iteration to work with Value references, or even change invoke to work on Rc<..>
         //       as we do everything else; surely we don't want to clone just to read from a collection
         if let Value::I32(ind) = **args.get(1).unwrap() {
             if ind < 0 {
-                return Value::Condition(format!("Index cannot be negative; Index ({})", ind));
+		return error_message::index_cannot_be_negative(ind as usize)
             }
             let ind = ind as usize;
 
@@ -193,41 +186,25 @@ impl IFn for NthFn {
                 Value::PersistentList(Cons(head, tail, count)) => {
                     let count = *count as usize;
                     if ind >= count {
-                        Value::Condition(format!(
-                            "Index out of bounds: Index ({}), Length: ({})",
-                            ind, count
-                        ))
+                        error_message::index_out_of_bounds(ind, count)
                     } else if ind == 0 {
                         head.to_value()
                     } else {
                         tail.iter().nth(ind - 1).unwrap().to_value()
                     }
                 }
-                Value::PersistentList(Empty) => Value::Condition(format!(
-                    "Index out of bounds: Index ({}), Length: ({})",
-                    ind, 0
-                )),
+                Value::PersistentList(Empty) => error_message::index_out_of_bounds(ind, 0),
                 Value::PersistentVector(PersistentVector { vals }) => {
                     if ind >= vals.len() {
-                        Value::Condition(format!(
-                            "Index out of bounds: Index ({}), Length: ({})",
-                            ind,
-                            vals.len()
-                        ))
+                        error_message::index_out_of_bounds(ind, vals.len())
                     } else {
                         vals.get(ind).unwrap().to_value()
                     }
                 }
-                _ => Value::Condition(format!(
-                    "Type mismatch; Expected instance of clojure.lang.ISeq, Recieved type {}",
-                    args.get(0).unwrap().type_tag()
-                )),
+                _ => error_message::type_mismatch(TypeTag::ISeq, &**args.get(0).unwrap()),
             }
         } else {
-            Value::Condition(format!(
-                "Type mismatch; Expected instance of clojure.lang.Integer,  Recieved type {}",
-                args.get(1).unwrap().type_tag()
-            ))
+            error_message::type_mismatch(TypeTag::Integer, &**args.get(1).unwrap())
         }
     }
 }
@@ -271,11 +248,7 @@ impl ToValue for PrintStringFn {
 impl IFn for PrintStringFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         if args.len() != 1 {
-            return Value::Condition(format!(
-                "Wrong number of arguments given to function (Given: {}, Expected: {})",
-                args.len(),
-                args.len()
-            ));
+            return error_message::wrong_arg_count(1, args.len())
         }
         println!("{}", args.get(0).unwrap().to_string());
         Value::Nil

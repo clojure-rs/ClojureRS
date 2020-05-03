@@ -18,6 +18,7 @@ mod keyword;
 mod type_tag;
 mod util;
 mod value;
+mod error_message;
 
 fn main() {
     //
