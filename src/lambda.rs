@@ -18,7 +18,7 @@ impl ToValue for Fn {
     }
 }
 impl IFn for Fn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         let local_environment = Rc::new(Environment::new_local_environment(Rc::clone(
             &self.enclosing_environment,
         )));
