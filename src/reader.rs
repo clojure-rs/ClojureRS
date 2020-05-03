@@ -131,7 +131,7 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
     );
 
     named!(identifier_tail<&str, &str>, take_while!(is_identifier_char));
-    
+
     named!(identifier <&str, String>,
          do_parse!(
              head: identifier_head >>
