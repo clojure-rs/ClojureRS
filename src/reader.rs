@@ -82,7 +82,7 @@ fn cons_str(head: char, tail: &str) -> String {
 ///   - `*`,
 ///   - `!`,
 fn is_identifier_char(chr: char) -> bool {
-    chr.is_alphanumeric() || "|?<>+-_=^%&$*!/".contains(chr)
+    chr.is_alphanumeric() || "|?<>+-_=^%&$*!".contains(chr)
 }
 
 /// Returns whether if a character can be in the head of an identifier.
@@ -127,8 +127,8 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
     );
 
     named!(identifier_tail<&str, &str>, take_while!(is_identifier_char));
-
-    named!(identifier_ <&str, String>,
+    
+    named!(identifier <&str, String>,
          do_parse!(
              head: identifier_head >>
              rest_input: identifier_tail >>
@@ -136,7 +136,7 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
          )
     );
 
-    identifier_(input)
+    identifier(input)
 }
 
 /// Parses valid Clojure symbols,  whose name is a valid identifier
