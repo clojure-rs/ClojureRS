@@ -177,7 +177,7 @@ impl IFn for NthFn {
     fn invoke(&self, args: Vec<&Value>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 2 {
-            return error_message::wrong_arg_count(2, args.len())
+            return error_message::wrong_varg_count(&[2,3], args.len())
         }
         // @TODO change iteration to work with Value references, or even change invoke to work on Rc<..>
         //       as we do everything else; surely we don't want to clone just to read from a collection
@@ -209,7 +209,7 @@ impl IFn for NthFn {
                 _ => error_message::type_mismatch(TypeTag::ISeq, args.get(0)),
             }
         } else {
-            error_message::type_mismatch(TypeTag::Integer, args.get(0))
+            error_message::type_mismatch(TypeTag::Integer, args.get(1))
         }
     }
 }
