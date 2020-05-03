@@ -317,7 +317,3 @@ impl IFn for AssocFn {
         Value::Nil
     }
 }
-
-        }
-    }
-}
