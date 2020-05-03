@@ -293,16 +293,12 @@ impl Value {
         match self {
             Value::IFn(ifn) => {
                 // Eval arguments
-                let evaled_arg_values = PersistentList::iter(args)
-                    .map(|rc_arg| rc_arg.eval(Rc::clone(environment)))
-                    .collect::<Vec<Value>>();
-                // Collect references for invoke
-                let evaled_args_refs = evaled_arg_values
-                    .iter()
-                    .map(|arg| arg)
-                    .collect::<Vec<&Value>>();
+                let evaled_arg_refs = PersistentList::iter(args)
+                    .map(|rc_arg| rc_arg.eval_to_rc(Rc::clone(environment)))
+                    .collect::<Vec<Rc<Value>>>();
+
                 // Invoke fn on arguments
-                Some(Rc::new(ifn.invoke(evaled_args_refs)))
+                Some(Rc::new(ifn.invoke(evaled_arg_refs)))
             }
             LexicalEvalFn => {
                 if args.len() != 1 {
@@ -313,8 +309,8 @@ impl Value {
                 }
                 // This should only be one value
                 let evaled_arg_values = PersistentList::iter(args)
-                    .map(|rc_arg| rc_arg.eval(Rc::clone(environment)))
-                    .collect::<Vec<Value>>();
+                    .map(|rc_arg| rc_arg.eval_to_rc(Rc::clone(environment)))
+                    .collect::<Vec<Rc<Value>>>();
 
                 let evaled_arg = evaled_arg_values.get(0).unwrap();
 
@@ -329,15 +325,7 @@ impl Value {
             // that's never interested me all that much
             //
             Value::Macro(ifn) => {
-                // Copy the args of the form into a new vector; these new values
-                // will be used by the macro to create the new expanded form
-                // (@TODO just reference the original args of the list if you can,
-                //  since they're not mutated)
-                let arg_values = PersistentList::iter(args)
-                    .map(|rc_arg| (*rc_arg).clone())
-                    .collect::<Vec<Value>>();
-
-                let arg_refs = arg_values.iter().map(|arg| arg).collect::<Vec<&Value>>();
+                let arg_refs = PersistentList::iter(args).collect::<Vec<Rc<Value>>>();
 
                 let macroexpansion = Rc::new(ifn.invoke(arg_refs));
 

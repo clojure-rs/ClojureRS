@@ -30,7 +30,7 @@ impl ToValue for StrFn {
     }
 }
 impl IFn for StrFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         Value::String(
             args.into_iter()
                 .map(|arg| arg.to_string())
@@ -48,7 +48,7 @@ impl ToValue for StringPrintFn {
     }
 }
 impl IFn for StringPrintFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         Value::String(
             args.into_iter()
                 .map(|arg| arg.to_string())
@@ -66,9 +66,9 @@ impl ToValue for AddFn {
     }
 }
 impl IFn for AddFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         args.into_iter().fold(0_i32.to_value(), |a, b| match a {
-            Value::I32(a_) => match b {
+            Value::I32(a_) => match *b {
                 Value::I32(b_) => Value::I32(a_ + b_),
                 _ => Value::Condition(format!(
                     "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
@@ -100,7 +100,7 @@ impl ToValue for EvalFn {
     }
 }
 impl IFn for EvalFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 1 {
             return Value::Condition(format!(
@@ -122,12 +122,12 @@ impl ToValue for DoFn {
     }
 }
 impl IFn for DoFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.is_empty() {
             return Value::Nil;
         }
-        (*args.last().unwrap()).clone()
+        (**args.last().unwrap()).clone()
     }
 }
 
@@ -145,7 +145,7 @@ impl ToValue for DoMacro {
     }
 }
 impl IFn for DoMacro {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.is_empty() {
             return vec![Symbol::intern("do").to_rc_value(), Rc::new(Value::Nil)]
@@ -173,7 +173,7 @@ impl ToValue for NthFn {
     }
 }
 impl IFn for NthFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 2 {
             return Value::Condition(format!(
@@ -183,13 +183,13 @@ impl IFn for NthFn {
         }
         // @TODO change iteration to work with Value references, or even change invoke to work on Rc<..>
         //       as we do everything else; surely we don't want to clone just to read from a collection
-        if let Some(Value::I32(ind)) = args.get(1) {
-            if *ind < 0 {
+        if let Value::I32(ind) = **args.get(1).unwrap() {
+            if ind < 0 {
                 return Value::Condition(format!("Index cannot be negative; Index ({})", ind));
             }
-            let ind = *ind as usize;
+            let ind = ind as usize;
 
-            match args.get(0).unwrap() {
+            match &**args.get(0).unwrap() {
                 Value::PersistentList(Cons(head, tail, count)) => {
                     let count = *count as usize;
                     if ind >= count {
@@ -240,9 +240,9 @@ impl ToValue for ConcatFn {
     }
 }
 impl IFn for ConcatFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
-        let concatted_vec = args.iter().fold(vec![], |mut sum, coll| {
-            let coll_vec = match coll {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
+        let concatted_vec = args.iter().fold(Vec::new(), |mut sum, coll| {
+            let coll_vec = match &**coll {
                 Value::PersistentList(plist) => {
                     Rc::new(plist.clone()).iter().collect::<Vec<Rc<Value>>>()
                 }
@@ -269,7 +269,7 @@ impl ToValue for PrintStringFn {
     }
 }
 impl IFn for PrintStringFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         if args.len() != 1 {
             return Value::Condition(format!(
                 "Wrong number of arguments given to function (Given: {}, Expected: {})",
@@ -291,7 +291,7 @@ impl ToValue for AssocFn {
     }
 }
 impl IFn for AssocFn {
-    fn invoke(&self, args: Vec<&Value>) -> Value {
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // We don't want even args, because assoc works like
         // (assoc {} :a 1) ;; 3 args
         // (assoc {} :a 1 :b 2) ;; 5 args
@@ -303,12 +303,12 @@ impl IFn for AssocFn {
             ));
         }
 
-        if let Value::PersistentListMap(pmap) = args.get(0).unwrap() {
+        if let Value::PersistentListMap(pmap) = &*(args.get(0).unwrap().clone()) {
             let mut retval = pmap.clone();
             for (key_value, val_value) in args.into_iter().skip(1).tuples() {
                 let key = key_value.to_rc_value();
                 let val = val_value.to_rc_value();
-		println!("key: {:?}, val: {:?}",key,val);
+                println!("key: {:?}, val: {:?}", key, val);
                 retval = pmap.assoc(key, val);
             }
             return Value::PersistentListMap(retval);

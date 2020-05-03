@@ -88,7 +88,6 @@ impl Environment {
         let environment = Rc::new(Environment::new_main_environment());
 
         let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
-        let load_file_fn = rust_core::LoadFileFn::new(Rc::clone(&environment));
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
@@ -113,7 +112,6 @@ impl Environment {
             Symbol::intern("lexical-eval"),
             lexical_eval_fn.to_rc_value(),
         );
-        environment.insert(Symbol::intern("load-file"), load_file_fn.to_rc_value());
         environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
 	environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());

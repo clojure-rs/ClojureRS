@@ -15,6 +15,7 @@ use crate::value::Value;
 use dyn_clone::DynClone;
 
 use std::fmt::Debug;
+use std::rc::Rc;
 
 //
 // Based on: clojure.lang.IFn
@@ -36,6 +37,6 @@ use std::fmt::Debug;
 //
 
 pub trait IFn: Debug + DynClone {
-    fn invoke(&self, args: Vec<&Value>) -> Value;
+    fn invoke(&self, args: Vec<Rc<Value>>) -> Value;
 }
 dyn_clone::clone_trait_object!(IFn);
