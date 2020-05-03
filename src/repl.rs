@@ -11,10 +11,6 @@ use crate::value::Evaluable;
 use crate::value::Value;
 use std::rc::Rc;
 
-use nom::Err::Incomplete;
-use nom::IResult;
-use nom::Needed::Size;
-
 pub struct Repl {
     environment: Rc<Environment>,
 }
