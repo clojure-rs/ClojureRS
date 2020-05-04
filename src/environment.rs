@@ -2,6 +2,7 @@ use crate::namespace::{Namespace, Namespaces};
 use crate::repl;
 use crate::repl::Repl;
 use crate::rust_core;
+use crate::clojure_std;
 use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 
@@ -77,6 +78,9 @@ impl Environment {
         let concat_fn = rust_core::ConcatFn {};
         let print_string_fn = rust_core::PrintStringFn {};
         let assoc_fn = rust_core::AssocFn {};
+        // clojure.std functions
+        let thread_sleep_fn = clojure_std::thread::SleepFn {};
+        let nanotime_fn = clojure_std::time::NanoTimeFn {};
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros
@@ -97,6 +101,11 @@ impl Environment {
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
+
+        // Thread namespace TODO / instead of _
+        environment.insert(Symbol::intern("Thread_sleep"), thread_sleep_fn.to_rc_value());
+
+        environment.insert(Symbol::intern("System_nanotime"), nanotime_fn.to_rc_value());
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
