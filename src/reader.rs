@@ -122,6 +122,13 @@ fn is_minus_char(chr: char) -> bool {
     chr == '-'
 }
 
+/// Returns true if given character is a period character
+///   - `-`,
+fn is_period_char(chr: char) -> bool {
+    chr == '.'
+}
+
+
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
 /// Example Failures:  'a,  12b,   ,cat  
@@ -173,6 +180,31 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
     integer_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
 }
 
+/// Parses valid doubles
+/// Example Successes: -1.0, 0.023, 1234.3223423
+///
+///
+pub fn double_parser(input: &str) -> IResult<&str, f64> {
+    named!(integer_sign<&str, &str>,
+       map!(
+           opt!(take_while_m_n!(1, 1, is_minus_char)),
+           |maybe_minus| maybe_minus.unwrap_or("")
+       )
+    );
+    named!(integer_part<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
+    named!(decimal_point<&str, &str>, take_while_m_n!(1, 1, is_period_char));
+    named!(decimal_part<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
+    named!(double_lexer <&str, String>,
+         do_parse!(
+             sign: integer_sign >>
+             integer: integer_part >>
+             point: decimal_point >>
+             decimal: decimal_part >>
+             (format!("{}{}{}{}",sign,integer, point, decimal))
+         )
+    );
+    double_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
+}
 // Currently used to create 'try_readers', which are readers (or
 // reader functions, at least) that are basically composable InputType
 // -> IResult<InputType,Value> parsers, that our normal read function
@@ -214,7 +246,14 @@ pub fn try_read_bool(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, Value::Boolean(bool.parse().unwrap())))
 }
 
-// Perhaps generalize this into reader macros 
+
+/// Tries to parse &str into Value::double
+///
+pub fn try_read_f64(input: &str) -> IResult<&str, Value> {
+    to_value_parser(double_parser)(input)
+}
+
+// Perhaps generalize this into reader macros
 /// Tries to parse &str into Value::Keyword 
 /// Example Successes:
 ///    :a                    => Value::Keyword(Keyword { sym: Symbol { name: "a" })
@@ -337,6 +376,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
         alt((
             try_read_map,
             try_read_string,
+            try_read_f64,
             try_read_i32,
             try_read_bool,
             try_read_symbol,
@@ -485,8 +525,30 @@ mod tests {
         }
     }
 
+    mod double_parser_tests {
+        use crate::reader::double_parser;
+
+        #[test]
+        fn double_parser_parses_negative_one() {
+            let s = "-1.2 ";
+            assert_eq!(Some((" ", -1.2)), double_parser(s).ok());
+        }
+
+        #[test]
+        fn double_parser_parses_one() {
+            let s = "1.12 ";
+            assert_eq!(Some((" ", 1.12)), double_parser(s).ok());
+        }
+
+        #[test]
+        fn double_parser_parses_integer_zero() {
+            let s = "0.0001 ";
+            assert_eq!(Some((" ", 0.0001)), double_parser(s).ok());
+        }
+    }
+
     mod integer_parser_tests {
-        use crate::reader::{debug_try_read, integer_parser};
+        use crate::reader::{integer_parser};
 
         #[test]
         fn integer_parser_parses_integer_one() {
