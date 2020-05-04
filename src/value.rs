@@ -28,6 +28,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone)]
 pub enum Value {
     I32(i32),
+    Boolean(bool),
     Symbol(Symbol),
     Keyword(Keyword),
     IFn(Rc<dyn IFn>),
@@ -71,6 +72,12 @@ impl PartialEq for Value {
         if let I32(i) = self {
             if let I32(i2) = other {
                 return i == i2;
+            }
+        }
+
+        if let Boolean(b) = self {
+            if let Boolean(b2) = other {
+                return b == b2;
             }
         }
 
@@ -180,6 +187,7 @@ impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
             I32(i) => i.hash(state),
+            Boolean(b) => b.hash(state),
             Symbol(sym) => sym.hash(state),
 	    Keyword(kw) => kw.hash(state),
             IFn(_) => {
@@ -216,6 +224,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let str = match self {
             I32(val) => val.to_string(),
+            Boolean(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
 	    Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
@@ -254,6 +263,7 @@ impl Value {
     pub fn type_tag(&self) -> TypeTag {
         match self {
             Value::I32(_) => TypeTag::I32,
+            Value::Boolean(_) => TypeTag::Boolean,
             Value::Symbol(_) => TypeTag::Symbol,
 	    Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
@@ -588,6 +598,11 @@ impl ToValue for Rc<Value> {
 impl ToValue for i32 {
     fn to_value(&self) -> Value {
         Value::I32(*self)
+    }
+}
+impl ToValue for bool {
+    fn to_value(&self) -> Value {
+        Value::Boolean(*self)
     }
 }
 impl ToValue for std::string::String {

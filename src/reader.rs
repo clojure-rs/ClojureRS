@@ -23,6 +23,8 @@ use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 use std::io::BufRead;
+use nom::Err::Error;
+use nom::error::ErrorKind;
 //
 // Note; the difference between ours 'parsers'
 //   identifier_parser
@@ -170,6 +172,7 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
     );
     integer_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
 }
+
 // Currently used to create 'try_readers', which are readers (or
 // reader functions, at least) that are basically composable InputType
 // -> IResult<InputType,Value> parsers, that our normal read function
@@ -197,6 +200,18 @@ pub fn to_value_parser<I, O: ToValue>(
 ///    1.5,  7.1321 , 1423152621625226126431525
 pub fn try_read_i32(input: &str) -> IResult<&str, Value> {
     to_value_parser(integer_parser)(input)
+}
+
+/// Tries to parse &str into Value::Boolean
+/// Expects:
+///     Booleans
+/// Example success:
+///     true => Value::Boolean(true)
+///     false => Value::Boolean(false)
+pub fn try_read_bool(input: &str) -> IResult<&str, Value> {
+    named!(bool_parser<&str,&str>, alt!( tag!("true") | tag!("false")));
+    let (rest_input,bool) = bool_parser(input)?;
+    Ok((rest_input, Value::Boolean(bool.parse().unwrap())))
 }
 
 // Perhaps generalize this into reader macros 
@@ -323,6 +338,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_map,
             try_read_string,
             try_read_i32,
+            try_read_bool,
             try_read_symbol,
 	    try_read_keyword,
             try_read_list,
@@ -498,6 +514,21 @@ mod tests {
         }
     }
 
+    mod try_read_bool_tests {
+        use crate::value::Value;
+        use crate::reader::try_read_bool;
+
+        #[test]
+        fn try_read_boolean_true_test() {
+            assert_eq!(Value::Boolean(true), try_read_bool("true ").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_boolean_false_test() {
+            assert_eq!(Value::Boolean(false), try_read_bool("false ").ok().unwrap().1);
+        }
+    }
+
     mod try_read_symbol_tests {
         use crate::reader::try_read_symbol;
         use crate::symbol::Symbol;
@@ -600,6 +631,22 @@ mod tests {
                 PersistentVector(persistent_vector::PersistentVector { vals: [].to_vec() }),
                 try_read("[] ").ok().unwrap().1
             );
+        }
+
+        #[test]
+        fn try_read_bool_true_test() {
+            assert_eq!(
+            Value::Boolean(true),
+            try_read("true ").ok().unwrap().1
+            )
+        }
+
+        #[test]
+        fn try_read_bool_false_test() {
+            assert_eq!(
+                Value::Boolean(false),
+                try_read("false ").ok().unwrap().1
+            )
         }
     }
 
