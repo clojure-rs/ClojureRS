@@ -3,6 +3,7 @@ use std::fmt;
 #[derive(Debug, Clone)]
 pub enum TypeTag {
     I32,
+    F64,
     Boolean,
     Symbol,
     Keyword,
@@ -26,6 +27,7 @@ impl fmt::Display for TypeTag {
         let str = match self {
             I32 => std::string::String::from("rust.std.i32"),
             Boolean => std::string::String::from("rust.std.bool"),
+            F64 => std::string::String::from("rust.std.f64"),
             Symbol => std::string::String::from("clojure.lang.Symbol"),
 	        Keyword => std::string::String::from("clojure.lang.Keyword"),
             IFn => std::string::String::from("clojure.lang.Function"),

@@ -70,9 +70,18 @@ impl IFn for AddFn {
         args.into_iter().fold(0_i32.to_value(), |a, b| match a {
             Value::I32(a_) => match *b {
                 Value::I32(b_) => Value::I32(a_ + b_),
+                Value::F64(b_) => Value::F64(a_ as f64 + b_),
                 _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
                     "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
                     b.type_tag()
+                )),
+            },
+            Value::F64(a_) => match *b {
+                Value::I32(b_) => Value::F64(a_ + b_ as f64),
+                Value::F64(b_) => Value::F64(a_ + b_),
+                _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
+                                               "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                                               b.type_tag()
                 )),
             },
             _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
