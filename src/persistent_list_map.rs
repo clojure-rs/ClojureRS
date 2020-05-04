@@ -30,11 +30,11 @@ pub enum PersistentListMap {
 // Again, only using strange IBlah convention to reflect the Clojure base
 // @TODO really though .. just rethink this
 /// A PersistentListMap.
-pub trait IPersistentListMap {
+pub trait IPersistentMap {
     fn get(&self, key: &Rc<Value>) -> Rc<Value>;
     fn assoc(&self, key: Rc<Value>, value: Rc<Value>) -> Self;
 }
-impl IPersistentListMap for PersistentListMap {
+impl IPersistentMap for PersistentListMap {
     // @TODO make fn of ILookup
     fn get(&self, key: &Rc<Value>) -> Rc<Value> {
         match self {
@@ -52,7 +52,7 @@ impl IPersistentListMap for PersistentListMap {
     }
 }
 
-impl IPersistentListMap for Rc<PersistentListMap> {
+impl IPersistentMap for Rc<PersistentListMap> {
     // @TODO make fn of ILookup
     fn get(&self, key: &Rc<Value>) -> Rc<Value> {
         match &**self {

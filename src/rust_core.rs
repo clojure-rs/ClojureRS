@@ -8,7 +8,7 @@ use crate::persistent_list::{
     PersistentList::{Cons, Empty},
     ToPersistentList, ToPersistentListIter,
 };
-use crate::persistent_list_map::IPersistentListMap;
+use crate::persistent_list_map::IPersistentMap;
 use crate::persistent_vector::{PersistentVector, ToPersistentVectorIter};
 use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
