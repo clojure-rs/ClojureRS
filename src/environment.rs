@@ -81,6 +81,10 @@ impl Environment {
         let concat_fn = rust_core::ConcatFn {};
         let print_string_fn = rust_core::PrintStringFn {};
         let assoc_fn = rust_core::AssocFn {};
+
+        // rust implementations of core functions
+        let slurp_fn = rust_core::slurp::SlurpFn {};
+
         // clojure.std functions
         let thread_sleep_fn = clojure_std::thread::SleepFn {};
         let nanotime_fn = clojure_std::time::NanoTimeFn {};
@@ -112,6 +116,9 @@ impl Environment {
         environment.insert(Symbol::intern("Thread_sleep"), thread_sleep_fn.to_rc_value());
 
         environment.insert(Symbol::intern("System_nanotime"), nanotime_fn.to_rc_value());
+
+        // core.clj wraps calls to the rust implementations
+        environment.insert(Symbol::intern("rust-slurp"), slurp_fn.to_rc_value());
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());

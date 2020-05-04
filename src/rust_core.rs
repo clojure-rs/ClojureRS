@@ -1,3 +1,5 @@
+pub(crate) mod slurp;
+
 use crate::value::Value;
 use std::rc::Rc;
 
