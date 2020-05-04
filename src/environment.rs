@@ -118,6 +118,7 @@ impl Environment {
         environment.insert(Symbol::intern("System_nanotime"), nanotime_fn.to_rc_value());
 
         // core.clj wraps calls to the rust implementations
+        // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp 
         environment.insert(Symbol::intern("rust-slurp"), slurp_fn.to_rc_value());
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
