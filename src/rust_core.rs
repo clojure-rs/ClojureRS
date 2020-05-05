@@ -41,9 +41,11 @@ pub(crate) mod do_macro;
 
 // arithmetics
 pub(crate) mod _plus_;
+pub use self::_plus_::*;
 
 // string
 pub(crate) mod str;
+pub use self::str::*;
 
 // operations on collections
 pub(crate) mod nth;
