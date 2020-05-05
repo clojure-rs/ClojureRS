@@ -88,7 +88,7 @@ impl Environment {
         // clojure.std functions
         let thread_sleep_fn = clojure_std::thread::SleepFn {};
         let nanotime_fn = clojure_std::time::NanoTimeFn {};
-        
+
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros

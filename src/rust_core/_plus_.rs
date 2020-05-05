@@ -37,3 +37,36 @@ impl IFn for AddFn {
         })
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    mod plus_tests {
+        use crate::ifn::IFn;
+        use crate::value::Value;
+        use std::rc::Rc;
+        use crate::rust_core::AddFn;
+
+        #[test]
+        fn plus_without_arguments_returns_zero() {
+            let addition = AddFn {};
+            let args = vec![];
+            assert_eq!(Value::I32(0), addition.invoke(args));
+        }
+
+        #[test]
+        fn plus_with_one_argument_returns_identity() {
+            let addition = AddFn {};
+            let args = vec![Rc::new(Value::I32(5))];
+            assert_eq!(Value::I32(5), addition.invoke(args));
+        }
+
+        #[test]
+        fn plus_with_two_argument_returns_product() {
+            let addition = AddFn {};
+            let args = vec![Rc::new(Value::I32(5)), Rc::new(Value::I32(6))];
+            assert_eq!(Value::I32(11), addition.invoke(args));
+        }
+
+    }
+}
