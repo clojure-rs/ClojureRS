@@ -19,6 +19,10 @@ use crate::error_message;
 
 use crate::util::IsEven;
 
+pub(crate) mod _subtract_;
+pub(crate) mod _divide_;
+pub(crate) mod _multiply_;
+
 // This module will hold core function and macro primitives that aren't special cases
 // (like the quote macro, or let), and can't be implemented in clojure itself
 

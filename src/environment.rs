@@ -71,6 +71,9 @@ impl Environment {
     pub fn clojure_core_environment() -> Rc<Environment> {
         // Register our macros / functions ahead of time
         let add_fn = rust_core::AddFn {};
+        let subtract_fn = rust_core::_subtract_::SubtractFn {};
+        let multiply_fn = rust_core::_multiply_::MultiplyFn {};
+        let divide_fn = rust_core::_divide_::DivideFn {};
         let str_fn = rust_core::StrFn {};
         let do_fn = rust_core::DoFn {};
         let nth_fn = rust_core::NthFn {};
@@ -94,6 +97,9 @@ impl Environment {
         let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
+        environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());
+        environment.insert(Symbol::intern("*"), multiply_fn.to_rc_value());
+        environment.insert(Symbol::intern("_slash_"), divide_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
         environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
