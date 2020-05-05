@@ -22,6 +22,10 @@ pub use self::_divide_::*;
 pub(crate) mod _multiply_;
 pub use self::_multiply_::*;
 
+pub(crate) mod rand;
+pub use self::rand::*;
+
+
 // string
 pub(crate) mod str;
 pub use self::str::*;
