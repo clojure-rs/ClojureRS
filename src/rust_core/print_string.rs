@@ -1,5 +1,5 @@
 use crate::ifn::IFn;
-use crate::value::{Value, ToValue, Evaluable};
+use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 use crate::error_message;
@@ -16,7 +16,7 @@ impl ToValue for PrintStringFn {
 impl IFn for PrintStringFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         if args.len() != 1 {
-            return error_message::wrong_arg_count(1, args.len())
+            return error_message::wrong_arg_count(1, args.len());
         }
         println!("{}", args.get(0).unwrap().to_string());
         Value::Nil

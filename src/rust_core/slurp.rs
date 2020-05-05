@@ -10,7 +10,6 @@ use reqwest;
 use url::Url;
 
 use crate::error_message;
-use std::error::Error;
 
 /// (slurp f & opts)
 ///

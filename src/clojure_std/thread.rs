@@ -2,12 +2,8 @@ use crate::error_message;
 use crate::ifn::IFn;
 use crate::type_tag::TypeTag;
 use crate::value::{ToValue, Value};
-use nom::lib::std::convert::TryFrom;
-use std::error::Error;
-use std::io::Read;
 use std::rc::Rc;
 
-use std::thread;
 use std::time;
 
 /// provides a sleep function to sleep for given amount of ms

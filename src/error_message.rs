@@ -1,7 +1,5 @@
 use crate::type_tag::TypeTag;
 use crate::value::Value;
-use nom::error::ErrorKind;
-use nom::Err;
 use std::error::Error;
 
 pub fn type_mismatch(expected: TypeTag, got: &Value) -> Value {
