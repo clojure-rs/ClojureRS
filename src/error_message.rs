@@ -1,5 +1,8 @@
 use crate::type_tag::TypeTag;
 use crate::value::Value;
+use nom::Err;
+use nom::error::ErrorKind;
+use std::error::Error;
 
 pub fn type_mismatch(expected: TypeTag, got: &Value) -> Value {
     Value::Condition(format!(
@@ -39,4 +42,8 @@ pub fn index_out_of_bounds(ind: usize, count: usize) -> Value {
 
 pub fn index_cannot_be_negative(ind: usize) -> Value {
     Value::Condition(format!("Index cannot be negative; Index ({})", ind))
+}
+
+pub fn generic_err(error: Box<Error>) -> Value {
+    Value::Condition(format!("{}", error.to_string()))
 }

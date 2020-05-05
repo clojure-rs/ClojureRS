@@ -22,3 +22,6 @@
         (quote (do
         (println (str "Elapsed time: " (_slash_ (- (System_nanotime) start) 1000000.0) " msecs"))
         ret))))
+
+(defn slurp [f & opts]
+  (rust-slurp f opts))
