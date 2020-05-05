@@ -13,6 +13,7 @@ mod persistent_vector;
 mod reader;
 mod repl;
 mod rust_core;
+mod clojure_std;
 mod symbol;
 mod keyword;
 mod type_tag;
