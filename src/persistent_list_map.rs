@@ -176,7 +176,6 @@ mod tests {
 
     #[test]
     fn test_persistent_list_map() {
-        let empty = PersistentListMap::Empty;
         let map1 = vec![
             MapEntry {
                 key: Symbol::intern("a").to_rc_value(),

@@ -471,7 +471,7 @@ pub fn read<R: BufRead>(reader: &mut R) -> Value {
         match maybe_line {
             Some(Err(e)) => return Value::Condition(format!("Reader error: {}", e)),
             Some(Ok(line)) => input_buffer.push_str(&line),
-            None => return Value::Condition(format!("Tried to read empty stream; unexpected EOF")),
+            None => return Value::Condition(String::from("Tried to read empty stream; unexpected EOF")),
         }
 
         let line_read = try_read(&input_buffer);

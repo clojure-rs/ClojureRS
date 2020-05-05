@@ -39,7 +39,7 @@ impl Repl {
             let _ = io::stdout().flush();
 
             // Read
-            let mut next = Repl::read(&mut stdin_reader);
+            let next = Repl::read(&mut stdin_reader);
             // Eval
             let evaled_next = self.eval(&next);
             // Print
