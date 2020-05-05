@@ -88,6 +88,7 @@ impl Environment {
         // clojure.std functions
         let thread_sleep_fn = clojure_std::thread::SleepFn {};
         let nanotime_fn = clojure_std::time::NanoTimeFn {};
+        
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros
@@ -98,7 +99,7 @@ impl Environment {
         let defmacro_macro = Value::DefmacroMacro {};
         let environment = Rc::new(Environment::new_main_environment());
 
-        let eval_fn = rust_core::eval::EvalFn::new(Rc::clone(&environment));
+        let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());
