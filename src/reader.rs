@@ -43,6 +43,12 @@ use nom::error::ErrorKind;
 // Our 'try readers' are a bit higher level, and are specifically supposed to be returning a valid // value::Value or some sort of failure.
 //
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//     Utils
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /// Returns the first character of a string slice.
 ///
 /// If `input` is not empty, then its first char will be returned. Otherwise,
@@ -67,6 +73,15 @@ fn cons_str(head: char, tail: &str) -> String {
 
     ret
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//     End Utils
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//       
+//     Predicates
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Returns whether if a character can be in the tail of an identifier.
 ///
@@ -128,6 +143,30 @@ fn is_period_char(chr: char) -> bool {
     chr == '.'
 }
 
+/// Returns whether if a given character is a whitespace.
+///
+/// Clojure defines a whitespace as either a comma or an unicode whitespace.
+fn is_clojure_whitespace(c: char) -> bool {
+    c.is_whitespace() || c == ','
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//     End predicates 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+//       
+//     Parsers 
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Consumes any whitespace from input, if there is any.
+/// Always succeeds.
+///
+/// A whitespace is either an ASCII whitespace or a comma.
+fn consume_clojure_whitespaces_parser(input: &str) -> IResult<&str, ()> {
+    named!(parser<&str, &str>, take_while!(is_clojure_whitespace));
+    parser(input).map(|(rest, _)| (rest, ()))
+}
 
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
@@ -217,6 +256,15 @@ pub fn to_value_parser<I, O: ToValue>(
 ) -> impl Fn(I) -> IResult<I, Value> {
     move |input: I| parser(input).map(|(rest_input, thing)| (rest_input, thing.to_value()))
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//    End Parsers
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//    Try-Readers
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // @TODO make sure whitespace or 'nothing' is at the end, fail for
 // float like numbers
@@ -261,7 +309,7 @@ pub fn try_read_f64(input: &str) -> IResult<&str, Value> {
 /// Example Failures:
 ///    :12 :'a 
 pub fn try_read_keyword(input: &str) -> IResult<&str, Value> {
-    named!(keyword_colon<&str, &str>, preceded!(consume_clojure_whitespaces, tag!(":")));
+    named!(keyword_colon<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!(":")));
 
     let (rest_input, _) = keyword_colon(input)?;
     let (rest_input,symbol) = symbol_parser(rest_input)?;
@@ -286,7 +334,7 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    "this is pretty straightforward" => Value::String("this is pretty straightforward")
 pub fn try_read_string(input: &str) -> IResult<&str, Value> {
-    named!(quotation<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("\"")));
+    named!(quotation<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("\"")));
 
     let (rest_input, _) = quotation(input)?;
 
@@ -306,8 +354,8 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    {:a 1} => Value::PersistentListMap {PersistentListMap { MapEntry { :a, 1} .. ]})
 pub fn try_read_map(input: &str) -> IResult<&str, Value> {
-    named!(lbracep<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("{")));
-    named!(rbracep<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("}")));
+    named!(lbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("{")));
+    named!(rbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("}")));
     let (map_inner_input, _) = lbracep(input)?;
     let mut map_as_vec: Vec<MapEntry> = Vec::new();
     let mut rest_input = map_inner_input;
@@ -333,8 +381,8 @@ pub fn try_read_map(input: &str) -> IResult<&str, Value> {
 ///    [1 2 [5 10 15] 3]
 ///      => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) .. Rc(Value::PersistentVector..)]})
 pub fn try_read_vector(input: &str) -> IResult<&str, Value> {
-    named!(lbracketp<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("[")));
-    named!(rbracketp<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("]")));
+    named!(lbracketp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("[")));
+    named!(rbracketp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("]")));
     let (vector_inner_input, _) = lbracketp(input)?;
     let mut vector_as_vec = Vec::new();
     // What's left of our input as we read more of our PersistentVector
@@ -354,8 +402,8 @@ pub fn try_read_vector(input: &str) -> IResult<&str, Value> {
 }
 
 pub fn try_read_list(input: &str) -> IResult<&str, Value> {
-    named!(lparenp<&str, &str>, preceded!(consume_clojure_whitespaces, tag!("(")));
-    named!(rparenp<&str, &str>, preceded!(consume_clojure_whitespaces, tag!(")")));
+    named!(lparenp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("(")));
+    named!(rparenp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!(")")));
 
     let (list_inner_input, _) = lparenp(input)?;
     let mut list_as_vec = Vec::new();
@@ -372,7 +420,7 @@ pub fn try_read_list(input: &str) -> IResult<&str, Value> {
 
 pub fn try_read(input: &str) -> IResult<&str, Value> {
     preceded(
-        consume_clojure_whitespaces,
+        consume_clojure_whitespaces_parser,
         alt((
             try_read_map,
             try_read_string,
@@ -386,15 +434,15 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
         )),
     )(input)
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//      End Try-Readers
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn debug_try_read(input: &str) -> IResult<&str, Value> {
-    let reading = try_read(input);
-    match &reading {
-        Ok((_, value)) => println!("Reading: {}", value),
-        _ => println!("Reading: {:?}", reading),
-    };
-    reading
-}
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//      Readers 
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // This is the high level read function that Clojure RS wraps
 pub fn read<R: BufRead>(reader: &mut R) -> Value {
@@ -425,22 +473,6 @@ pub fn read<R: BufRead>(reader: &mut R) -> Value {
             }
         }
     }
-}
-
-/// Consumes any whitespace from input, if there is any.
-/// Always succeeds.
-///
-/// A whitespace is either an ASCII whitespace or a comma.
-fn consume_clojure_whitespaces(input: &str) -> IResult<&str, ()> {
-    named!(parser<&str, &str>, take_while!(is_clojure_whitespace));
-    parser(input).map(|(rest, _)| (rest, ()))
-}
-
-/// Returns whether if a given character is a whitespace.
-///
-/// Clojure defines a whitespace as either a comma or an unicode whitespace.
-fn is_clojure_whitespace(c: char) -> bool {
-    c.is_whitespace() || c == ','
 }
 
 #[cfg(test)]
@@ -713,24 +745,24 @@ mod tests {
     }
 
     mod consume_clojure_whitespaces_tests {
-        use crate::reader::consume_clojure_whitespaces;
+        use crate::reader::consume_clojure_whitespaces_parser;
         #[test]
         fn consume_whitespaces_from_input() {
             let s = ", ,,  ,1, 2, 3, 4 5,,6 ";
             assert_eq!(
                 Some(("1, 2, 3, 4 5,,6 ", ())),
-                consume_clojure_whitespaces(&s).ok()
+                consume_clojure_whitespaces_parser(&s).ok()
             );
         }
         #[test]
         fn consume_whitespaces_from_empty_input() {
             let s = "";
-            assert_eq!(None, consume_clojure_whitespaces(&s).ok());
+            assert_eq!(None, consume_clojure_whitespaces_parser(&s).ok());
         }
         #[test]
         fn consume_whitespaces_from_input_no_whitespace() {
             let s = "1, 2, 3";
-            assert_eq!(Some(("1, 2, 3", ())), consume_clojure_whitespaces(&s).ok());
+            assert_eq!(Some(("1, 2, 3", ())), consume_clojure_whitespaces_parser(&s).ok());
         }
     }
 
