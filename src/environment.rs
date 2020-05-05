@@ -71,9 +71,9 @@ impl Environment {
     pub fn clojure_core_environment() -> Rc<Environment> {
         // Register our macros / functions ahead of time
         let add_fn = rust_core::AddFn {};
-        let subtract_fn = rust_core::_subtract_::SubtractFn {};
-        let multiply_fn = rust_core::_multiply_::MultiplyFn {};
-        let divide_fn = rust_core::_divide_::DivideFn {};
+        let subtract_fn = rust_core::SubtractFn {};
+        let multiply_fn = rust_core::MultiplyFn {};
+        let divide_fn = rust_core::DivideFn {};
         let str_fn = rust_core::StrFn {};
         let do_fn = rust_core::DoFn {};
         let nth_fn = rust_core::NthFn {};
