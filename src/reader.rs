@@ -418,10 +418,24 @@ pub fn try_read_list(input: &str) -> IResult<&str, Value> {
     }
 }
 
+pub fn try_read_quoted(input: &str) -> IResult<&str, Value> {
+    named!(quote<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("'")));
+
+    let (form,_) = quote(input)?;
+
+    let (rest_input,quoted_form_value) = try_read(form)?;
+
+    // (quote value) 
+    Ok((rest_input,
+	vec![Symbol::intern("quote").to_rc_value(),
+	     quoted_form_value      .to_rc_value()].into_list().to_value()))
+}
+
 pub fn try_read(input: &str) -> IResult<&str, Value> {
     preceded(
         consume_clojure_whitespaces_parser,
         alt((
+	    try_read_quoted,
             try_read_map,
             try_read_string,
             try_read_f64,
