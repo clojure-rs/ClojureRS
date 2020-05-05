@@ -98,7 +98,7 @@ impl Environment {
         let defmacro_macro = Value::DefmacroMacro {};
         let environment = Rc::new(Environment::new_main_environment());
 
-        let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
+        let eval_fn = rust_core::eval::EvalFn::new(Rc::clone(&environment));
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());

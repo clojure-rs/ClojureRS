@@ -1,14 +1,16 @@
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
-use std::fs::File;
 use crate::ifn::IFn;
-use std::io::Read;
-use std::error::Error;
-use crate::error_message;
 use nom::lib::std::convert::TryFrom;
+
+use std::fs::File;
+use std::io::Read;
 
 use url::Url;
 use reqwest;
+
+use std::error::Error;
+use crate::error_message;
 
 /// (slurp f & opts)
 ///
