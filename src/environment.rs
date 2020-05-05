@@ -75,6 +75,7 @@ impl Environment {
         let multiply_fn = rust_core::MultiplyFn {};
         let divide_fn = rust_core::DivideFn {};
         let rand_fn = rust_core::RandFn {};
+        let rand_int_fn = rust_core::RandIntFn {};
         let str_fn = rust_core::StrFn {};
         let do_fn = rust_core::DoFn {};
         let nth_fn = rust_core::NthFn {};
@@ -107,6 +108,7 @@ impl Environment {
         environment.insert(Symbol::intern("*"), multiply_fn.to_rc_value());
         environment.insert(Symbol::intern("_slash_"), divide_fn.to_rc_value());
         environment.insert(Symbol::intern("rand"), rand_fn.to_rc_value());
+        environment.insert(Symbol::intern("rand-int"), rand_int_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
         environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
