@@ -1,5 +1,6 @@
 use crate::environment::Environment;
 use crate::ifn::IFn;
+use crate::keyword::Keyword;
 use crate::lambda;
 use crate::maps::MapEntry;
 use crate::persistent_list::PersistentList::Cons;
@@ -7,7 +8,6 @@ use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListI
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
-use crate::keyword::Keyword;
 use crate::type_tag::TypeTag;
 
 extern crate rand;
@@ -94,7 +94,7 @@ impl PartialEq for Value {
             }
         }
 
-	if let Keyword(kw) = self {
+        if let Keyword(kw) = self {
             if let Keyword(kw2) = other {
                 return kw == kw2;
             }
@@ -197,7 +197,7 @@ impl Hash for Value {
             F64(d) => d.to_value().hash(state),
             Boolean(b) => b.hash(state),
             Symbol(sym) => sym.hash(state),
-	    Keyword(kw) => kw.hash(state),
+            Keyword(kw) => kw.hash(state),
             IFn(_) => {
                 let mut rng = rand::thread_rng();
                 let n2: u16 = rng.gen();
@@ -235,7 +235,7 @@ impl fmt::Display for Value {
             F64(val) => val.to_string(),
             Boolean(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
-	    Keyword(kw) => kw.to_string(),
+            Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
             LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
             PersistentList(plist) => plist.to_string(),
@@ -275,7 +275,7 @@ impl Value {
             Value::F64(_) => TypeTag::F64,
             Value::Boolean(_) => TypeTag::Boolean,
             Value::Symbol(_) => TypeTag::Symbol,
-	    Value::Keyword(_) => TypeTag::Keyword,
+            Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
             Value::LexicalEvalFn => TypeTag::IFn,
             Value::PersistentList(_) => TypeTag::PersistentList,

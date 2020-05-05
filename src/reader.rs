@@ -13,18 +13,18 @@ use nom::{
     Err::Incomplete, IResult, Needed,
 };
 
+use crate::keyword::Keyword;
 use crate::maps::MapEntry;
 use crate::persistent_list::ToPersistentList;
 use crate::persistent_list_map::ToPersistentListMap;
 use crate::persistent_vector::ToPersistentVector;
 use crate::symbol::Symbol;
-use crate::keyword::Keyword;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
-use std::io::BufRead;
-use nom::Err::Error;
 use nom::error::ErrorKind;
+use nom::Err::Error;
+use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
 //   identifier_parser
@@ -78,7 +78,7 @@ fn cons_str(head: char, tail: &str) -> String {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-//       
+//
 //     Predicates
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -150,12 +150,12 @@ fn is_clojure_whitespace(c: char) -> bool {
     c.is_whitespace() || c == ','
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-//     End predicates 
+//     End predicates
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-//       
-//     Parsers 
+//
+//     Parsers
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -290,10 +290,9 @@ pub fn try_read_i32(input: &str) -> IResult<&str, Value> {
 ///     false => Value::Boolean(false)
 pub fn try_read_bool(input: &str) -> IResult<&str, Value> {
     named!(bool_parser<&str,&str>, alt!( tag!("true") | tag!("false")));
-    let (rest_input,bool) = bool_parser(input)?;
+    let (rest_input, bool) = bool_parser(input)?;
     Ok((rest_input, Value::Boolean(bool.parse().unwrap())))
 }
-
 
 /// Tries to parse &str into Value::double
 ///
@@ -302,20 +301,20 @@ pub fn try_read_f64(input: &str) -> IResult<&str, Value> {
 }
 
 // Perhaps generalize this into reader macros
-/// Tries to parse &str into Value::Keyword 
+/// Tries to parse &str into Value::Keyword
 /// Example Successes:
 ///    :a                    => Value::Keyword(Keyword { sym: Symbol { name: "a" })
-///    :cat-dog              => Value::Keyword(Keyword { sym: Symbol { name: "cat-dog" }) 
+///    :cat-dog              => Value::Keyword(Keyword { sym: Symbol { name: "cat-dog" })
 /// Example Failures:
-///    :12 :'a 
+///    :12 :'a
 pub fn try_read_keyword(input: &str) -> IResult<&str, Value> {
     named!(keyword_colon<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!(":")));
 
     let (rest_input, _) = keyword_colon(input)?;
-    let (rest_input,symbol) = symbol_parser(rest_input)?;
+    let (rest_input, symbol) = symbol_parser(rest_input)?;
 
     let keyword_value = Keyword { sym: symbol }.to_value();
-    Ok((rest_input,keyword_value))
+    Ok((rest_input, keyword_value))
 }
 
 /// Tries to parse &str into Value::Symbol
@@ -421,28 +420,34 @@ pub fn try_read_list(input: &str) -> IResult<&str, Value> {
 pub fn try_read_quoted(input: &str) -> IResult<&str, Value> {
     named!(quote<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("'")));
 
-    let (form,_) = quote(input)?;
+    let (form, _) = quote(input)?;
 
-    let (rest_input,quoted_form_value) = try_read(form)?;
+    let (rest_input, quoted_form_value) = try_read(form)?;
 
-    // (quote value) 
-    Ok((rest_input,
-	vec![Symbol::intern("quote").to_rc_value(),
-	     quoted_form_value      .to_rc_value()].into_list().to_value()))
+    // (quote value)
+    Ok((
+        rest_input,
+        vec![
+            Symbol::intern("quote").to_rc_value(),
+            quoted_form_value.to_rc_value(),
+        ]
+        .into_list()
+        .to_value(),
+    ))
 }
 
 pub fn try_read(input: &str) -> IResult<&str, Value> {
     preceded(
         consume_clojure_whitespaces_parser,
         alt((
-	    try_read_quoted,
+            try_read_quoted,
             try_read_map,
             try_read_string,
             try_read_f64,
             try_read_i32,
             try_read_bool,
             try_read_symbol,
-	    try_read_keyword,
+            try_read_keyword,
             try_read_list,
             try_read_vector,
         )),
@@ -454,7 +459,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//      Readers 
+//      Readers
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -594,7 +599,7 @@ mod tests {
     }
 
     mod integer_parser_tests {
-        use crate::reader::{integer_parser};
+        use crate::reader::integer_parser;
 
         #[test]
         fn integer_parser_parses_integer_one() {
@@ -623,8 +628,8 @@ mod tests {
     }
 
     mod try_read_bool_tests {
-        use crate::value::Value;
         use crate::reader::try_read_bool;
+        use crate::value::Value;
 
         #[test]
         fn try_read_boolean_true_test() {
@@ -633,7 +638,10 @@ mod tests {
 
         #[test]
         fn try_read_boolean_false_test() {
-            assert_eq!(Value::Boolean(false), try_read_bool("false ").ok().unwrap().1);
+            assert_eq!(
+                Value::Boolean(false),
+                try_read_bool("false ").ok().unwrap().1
+            );
         }
     }
 
@@ -743,18 +751,12 @@ mod tests {
 
         #[test]
         fn try_read_bool_true_test() {
-            assert_eq!(
-            Value::Boolean(true),
-            try_read("true ").ok().unwrap().1
-            )
+            assert_eq!(Value::Boolean(true), try_read("true ").ok().unwrap().1)
         }
 
         #[test]
         fn try_read_bool_false_test() {
-            assert_eq!(
-                Value::Boolean(false),
-                try_read("false ").ok().unwrap().1
-            )
+            assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
         }
     }
 
@@ -776,7 +778,10 @@ mod tests {
         #[test]
         fn consume_whitespaces_from_input_no_whitespace() {
             let s = "1, 2, 3";
-            assert_eq!(Some(("1, 2, 3", ())), consume_clojure_whitespaces_parser(&s).ok());
+            assert_eq!(
+                Some(("1, 2, 3", ())),
+                consume_clojure_whitespaces_parser(&s).ok()
+            );
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::ifn::IFn;
-use crate::value::{Value, ToValue};
+use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 /// (* x y & xys)
@@ -17,22 +17,25 @@ impl IFn for MultiplyFn {
             Value::I32(a_) => match *b {
                 Value::I32(b_) => Value::I32(a_ * b_),
                 Value::F64(b_) => Value::F64(a_ as f64 * b_),
-                _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                               "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                               b.type_tag()
+                _ => Value::Condition(format!(
+                    // TODO: what error message should be returned regarding using typetags?
+                    "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                    b.type_tag()
                 )),
             },
             Value::F64(a_) => match *b {
                 Value::I32(b_) => Value::F64(a_ * b_ as f64),
                 Value::F64(b_) => Value::F64(a_ * b_),
-                _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                               "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                               b.type_tag()
+                _ => Value::Condition(format!(
+                    // TODO: what error message should be returned regarding using typetags?
+                    "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                    b.type_tag()
                 )),
             },
-            _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                           "Type mismatch: Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                           a.type_tag()
+            _ => Value::Condition(format!(
+                // TODO: what error message should be returned regarding using typetags?
+                "Type mismatch: Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                a.type_tag()
             )),
         })
     }
@@ -41,8 +44,8 @@ impl IFn for MultiplyFn {
 #[cfg(test)]
 mod tests {
     mod multiply_tests {
-        use crate::rust_core::_multiply_::MultiplyFn;
         use crate::ifn::IFn;
+        use crate::rust_core::_multiply_::MultiplyFn;
         use crate::value::Value;
         use std::rc::Rc;
 
@@ -66,6 +69,5 @@ mod tests {
             let args = vec![Rc::new(Value::I32(5)), Rc::new(Value::I32(6))];
             assert_eq!(Value::I32(30), multiply.invoke(args));
         }
-
     }
 }

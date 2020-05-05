@@ -14,8 +14,8 @@ use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
 use crate::value::{Evaluable, ToValue};
 
-use itertools::Itertools;
 use crate::error_message;
+use itertools::Itertools;
 
 use crate::util::IsEven;
 
@@ -80,7 +80,8 @@ impl IFn for AddFn {
             Value::I32(a_) => match *b {
                 Value::I32(b_) => Value::I32(a_ + b_),
                 Value::F64(b_) => Value::F64(a_ as f64 + b_),
-                _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
+                _ => Value::Condition(format!(
+                    // TODO: what error message should be returned regarding using typetags?
                     "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
                     b.type_tag()
                 )),
@@ -88,12 +89,14 @@ impl IFn for AddFn {
             Value::F64(a_) => match *b {
                 Value::I32(b_) => Value::F64(a_ + b_ as f64),
                 Value::F64(b_) => Value::F64(a_ + b_),
-                _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                               "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                               b.type_tag()
+                _ => Value::Condition(format!(
+                    // TODO: what error message should be returned regarding using typetags?
+                    "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                    b.type_tag()
                 )),
             },
-            _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
+            _ => Value::Condition(format!(
+                // TODO: what error message should be returned regarding using typetags?
                 "Type mismatch: Expecting: (i32 | i64 | f32 | f64), Found: {}",
                 a.type_tag()
             )),
@@ -121,7 +124,7 @@ impl IFn for EvalFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 1 {
-            return error_message::wrong_arg_count(1, args.len())
+            return error_message::wrong_arg_count(1, args.len());
         }
         let arg = args.get(0).unwrap();
         arg.eval(Rc::clone(&self.enclosing_environment))
@@ -190,13 +193,13 @@ impl IFn for NthFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 2 {
-            return error_message::wrong_varg_count(&[2,3], args.len())
+            return error_message::wrong_varg_count(&[2, 3], args.len());
         }
         // @TODO change iteration to work with Value references, or even change invoke to work on Rc<..>
         //       as we do everything else; surely we don't want to clone just to read from a collection
         if let Value::I32(ind) = **args.get(1).unwrap() {
             if ind < 0 {
-		return error_message::index_cannot_be_negative(ind as usize)
+                return error_message::index_cannot_be_negative(ind as usize);
             }
             let ind = ind as usize;
 
@@ -266,7 +269,7 @@ impl ToValue for PrintStringFn {
 impl IFn for PrintStringFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         if args.len() != 1 {
-            return error_message::wrong_arg_count(1, args.len())
+            return error_message::wrong_arg_count(1, args.len());
         }
         println!("{}", args.get(0).unwrap().to_string());
         Value::Nil

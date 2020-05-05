@@ -1,8 +1,8 @@
+use crate::clojure_std;
 use crate::namespace::{Namespace, Namespaces};
 use crate::repl;
 use crate::repl::Repl;
 use crate::rust_core;
-use crate::clojure_std;
 use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 
@@ -109,7 +109,10 @@ impl Environment {
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
 
         // Thread namespace TODO / instead of _
-        environment.insert(Symbol::intern("Thread_sleep"), thread_sleep_fn.to_rc_value());
+        environment.insert(
+            Symbol::intern("Thread_sleep"),
+            thread_sleep_fn.to_rc_value(),
+        );
 
         environment.insert(Symbol::intern("System_nanotime"), nanotime_fn.to_rc_value());
 
@@ -128,7 +131,7 @@ impl Environment {
             lexical_eval_fn.to_rc_value(),
         );
         environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
-	environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
+        environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
         environment.insert(
             Symbol::intern("print-string"),

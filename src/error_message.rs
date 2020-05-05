@@ -4,30 +4,29 @@ use crate::value::Value;
 pub fn type_mismatch(expected: TypeTag, got: &Value) -> Value {
     Value::Condition(format!(
         "Type mismatch; Expected instance of {},  Recieved type {}",
-        expected,
-	got
+        expected, got
     ))
 }
 
 pub fn wrong_arg_count(expected: usize, got: usize) -> Value {
     Value::Condition(format!(
         "Wrong number of arguments given to function (Given: {}, Expected: {})",
-        got,
-        expected
+        got, expected
     ))
 }
 
 pub fn wrong_varg_count(expected: &[usize], got: usize) -> Value {
     Value::Condition(format!(
         "Wrong number of arguments given to function (Given: {}, Expected: {:?})",
-        got,
-        expected
+        got, expected
     ))
 }
 
 pub fn zero_arg_count(got: usize) -> Value {
     Value::Condition(format!(
-        "Wrong number of arguments given to function (Given: {})", got))
+        "Wrong number of arguments given to function (Given: {})",
+        got
+    ))
 }
 
 pub fn index_out_of_bounds(ind: usize, count: usize) -> Value {

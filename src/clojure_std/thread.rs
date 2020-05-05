@@ -1,11 +1,11 @@
-use crate::value::{ToValue, Value};
-use std::rc::Rc;
-use crate::ifn::IFn;
-use std::io::Read;
-use std::error::Error;
 use crate::error_message;
-use nom::lib::std::convert::TryFrom;
+use crate::ifn::IFn;
 use crate::type_tag::TypeTag;
+use crate::value::{ToValue, Value};
+use nom::lib::std::convert::TryFrom;
+use std::error::Error;
+use std::io::Read;
+use std::rc::Rc;
 
 use std::thread;
 use std::time;
@@ -26,13 +26,13 @@ impl IFn for SleepFn {
             match arg {
                 Value::I32(i) => {
                     std::thread::sleep(time::Duration::new(0, (*i as u32) * 1000000));
-                    return Value::Nil
-                },
-                _ => error_message::type_mismatch(TypeTag::I32, args.get(0).unwrap())
+                    return Value::Nil;
+                }
+                _ => error_message::type_mismatch(TypeTag::I32, args.get(0).unwrap()),
             }
         } else {
             error_message::wrong_arg_count(1, args.len());
-            return Value::Nil
+            return Value::Nil;
         }
     }
 }
