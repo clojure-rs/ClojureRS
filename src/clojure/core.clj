@@ -16,3 +16,9 @@
 
 (defn dec [x]
   (- x 1))
+
+(defmacro time [expr]
+  (list (quote let) [(quote start) (quote (System_nanotime)) (quote ret) expr]
+        (quote (do
+        (println (str "Elapsed time: " (_slash_ (- (System_nanotime) start) 1000000.0) " msecs"))
+        ret))))
