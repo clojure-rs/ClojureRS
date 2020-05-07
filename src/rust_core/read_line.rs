@@ -22,8 +22,7 @@ impl IFn for ReadLineFn {
         if args.len() != 0 {
             return error_message::wrong_arg_count(0, args.len())
         }
-
-        //io::stdout().flush();
+        
         let mut input = String::new();
         io::stdout().flush();
         match io::stdin().read_line(&mut input) {
