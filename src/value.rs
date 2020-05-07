@@ -1,5 +1,6 @@
 use crate::environment::Environment;
 use crate::ifn::IFn;
+use crate::keyword::Keyword;
 use crate::lambda;
 use crate::maps::MapEntry;
 use crate::persistent_list::PersistentList::Cons;
@@ -7,7 +8,6 @@ use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListI
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
-use crate::keyword::Keyword;
 use crate::type_tag::TypeTag;
 
 extern crate rand;
@@ -70,110 +70,29 @@ impl PartialEq for Value {
     // @TODO implement our generic IFns some other way? After all, again, this isn't Java
     fn eq(&self, other: &Value) -> bool {
         //
-        if let I32(i) = self {
-            if let I32(i2) = other {
-                return i == i2;
-            }
+        match (self, other) {
+            (I32(i), I32(i2)) => i == i2,
+            (F64(d), F64(d2)) => d == d2,
+            (Boolean(b), Boolean(b2)) => b == b2,
+            (Symbol(sym), Symbol(sym2)) => sym == sym2,
+            (Keyword(kw), Keyword(kw2)) => kw == kw2,
+            // Equality not defined on functions, similar to Clojure
+            // Change this perhaps? Diverge?
+            (IFn(_), IFn(_)) => false,
+            // Is it misleading for equality to sometimes work?
+            (LexicalEvalFn, LexicalEvalFn) => true,
+            (PersistentList(plist), PersistentList(plist2)) => plist == plist2,
+            (PersistentVector(pvector), PersistentVector(pvector2)) => *pvector == *pvector2,
+            (PersistentListMap(plistmap), PersistentListMap(plistmap2)) => *plistmap == *plistmap2,
+            (Condition(msg), Condition(msg2)) => msg == msg2,
+            (QuoteMacro, QuoteMacro) => true,
+            (DefmacroMacro, DefmacroMacro) => true,
+            (DefMacro, DefMacro) => true,
+            (LetMacro, LetMacro) => true,
+            (String(string), String(string2)) => string == string2,
+            (Nil, Nil) => true,
+            _ => false,
         }
-
-        if let F64(d) = self {
-            if let F64(d2) = other {
-                return d == d2;
-            }
-        }
-
-        if let Boolean(b) = self {
-            if let Boolean(b2) = other {
-                return b == b2;
-            }
-        }
-
-        if let Symbol(sym) = self {
-            if let Symbol(sym2) = other {
-                return sym == sym2;
-            }
-        }
-
-	if let Keyword(kw) = self {
-            if let Keyword(kw2) = other {
-                return kw == kw2;
-            }
-        }
-        // Equality not defined on functions, similar to Clojure
-        // Change this perhaps? Diverge?
-        if let IFn(_) = self {
-            if let IFn(_) = other {
-                return false;
-            }
-        }
-        // Is it misleading for equality to sometimes work?
-        if let LexicalEvalFn = self {
-            if let LexicalEvalFn = other {
-                return true;
-            }
-        }
-
-        if let PersistentList(plist) = self {
-            if let PersistentList(plist2) = other {
-                return plist == plist2;
-            }
-        }
-
-        if let PersistentVector(pvector) = self {
-            if let PersistentVector(pvector2) = other {
-                return *pvector == *pvector2;
-            }
-        }
-
-        if let PersistentListMap(plistmap) = self {
-            if let PersistentListMap(plistmap2) = other {
-                return *plistmap == *plistmap2;
-            }
-        }
-
-        if let Condition(msg) = self {
-            if let Condition(msg2) = other {
-                return msg == msg2;
-            }
-        }
-
-        if let QuoteMacro = self {
-            if let QuoteMacro = other {
-                return true;
-            }
-        }
-
-        if let DefmacroMacro = self {
-            if let DefmacroMacro = other {
-                return true;
-            }
-        }
-
-        if let DefMacro = self {
-            if let DefMacro = other {
-                return true;
-            }
-        }
-
-        if let LetMacro = self {
-            if let LetMacro = other {
-                return true;
-            }
-        }
-
-        if let String(string) = self {
-            if let String(string2) = other {
-                return string == string2;
-            }
-        }
-
-        if let Nil = self {
-            if let Nil = other {
-                return true;
-            }
-        }
-
-        false
     }
 }
 
@@ -197,7 +116,7 @@ impl Hash for Value {
             F64(d) => d.to_value().hash(state),
             Boolean(b) => b.hash(state),
             Symbol(sym) => sym.hash(state),
-	    Keyword(kw) => kw.hash(state),
+            Keyword(kw) => kw.hash(state),
             IFn(_) => {
                 let mut rng = rand::thread_rng();
                 let n2: u16 = rng.gen();
@@ -235,7 +154,7 @@ impl fmt::Display for Value {
             F64(val) => val.to_string(),
             Boolean(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
-	    Keyword(kw) => kw.to_string(),
+            Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
             LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
             PersistentList(plist) => plist.to_string(),
@@ -275,7 +194,7 @@ impl Value {
             Value::F64(_) => TypeTag::F64,
             Value::Boolean(_) => TypeTag::Boolean,
             Value::Symbol(_) => TypeTag::Symbol,
-	    Value::Keyword(_) => TypeTag::Keyword,
+            Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
             Value::LexicalEvalFn => TypeTag::IFn,
             Value::PersistentList(_) => TypeTag::PersistentList,

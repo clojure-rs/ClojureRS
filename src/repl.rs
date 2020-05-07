@@ -2,7 +2,6 @@ use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::Read;
 use std::io::Write;
 
 use crate::environment::Environment;
@@ -39,7 +38,7 @@ impl Repl {
             let _ = io::stdout().flush();
 
             // Read
-            let mut next = Repl::read(&mut stdin_reader);
+            let next = Repl::read(&mut stdin_reader);
             // Eval
             let evaled_next = self.eval(&next);
             // Print

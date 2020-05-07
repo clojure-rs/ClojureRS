@@ -1,5 +1,5 @@
 use crate::ifn::IFn;
-use crate::value::{Value, ToValue, Evaluable};
+use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 // Todo: dead code? no usage found
