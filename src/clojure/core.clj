@@ -8,8 +8,11 @@
 (defn apply [f args]
   (lexical-eval (concat (list f) args)))
 
-(defn println [& more]
+(defn print [& more]
   (print-string (apply str more)))
+
+(defn println [& more]
+  (println-string (apply str more)))
 
 (defn inc [x]
   (+ x 1))

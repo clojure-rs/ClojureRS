@@ -199,6 +199,8 @@ impl Environment {
         let do_macro = rust_core::DoMacro {};
         let concat_fn = rust_core::ConcatFn {};
         let print_string_fn = rust_core::PrintStringFn {};
+        let println_string_fn = rust_core::PrintlnStringFn {};
+        let read_line_fn = rust_core::ReadLineFn {};
         let assoc_fn = rust_core::AssocFn {};
 
         // rust implementations of core functions
@@ -277,6 +279,11 @@ impl Environment {
             Symbol::intern("print-string"),
             print_string_fn.to_rc_value(),
         );
+        environment.insert(
+            Symbol::intern("println-string"),
+            println_string_fn.to_rc_value(),
+        );
+        environment.insert(Symbol::intern("read-line"), read_line_fn.to_rc_value());
 
         //
         // Read in clojure.core

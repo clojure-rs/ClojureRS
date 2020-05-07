@@ -48,6 +48,8 @@ pub(crate) mod print_string;
 pub use self::print_string::*;
 pub(crate) mod string_print;
 pub use self::string_print::*;
+pub(crate) mod read_line;
+pub use self::read_line::*;
 
 // other
 pub(crate) mod slurp;
