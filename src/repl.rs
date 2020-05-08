@@ -35,7 +35,7 @@ impl Repl {
         let mut stdin_reader = stdin.lock();
 
         loop {
-            print!("user=> ");
+            print!("{}=> ",self.environment.get_current_namespace_name());
             let _ = io::stdout().flush();
 
             // Read
