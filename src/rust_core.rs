@@ -27,6 +27,10 @@ pub use self::_divide_::*;
 
 pub(crate) mod _multiply_;
 pub use self::_multiply_::*;
+
+pub(crate) mod ns;
+pub use self::ns::*;
+
 //
 // This module will hold core function and macro primitives that aren't special cases
 // (like the quote macro, or let), and can't be implemented in clojure itself
@@ -113,7 +117,7 @@ impl EvalFn {
         EvalFn {
             enclosing_environment,
         }
-    }
+    } 
 }
 impl ToValue for EvalFn {
     fn to_value(&self) -> Value {
