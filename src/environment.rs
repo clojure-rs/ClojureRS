@@ -1,4 +1,5 @@
 use crate::clojure_std;
+use crate::clojure_string;
 use crate::namespace::{Namespace, Namespaces};
 use crate::repl::Repl;
 use crate::rust_core;
@@ -201,6 +202,9 @@ impl Environment {
         let get_fn = rust_core::GetFn {};
         let map_fn = rust_core::MapFn {};
 
+        // clojure.string
+        let reverse_fn = clojure_string::reverse::ReverseFn {};
+
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros
@@ -245,6 +249,9 @@ impl Environment {
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
         environment.insert(Symbol::intern("rust-slurp"), slurp_fn.to_rc_value());
+
+        // clojure.string
+        environment.insert(Symbol::intern("clojure_string_reverse"), reverse_fn.to_rc_value());
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
