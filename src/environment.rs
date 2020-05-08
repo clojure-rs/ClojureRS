@@ -272,7 +272,8 @@ impl Environment {
         // @TODO its time for a RT (runtime), which environment seems to be becoming
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
 
-	environment.change_namespace(Symbol::intern("user"));
+	// We can add this back once we have requires
+	// environment.change_namespace(Symbol::intern("user"));
 
         environment
     }
