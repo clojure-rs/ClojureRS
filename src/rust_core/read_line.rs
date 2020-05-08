@@ -22,11 +22,13 @@ impl IFn for ReadLineFn {
         if args.len() != 0 {
             return error_message::wrong_arg_count(0, args.len())
         }
-        
         let mut input = String::new();
         io::stdout().flush();
         match io::stdin().read_line(&mut input) {
-            Ok(_) => Value::String(input),
+            Ok(_) => {
+                input.pop();
+                Value::String(input)
+            },
             Err(error) => error_message::generic_err(Box::try_from(error).unwrap())
         }
     }

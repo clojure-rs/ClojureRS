@@ -36,14 +36,13 @@ impl Repl {
         loop {
             print!("{}=> ",self.environment.get_current_namespace_name());
             let _ = io::stdout().flush();
-            let mut next = Value::Nil;
 
-            // a scope for stdin to be released for providing input for function
-            {
+            let next = {
                 let mut stdin_reader = stdin.lock();
                 // Read
-                next = Repl::read(&mut stdin_reader);
-            }
+                Repl::read(&mut stdin_reader)
+                // Release stdin.lock
+            };
 
             // Eval
             let evaled_next = self.eval(&next);
