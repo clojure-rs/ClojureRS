@@ -42,10 +42,18 @@ impl Symbol {
     pub fn unqualified(&self) -> Symbol {
 	Symbol::intern(&self.name)
     }
+    pub fn has_ns(&self) -> bool {
+	self.ns != ""
+    }
 }
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name)
+	if self.has_ns() {
+	    write!(f, "{}/{}", self.ns, self.name)
+	}
+	else { 
+            write!(f, "{}", self.name)
+	}
     }
 }
 mod tests {
