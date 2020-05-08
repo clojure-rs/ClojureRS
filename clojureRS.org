@@ -137,3 +137,26 @@ Perhaps they could look like
 
     (div 5 0)))
 #+END_SRC
+** Symbols, Interning 
+   In Clojure proper, there is specific semantics for keywords and symbols -- namely,
+#+BEGIN_SRC clojure   
+   (intern "namespace" "name")
+
+   (intern "namespace/name")
+#+END_SRC
+   Since Rust doesn't have overloading,  we can either do 
+#+BEGIN_SRC rust
+   pub fn intern(ns: Option<&str>, name: &str) 
+#+END_SRC
+
+   Or just have two functions. So we've gone with the latter 
+
+#+BEGIN_SRC rust
+   intern(name)
+   intern_with_ns(ns,name) 
+#+END_SRC 
+  To be honest, from my time in other languages I've gotten used to
+  the idea of naming all your functions, giving you all these little 
+  'offshoots' of, say, intern in this case (although its basically namespacing
+  in a way; anytime you're doing something like blah__1 blah__other blah__3, 
+  your blah has become a 'family name' of sorts; a namespace). 
