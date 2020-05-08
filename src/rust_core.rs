@@ -44,12 +44,17 @@ pub(crate) mod assoc;
 pub use self::assoc::*;
 
 // input and output
+pub(crate) mod system_newline;
+pub use self::system_newline::*;
+pub(crate) mod flush_stdout;
+pub use self::flush_stdout::*;
 pub(crate) mod print_string;
 pub use self::print_string::*;
 pub(crate) mod string_print;
 pub use self::string_print::*;
 pub(crate) mod read_line;
 pub use self::read_line::*;
+
 
 // other
 pub(crate) mod slurp;

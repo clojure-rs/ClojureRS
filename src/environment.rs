@@ -70,7 +70,7 @@ use Environment::*;
 impl Environment {
     pub fn change_namespace(&self,symbol: Symbol) {
 	      let symbol = symbol.unqualified();
-	      
+
 	      match self.get_main_environment() {
 	          MainEnvironment(EnvironmentVal { curr_ns_sym, ..}) => {
 		            curr_ns_sym.replace(symbol);
@@ -162,9 +162,9 @@ impl Environment {
         match self {
             MainEnvironment(env_val) => { 
 		            // If we've recieved a qualified symbol like
-		            // clojure.core/+ 
+		            // clojure.core/+
 		            if sym.ns != "" {
-		                // Use that namespace 
+		                // Use that namespace
 		                env_val.get_from_namespace(&Symbol::intern(&sym.ns),sym)
 		            }
 		            else {
@@ -198,8 +198,9 @@ impl Environment {
         let nth_fn = rust_core::NthFn {};
         let do_macro = rust_core::DoMacro {};
         let concat_fn = rust_core::ConcatFn {};
+        let flush_stdout_fn = rust_core::FlushStdoutFn {};
+        let system_newline_fn = rust_core::SystemNewlineFn {};
         let print_string_fn = rust_core::PrintStringFn {};
-        let println_string_fn = rust_core::PrintlnStringFn {};
         let read_line_fn = rust_core::ReadLineFn {};
         let assoc_fn = rust_core::AssocFn {};
 
@@ -209,6 +210,7 @@ impl Environment {
         // clojure.std functions
         let thread_sleep_fn = clojure_std::thread::SleepFn {};
         let nanotime_fn = clojure_std::time::NanoTimeFn {};
+        let get_env_fn = clojure_std::env::GetEnvFn {};
 
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
@@ -248,10 +250,9 @@ impl Environment {
             thread_sleep_fn.to_rc_value(),
         );
 
-        environment.insert(
-	          Symbol::intern("System_nanotime"),
-	          nanotime_fn.to_rc_value()
-	      );
+        environment.insert(Symbol::intern("System_nanoTime"), nanotime_fn.to_rc_value());
+
+        environment.insert(Symbol::intern("System_getenv"), get_env_fn.to_rc_value());
 
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
@@ -275,13 +276,19 @@ impl Environment {
         environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
         environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
+
+        // input and output
+        environment.insert(
+            Symbol::intern("system-newline"),
+            system_newline_fn.to_rc_value(),
+        );
+        environment.insert(
+            Symbol::intern("flush-stdout"),
+            flush_stdout_fn.to_rc_value(),
+        );
         environment.insert(
             Symbol::intern("print-string"),
             print_string_fn.to_rc_value(),
-        );
-        environment.insert(
-            Symbol::intern("println-string"),
-            println_string_fn.to_rc_value(),
         );
         environment.insert(Symbol::intern("read-line"), read_line_fn.to_rc_value());
 
@@ -330,16 +337,16 @@ mod tests {
 	          // env_val.change_namespace(Symbol::intern_with_ns("not-ns","ns"));
 	          // assert_eq!(Symbol::intern("ns"),env_val.get_current_namespace())
 		        ;
-				    
-	          // @TODO add case for local environment 	
+
+	          // @TODO add case for local environment
 	      }
-	      
+
 	      /////////////////////////////////////////////////////////////////////////////
 	      //
 	      //  fn get_from_namespace(&self,namespace: &Symbol,sym: &Symbol) -> Rc<Value>
 	      //
 	      //////////////////////////////////////////////////////////////////////////////
-	      
+
 	      #[test]
         fn test_get_from_namespace() {
 	          let env_val = EnvironmentVal::new_main_val();
