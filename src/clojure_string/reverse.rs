@@ -6,7 +6,6 @@ use crate::error_message;
 use crate::type_tag::TypeTag;
 
 /// clojure.string/reverse ; reverses a string
-/// (defn print-string [string] .. prints single string .. )
 #[derive(Debug, Clone)]
 pub struct ReverseFn {}
 impl ToValue for ReverseFn {
