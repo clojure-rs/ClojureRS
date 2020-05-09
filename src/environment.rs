@@ -244,15 +244,24 @@ impl Environment {
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
 
-        // Thread namespace TODO / instead of _
-        environment.insert(
-            Symbol::intern("Thread_sleep"),
-            thread_sleep_fn.to_rc_value(),
-        );
+        // Thread namespace
+		environment.insert_into_namespace(
+			&Symbol::intern("Thread"),
+			Symbol::intern("sleep"),
+			thread_sleep_fn.to_rc_value()
+		);
 
-        environment.insert(Symbol::intern("System_nanoTime"), nanotime_fn.to_rc_value());
-
-        environment.insert(Symbol::intern("System_getenv"), get_env_fn.to_rc_value());
+		// System namespace
+		environment.insert_into_namespace(
+			&Symbol::intern("System"),
+			Symbol::intern("nanoTime"),
+			nanotime_fn.to_rc_value()
+		);
+		environment.insert_into_namespace(
+			&Symbol::intern("System"),
+			Symbol::intern("getenv"),
+			get_env_fn.to_rc_value()
+		);
 
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
