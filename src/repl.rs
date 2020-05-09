@@ -31,7 +31,6 @@ impl Repl {
     }
     pub fn run(&self) {
         let stdin = io::stdin();
-        let mut stdin_reader = stdin.lock();
 
         loop {
             print!("{}=> ",self.environment.get_current_namespace_name());
