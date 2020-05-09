@@ -17,7 +17,7 @@ pub enum TypeTag {
     String,
     Integer,
     ISeq,
-    Nil
+    Nil,
 }
 
 use TypeTag::*;
@@ -29,7 +29,7 @@ impl fmt::Display for TypeTag {
             Boolean => std::string::String::from("rust.std.bool"),
             F64 => std::string::String::from("rust.std.f64"),
             Symbol => std::string::String::from("clojure.lang.Symbol"),
-	        Keyword => std::string::String::from("clojure.lang.Keyword"),
+            Keyword => std::string::String::from("clojure.lang.Keyword"),
             IFn => std::string::String::from("clojure.lang.Function"),
             Condition => std::string::String::from("clojure.lang.Condition"),
             PersistentList => std::string::String::from("clojure.lang.PersistentList"),

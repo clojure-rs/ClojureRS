@@ -10,7 +10,7 @@
 
 use nom::{
     branch::alt, bytes::complete::tag, map, sequence::preceded, take_until, terminated,
-    Err::Incomplete, IResult,
+    combinator::opt, Err::Incomplete, IResult, Needed,
 };
 
 use crate::keyword::Keyword;
@@ -22,6 +22,8 @@ use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
+use nom::error::ErrorKind;
+use nom::Err::Error;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -102,7 +104,7 @@ fn cons_str(head: char, tail: &str) -> String {
 ///   - `*`,
 ///   - `!`,
 fn is_identifier_char(chr: char) -> bool {
-    chr.is_alphanumeric() || "|?<>+-_=^%&$*!".contains(chr)
+    chr.is_alphanumeric() || "|?<>+-_=^%&$*!.".contains(chr)
 }
 
 /// Returns whether if a character can be in the head of an identifier.
@@ -126,7 +128,7 @@ fn is_identifier_char(chr: char) -> bool {
 ///   - `*`,
 ///   - `!`,
 fn is_non_numeric_identifier_char(chr: char) -> bool {
-    chr.is_alphabetic() || "|?<>+-_=^%&$*!".contains(chr)
+    chr.is_alphabetic() || "|?<>+-_=^%&$*!.".contains(chr)
 }
 
 /// Returns true if given character is a minus character
@@ -190,9 +192,22 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
     identifier(input)
 }
 
-/// Parses valid Clojure symbols,  whose name is a valid identifier
+/// Parses valid Clojure symbol
+/// Example Successes: a , b , |ab123|
+///                    namespace.subnamespace/a    cat/b   a.b.c/|ab123| 
 pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
-    identifier_parser(input).map(|(rest_input, name)| (rest_input, Symbol::intern(&name)))
+    named!(namespace_parser <&str,String>,
+	   do_parse!(
+	       ns: identifier_parser >>
+	       tag!("/") >>
+	       (ns)));
+    
+    let (rest_input,ns)   = opt(namespace_parser)(input)?;
+    let (rest_input,name) = identifier_parser(rest_input)?; 
+    match ns {
+	Some(ns) => Ok((rest_input,Symbol::intern_with_ns(&ns,&name))),
+	None     => Ok((rest_input,Symbol::intern(&name)))   
+    }
 }
 
 /// Parses valid integers
@@ -549,6 +564,7 @@ mod tests {
     }
 
     mod symbol_parser_tests {
+	use crate::reader::try_read_symbol;
         use crate::reader::symbol_parser;
         use crate::symbol::Symbol;
 
@@ -557,9 +573,7 @@ mod tests {
             assert_eq!(
                 Some((
                     " this",
-                    Symbol {
-                        name: String::from("input->output?")
-                    }
+                    Symbol::intern("input->output?")
                 )),
                 symbol_parser("input->output? this").ok()
             );
@@ -573,6 +587,21 @@ mod tests {
         #[test]
         fn identifier_parser_does_not_parse_empty_input() {
             assert_eq!(None, symbol_parser("").ok());
+        }
+
+	#[test]
+        fn symbol_parser_normal_symbol_test() {
+            assert_eq!(
+                Symbol::intern("a"),
+                symbol_parser("a ").ok().unwrap().1
+            );
+        }
+	#[test]
+	fn symbol_parser_namespace_qualified_symbol_test() {
+            assert_eq!(
+                Symbol::intern_with_ns("clojure.core","a"),
+                symbol_parser("clojure.core/a ").ok().unwrap().1
+            );
         }
     }
 
@@ -653,9 +682,7 @@ mod tests {
         #[test]
         fn try_read_minus_as_valid_symbol_test() {
             assert_eq!(
-                Value::Symbol(Symbol {
-                    name: String::from("-")
-                }),
+                Value::Symbol(Symbol::intern("-")),
                 try_read_symbol("- ").unwrap().1
             );
         }
@@ -704,9 +731,7 @@ mod tests {
         #[test]
         fn try_read_valid_symbol_test() {
             assert_eq!(
-                Value::Symbol(Symbol {
-                    name: String::from("my-symbol")
-                }),
+                Value::Symbol(Symbol::intern("my-symbol")),
                 try_read("my-symbol ").ok().unwrap().1
             );
         }
@@ -714,9 +739,7 @@ mod tests {
         #[test]
         fn try_read_minus_as_valid_symbol_test() {
             assert_eq!(
-                Value::Symbol(Symbol {
-                    name: String::from("-")
-                }),
+                Value::Symbol(Symbol::intern("-")),
                 try_read("- ").ok().unwrap().1
             );
         }
@@ -724,9 +747,7 @@ mod tests {
         #[test]
         fn try_read_minus_prefixed_as_valid_symbol_test() {
             assert_eq!(
-                Value::Symbol(Symbol {
-                    name: String::from("-prefixed")
-                }),
+                Value::Symbol(Symbol::intern("-prefixed")),
                 try_read("-prefixed ").ok().unwrap().1
             );
         }

@@ -1,5 +1,5 @@
 use crate::ifn::IFn;
-use crate::value::{Value, ToValue};
+use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 use crate::error_message;
@@ -16,18 +16,19 @@ impl ToValue for SubtractFn {
 impl IFn for SubtractFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         match args.len() {
-            0 =>  { error_message::zero_arg_count(args.len()) },
+            0 => error_message::zero_arg_count(args.len()),
             1 => {
                 let val = args.get(0).unwrap().to_value();
                 match val {
                     Value::I32(a_) => Value::I32(-a_),
                     Value::F64(f_) => Value::F64(-f_),
-                    _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                                   "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                                   val.type_tag()
-                    ))
+                    _ => Value::Condition(format!(
+                        // TODO: what error message should be returned regarding using typetags?
+                        "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                        val.type_tag()
+                    )),
                 }
-            },
+            }
             _ => {
                 let mut args_iterator = args.into_iter();
                 let first_arg = args_iterator.next().unwrap();
@@ -35,22 +36,25 @@ impl IFn for SubtractFn {
                     Value::I32(a_) => match *b {
                         Value::I32(b_) => Value::I32(a_ - b_),
                         Value::F64(b_) => Value::F64(a_ as f64 - b_),
-                        _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                                       "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                                       b.type_tag()
+                        _ => Value::Condition(format!(
+                            // TODO: what error message should be returned regarding using typetags?
+                            "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                            b.type_tag()
                         )),
                     },
                     Value::F64(a_) => match *b {
                         Value::I32(b_) => Value::F64(a_ - b_ as f64),
                         Value::F64(b_) => Value::F64(a_ - b_),
-                        _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                                       "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                                       b.type_tag()
+                        _ => Value::Condition(format!(
+                            // TODO: what error message should be returned regarding using typetags?
+                            "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                            b.type_tag()
                         )),
                     },
-                    _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                                   "Type mismatch: Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                                   a.type_tag()
+                    _ => Value::Condition(format!(
+                        // TODO: what error message should be returned regarding using typetags?
+                        "Type mismatch: Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                        a.type_tag()
                     )),
                 })
             }
@@ -61,8 +65,8 @@ impl IFn for SubtractFn {
 #[cfg(test)]
 mod tests {
     mod subtract_tests {
-        use crate::rust_core::_subtract_::SubtractFn;
         use crate::ifn::IFn;
+        use crate::rust_core::_subtract_::SubtractFn;
         use crate::value::Value;
         use std::rc::Rc;
 
@@ -70,8 +74,12 @@ mod tests {
         fn subtract_without_arguments_returns_one() {
             let subtract = SubtractFn {};
             let args = vec![];
-            assert_eq!(Value::Condition(String::from("Wrong number of arguments given to function (Given: 0)")),
-                       subtract.invoke(args));
+            assert_eq!(
+                Value::Condition(String::from(
+                    "Wrong number of arguments given to function (Given: 0)"
+                )),
+                subtract.invoke(args)
+            );
         }
 
         #[test]
@@ -109,7 +117,8 @@ mod tests {
                 Rc::new(Value::I32(-3)),
                 Rc::new(Value::I32(7)),
                 Rc::new(Value::I32(7)),
-                Rc::new(Value::I32(4))];
+                Rc::new(Value::I32(4)),
+            ];
             assert_eq!(Value::I32(-21), subtract.invoke(args));
         }
 
@@ -120,7 +129,8 @@ mod tests {
                 Rc::new(Value::I32(-3)),
                 Rc::new(Value::I32(7)),
                 Rc::new(Value::I32(-7)),
-                Rc::new(Value::I32(-4))];
+                Rc::new(Value::I32(-4)),
+            ];
             assert_eq!(Value::I32(1), subtract.invoke(args));
         }
     }

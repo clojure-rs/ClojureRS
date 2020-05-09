@@ -137,3 +137,57 @@ Perhaps they could look like
 
     (div 5 0)))
 #+END_SRC
+** Symbols, Interning 
+   In Clojure proper, there is specific semantics for keywords and symbols -- namely,
+#+BEGIN_SRC clojure   
+   (intern "namespace" "name")
+
+   (intern "namespace/name")
+#+END_SRC
+   Since Rust doesn't have overloading,  we can either do 
+#+BEGIN_SRC rust
+   pub fn intern(ns: Option<&str>, name: &str) 
+#+END_SRC
+
+   Or just have two functions. So we've gone with the latter 
+
+#+BEGIN_SRC rust
+   intern(name)
+   intern_with_ns(ns,name) 
+#+END_SRC 
+  To be honest, from my time in other languages I've gotten used to
+  the idea of naming all your functions, giving you all these little 
+  'offshoots' of, say, intern in this case (although its basically namespacing
+  in a way; anytime you're doing something like blah__1 blah__other blah__3, 
+  your blah has become a 'family name' of sorts; a namespace). 
+** Immutable Data Structures 
+   Right now we likewise use naive immutables;  the map is an O(n) associative-list, 
+   meaning its really a list of (key . value) pairs underneath,  and a persistent 'history' 
+   is achieved by thinking of the list as a timeline of changes;  the first element 
+   is the first change, the second the second, and if you hold the map as it was at this 
+   point in time, you simply point to this second entry.  Then, to search for members of the map,
+   you walk backwards through the timeline -- but not forwards; things will continue to happen, but 
+   they won't affect you because they'll come afterwards.
+
+   The persistent vector is just a plain Vec, and more importantly I
+   don't think there's any structural sharing there atm
+
+   The persistent list should be the closest to the proper Clojure structure,  and is a Cons list,  where 
+   likewise what sublist you reference depends on where your head is pointing to. 
+
+   The plan is to look into `im` or implement the structures myself, if I find that's necessary. I already
+   started reverse engineering the PersistentHashMap myself, trying to come up with a structure with the 
+   same time / space complexities, although I will definitely not wait for me to figure that out --
+   that could take weeks or years or forever -- I'll just look it up.  But I'd be neato if I did 
+** Memory management 
+   Right now, the project uses plain, also-naive reference counting.
+   Things in the ClojureRS world live inside Rc<Values> , where Value
+   (again) is an enum wrapping all potential types.
+
+   It will be important for this to truly grow, I think, before we start trying to observe it under 
+   the hood, mapping its activities to visuals that show us just 
+   what kind of dance is going on underneath, and where the bottlenecks are.  
+
+   It will be at that time that it will be best to truly start adding
+   a deeper design to memory management, although until then I will
+   keep reading on what others have found before me 

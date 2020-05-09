@@ -9,6 +9,9 @@ pub use self::eval::*;
 pub(crate) mod do_macro;
 pub use self::do_macro::*;
 
+pub(crate) mod ns;
+pub use self::ns::*;
+
 // arithmetics
 pub(crate) mod _plus_;
 pub use self::_plus_::*;

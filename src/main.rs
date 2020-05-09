@@ -2,8 +2,11 @@
 extern crate nom;
 extern crate itertools;
 
+mod clojure_std;
 mod environment;
+mod error_message;
 mod ifn;
+mod keyword;
 mod lambda;
 mod maps;
 mod namespace;
@@ -13,13 +16,10 @@ mod persistent_vector;
 mod reader;
 mod repl;
 mod rust_core;
-mod clojure_std;
 mod symbol;
-mod keyword;
 mod type_tag;
 mod util;
 mod value;
-mod error_message;
 
 fn main() {
     //
