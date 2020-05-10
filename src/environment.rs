@@ -26,11 +26,11 @@ impl EnvironmentVal {
         self.curr_ns_sym.replace(name);
     }
     fn insert_into_namespace(&self, namespace: &Symbol, sym: Symbol, val: Rc<Value>) {
-        self.namespaces.insert_into_namespace(namespace, sym, val);
+        self.namespaces.insert_into_namespace(namespace, &sym, val);
     }
     fn insert_into_current_namespace(&self, sym: Symbol, val: Rc<Value>) {
         self.namespaces
-            .insert_into_namespace(&*self.curr_ns_sym.borrow(), sym, val);
+            .insert_into_namespace(&*self.curr_ns_sym.borrow(), &sym, val);
     }
     fn get_from_namespace(&self, namespace: &Symbol, sym: &Symbol) -> Rc<Value> {
         self.namespaces.get(namespace, sym)
@@ -44,9 +44,8 @@ impl EnvironmentVal {
     /// Default main environment
     fn new_main_val() -> EnvironmentVal {
         let curr_ns_sym = Symbol::intern("user");
-        let curr_ns = Namespace::from_sym(curr_ns_sym.clone());
-        let namespaces = Namespaces(RefCell::new(HashMap::new()));
-        namespaces.insert(curr_ns_sym.clone(), curr_ns);
+        let namespaces = Namespaces::new();
+        namespaces.create_namespace(&curr_ns_sym);
         EnvironmentVal {
             curr_ns_sym: RefCell::new(curr_ns_sym),
             namespaces,

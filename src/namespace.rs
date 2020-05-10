@@ -10,17 +10,17 @@ pub struct Namespace {
     mappings: RefCell<HashMap<Symbol, Rc<Value>>>,
 }
 impl Namespace {
-    pub fn new(name: Symbol, mappings: RefCell<HashMap<Symbol, Rc<Value>>>) -> Namespace {
-        Namespace { name, mappings }
+    pub fn new(name: &Symbol, mappings: RefCell<HashMap<Symbol, Rc<Value>>>) -> Namespace {
+        Namespace { name: name.unqualified(), mappings }
     }
-    pub fn from_sym(name: Symbol) -> Namespace {
+    pub fn from_sym(name: &Symbol) -> Namespace {
         Namespace::new(name, RefCell::new(HashMap::new()))
     }
-    pub fn insert(&self, sym: Symbol, val: Rc<Value>) {
-        self.mappings.borrow_mut().insert(sym, val);
+    pub fn insert(&self, sym: &Symbol, val: Rc<Value>) {
+        self.mappings.borrow_mut().insert(sym.unqualified(), val);
     }
     pub fn get(&self, sym: &Symbol) -> Rc<Value> {
-        match self.mappings.borrow_mut().get(sym) {
+        match self.mappings.borrow_mut().get(&sym.unqualified()) {
             Some(val) => Rc::clone(val),
             None => Rc::new(Value::Condition(format!("1 Undefined symbol {}", sym.name))),
         }
@@ -33,13 +33,17 @@ impl Namespaces {
     pub fn new() -> Namespaces {
         Namespaces(RefCell::new(HashMap::new()))
     }
-    /// Insert a new namespace of name (sym)
-    pub fn insert(&self, sym: Symbol, namespace: Namespace) {
+    fn insert(&self, namespace: Namespace) {
         // When storing / retrieving from namespaces, we want
         // namespace unqualified keys
-        let sym = sym.unqualified();
-        self.0.borrow_mut().insert(sym, namespace);
+        self.0.borrow_mut().insert(namespace.name.unqualified(), namespace);
     }
+    /// Adds a new namespace to internal HashMap (but does
+    /// *not* return a Namespace or reference to one)
+    pub fn create_namespace(&self,sym: &Symbol){
+        self.insert(Namespace::from_sym(sym));
+    }
+    /// Insert a new namespace of name (sym)
     pub fn has_namespace(&self, namespace_sym: &Symbol) -> bool {
         let namespace_sym = namespace_sym.unqualified();
 
@@ -50,18 +54,14 @@ impl Namespaces {
             None => false,
         }
     }
-    // @TODO Consider writing `sym` as reference here, because we clone it anyways
-    //       Only reason to keep it is `inserts` are pass-by-value here normally,
-    //       since the idea normally is you are literally inserting the keys too
-    //       I'd prefer that consistency, unless we find it has a noticeable
-    //       performance impact
     /// Insert a binding (sym = val) *into* namespace (namespace)
-    pub fn insert_into_namespace(&self, namespace_sym: &Symbol, sym: Symbol, val: Rc<Value>) {
+    /// If namespace doesn't exist, create it 
+    pub fn insert_into_namespace(&self, namespace_sym: &Symbol, sym: &Symbol, val: Rc<Value>) {
         let mut namespace_sym = &namespace_sym.unqualified();
         // We will only use this if ns isn't ""
         let symbol_namespace_sym = Symbol::intern(&sym.ns);
 
-        if sym.ns != "" {
+        if sym.has_ns() {
             namespace_sym = &symbol_namespace_sym;
         }
 
@@ -69,13 +69,13 @@ impl Namespaces {
         let namespace = namespaces.get(namespace_sym);
         match namespace {
             Some(namespace) => {
-                namespace.insert(sym.unqualified(), val);
+                namespace.insert(sym, val);
             }
             None => {
                 drop(namespaces);
-                let namespace = Namespace::from_sym(namespace_sym.clone());
-                namespace.insert(sym.unqualified(), val);
-                self.insert(namespace_sym.unqualified(), namespace);
+                let namespace = Namespace::from_sym(namespace_sym);
+                namespace.insert(sym, val);
+                self.insert(namespace);
             }
         }
     }
@@ -87,7 +87,7 @@ impl Namespaces {
 
         // @TODO just make it an Optional<String>
         // If our sym is namespace qualified,  use that as our namespace
-        if sym.ns != "" {
+        if sym.has_ns() {
             namespace_sym = Symbol::intern(&sym.ns);
         }
 
@@ -105,13 +105,145 @@ impl Namespaces {
 
 #[cfg(test)]
 mod tests {
+    // 'Struct' here because its not immediately clear why, when testing this,
+    // why the word 'namespace' is repeated and that this is actually specifically
+    // a struct 
+    mod namespace_struct {
+        use crate::namespace::Namespace;
+        use crate::symbol::Symbol;
+        use crate::value::Value;
+        use std::rc::Rc;
+        use std::cell::RefCell;
+        use std::collections::HashMap;
 
-    mod namespaces {
+        #[test]
+        fn new() {
+            let namespace = Namespace::new(&Symbol::intern("a"),RefCell::new(HashMap::new()));
+            assert_eq!(namespace.name, Symbol::intern("a"));
+            assert!(namespace.mappings.borrow().is_empty());
+        }
+
+        #[test]
+        fn new_removes_namespace_from_qualified_symbol() {
+            let namespace = Namespace::new(&Symbol::intern_with_ns("ns","a"),RefCell::new(HashMap::new()));
+            assert_eq!(namespace.name, Symbol::intern("a"));
+            assert!(namespace.name != Symbol::intern_with_ns("ns","a"));
+            assert!(namespace.mappings.borrow().is_empty());
+        }
+        #[test]
+        fn new_namespace_starts_empty() {
+            let namespace = Namespace::new(&Symbol::intern("a"),RefCell::new(HashMap::new()));
+            let namespace2 = Namespace::new(&Symbol::intern_with_ns("ns","b"),RefCell::new(HashMap::new()));
+            assert!(namespace.mappings.borrow().is_empty());
+            assert!(namespace2.mappings.borrow().is_empty());
+        }
+
+        #[test]
+        fn from_sym() {
+            let namespace = Namespace::from_sym(&Symbol::intern_with_ns("ns","name"));
+            assert_eq!(namespace.name,Symbol::intern("name"));
+            assert!(namespace.name != Symbol::intern_with_ns("ns","name"));
+            assert!(namespace.mappings.borrow().is_empty());
+        }
+        #[test]
+        fn insert() {
+            let namespace = Namespace::from_sym(&Symbol::intern("name"));
+            namespace.insert(&Symbol::intern("a"),Rc::new(Value::Nil));
+            namespace.insert(&Symbol::intern_with_ns("ns","b"),Rc::new(Value::Nil));
+            assert_eq!(namespace.name,Symbol::intern("name"));
+            assert!(namespace.name != Symbol::intern("ns"));
+            assert!(namespace.name != Symbol::intern_with_ns("ns","name"));
+
+            namespace.insert(&Symbol::intern("c"),Rc::new(Value::Nil));
+            match &*namespace.get(&Symbol::intern("c")) {
+                Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
+                _ => {}
+            }
+        }
+
+        #[test]
+        fn get() {
+            let namespace = Namespace::from_sym(&Symbol::intern("name"));
+            namespace.insert(&Symbol::intern("a"),Rc::new(Value::Nil));
+            namespace.insert(&Symbol::intern_with_ns("ns","b"),Rc::new(Value::Nil));
+            match &*namespace.get(&Symbol::intern("a")) {
+                Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
+                _ => {}
+            }
+
+            match &*namespace.get(&Symbol::intern("b")) {
+                Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
+                _ => {}
+            }
+
+            match &*namespace.get(&Symbol::intern("ns")) {
+                Value::Condition(_) => {}
+                _ => panic!("We are able to get a symbol whose name is the namespace of another symbol we inserted (and note, that namesapce should be dropped altogether on insert)"),
+            }
+
+            match &*namespace.get(&Symbol::intern("sassafrass")) {
+                Value::Condition(_) => {}
+                _ => panic!("We are able to get a symbol we didn't insert without a Condition being thrown"),
+            }
+
+            match &*namespace.get(&Symbol::intern_with_ns("ns","b")) {
+                Value::Condition(_) => panic!("We are unable to get a symbol by trying to get a namespace qualified version of it (the namespace normally should be irrelevant and automatically drop)"),
+                _ => {}
+            }
+
+            match &*namespace.get(&Symbol::intern_with_ns("chicken","a")) {
+                Value::Condition(_) => panic!("We are unable to get a symbol by trying to get a namespace qualified (with a random namespace) version of it (the namespace normally should be irrelevant and automatically drop)"),
+                _ => {}
+            }
+        }
+    }
+    mod namespaces_newtype {
+        use crate::namespace::Namespace;
         use crate::namespace::Namespaces;
         use crate::symbol::Symbol;
         use crate::value::Value;
         use std::rc::Rc;
+        fn new() {
+            let namespaces = Namespaces::new();
+            assert!(namespaces.0.borrow().is_empty());
+        }
+        fn insert() {
+            let namespaces = Namespaces::new();
+            let namespace  = Namespace::from_sym(&Symbol::intern("clojure.core"));
+            namespace.insert(&Symbol::intern("+"),Rc::new(Value::Nil));
+            // Namespace should be dropped; doesn't matter when inserting into
+            // a namespace
+            namespace.insert(&Symbol::intern_with_ns("clojure.math","+"),Rc::new(Value::Nil));
+            /////////////////////////////////////////////////////////////
+            namespaces.insert(namespace);
 
+            assert_eq!(Value::Nil,*namespaces.get(&Symbol::intern("clojure.core"),&Symbol::intern("+")));
+            assert_eq!(Value::Nil,*namespaces.get(&Symbol::intern_with_ns("ns-doesn't-matter","clojure.core"),&Symbol::intern("+")));
+            assert_eq!(Value::Nil,*namespaces.get(&Symbol::intern_with_ns("ns-doesn't-matter","clojure.core"),&Symbol::intern_with_ns("ns-still-doesn't-matter","+")));
+            //Ie, we should get a Condition, because there is no clojure.math/+ 
+            assert!(Value::Nil != *namespaces.get(&Symbol::intern("clojure.math"),&Symbol::intern("+")));
+        }
+        fn has_namespace() {
+            let namespaces = Namespaces::new();
+            let namespace  = Namespace::from_sym(&Symbol::intern("clojure.core"));
+            namespace.insert(&Symbol::intern("+"),Rc::new(Value::Nil));
+
+            assert!(namespaces.has_namespace(&Symbol::intern("clojure.core")));
+            assert!(namespaces.has_namespace(&Symbol::intern_with_ns("ns-doesn't-matter","clojure.core")));
+            assert!(!namespaces.has_namespace(&Symbol::intern("+")));
+            // Note; ns-doesn't-matter *isn't* the namespace this time 
+            assert!(!namespaces.has_namespace(&Symbol::intern_with_ns("clojure.core","ns-doesn't-matter")));
+        }
+        fn insert_into_namespace() {
+            let namespaces = Namespaces::new();
+            namespaces.insert_into_namespace(&Symbol::intern("clojure.core"), &Symbol::intern("+"), Rc::new(Value::Nil));
+            assert!(!namespaces.has_namespace(&Symbol::intern("random_ns")));
+            assert!(namespaces.has_namespace(&Symbol::intern("clojure.core")));
+
+            assert_eq!(Value::Nil, *namespaces.get(&Symbol::intern("clojure.core"),&Symbol::intern("+")));
+            assert!(Value::Nil != *namespaces.get(&Symbol::intern("clojure.core"),&Symbol::intern("other-sym")));
+            assert!(Value::Nil != *namespaces.get(&Symbol::intern("other-ns"),&Symbol::intern("+")));
+        }
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
         //  pub fn get(&self,namespace_sym: &Symbol,sym: &Symbol) -> Rc<Value>
@@ -139,7 +271,7 @@ mod tests {
             let clojure_core1_plus_1 = Symbol::intern("clojure.core1/+1");
             namespaces.insert_into_namespace(
                 &Symbol::intern("clojure.core1"),
-                Symbol::intern("+1"),
+                &Symbol::intern("+1"),
                 Rc::new(Value::Nil),
             );
             match &*namespaces.get(&Symbol::intern("clojure.your"), &clojure_core1_plus_1) {
@@ -162,7 +294,7 @@ mod tests {
             let clojure_core_plus = Symbol::intern("clojure.core/+");
             namespaces.insert_into_namespace(
                 &Symbol::intern("clojure.core"),
-                Symbol::intern("+"),
+                &Symbol::intern("+"),
                 Rc::new(Value::Nil),
             );
             // Really means get +/+,  but is overwritten to mean get clojure.core/+
@@ -185,7 +317,7 @@ mod tests {
             let plus_2 = Symbol::intern("+2");
             namespaces.insert_into_namespace(
                 &Symbol::intern("core2"),
-                Symbol::intern("+2"),
+                &Symbol::intern("+2"),
                 Rc::new(Value::Nil),
             );
             // Get intern("core2/+2")
@@ -208,7 +340,7 @@ mod tests {
             let namespaces = Namespaces::new();
             namespaces.insert_into_namespace(
                 &Symbol::intern("core2"),
-                Symbol::intern("+2"),
+                &Symbol::intern("+2"),
                 Rc::new(Value::Nil),
             );
 
