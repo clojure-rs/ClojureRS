@@ -76,7 +76,7 @@ mod tests {
             let args = vec![];
             assert_eq!(
                 Value::Condition(String::from(
-                    "Wrong number of arguments given to function (Given: 0, Expected: 1)"
+                    "Wrong number of arguments given to function (Given: 0)"
                 )),
                 divide.invoke(args)
             );
