@@ -249,14 +249,14 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
     );
     // integer_tail<&str,&str> above function 
     
-    named!(integer_lexer <&str, String>,
+    named!(integer_parser <&str, String>,
          do_parse!(
              sign: integer_sign >>
              rest_input: integer_tail >>
              (format!("{}{}",sign,rest_input))
          )
     );
-    integer_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
+    integer_parser(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
 }
 
 /// Parses valid doubles
@@ -266,7 +266,7 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
 pub fn double_parser(input: &str) -> IResult<&str, f64> {
     named!(decimal_point<&str, &str>, take_while_m_n!(1, 1, is_period_char));
     
-    named!(double_lexer <&str, String>,
+    named!(double_parser <&str, String>,
          do_parse!(
              integer: integer_parser >> //integer_part >>
              point: complete!(decimal_point) >>
@@ -274,7 +274,7 @@ pub fn double_parser(input: &str) -> IResult<&str, f64> {
              (format!("{}{}{}",integer, point, decimal))
          )
     );
-    double_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
+    double_parser(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
 }
 // Currently used to create 'try_readers', which are readers (or
 // reader functions, at least) that are basically composable InputType
