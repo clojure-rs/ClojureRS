@@ -326,6 +326,17 @@ pub fn try_read_bool(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, Value::Boolean(bool.parse().unwrap())))
 }
 
+// Tries to parse &str into Value::Nil
+/// Expects:
+///     nil
+/// Example success:
+///     nil => Value::Nil
+pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
+    named!(nil_parser<&str,&str>, tag!("nil"));
+    let (rest_input, nil) = nil_parser(input)?;
+    Ok((rest_input, Value::Nil))
+}
+
 /// Tries to parse &str into Value::double
 ///
 pub fn try_read_f64(input: &str) -> IResult<&str, Value> {
@@ -490,6 +501,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_f64,
             try_read_i32,
             try_read_bool,
+            try_read_nil,
             try_read_symbol,
             try_read_keyword,
             try_read_list,
@@ -695,6 +707,16 @@ mod tests {
                 Value::Boolean(false),
                 try_read_bool("false ").ok().unwrap().1
             );
+        }
+    }
+
+    mod try_read_nil_tests {
+        use crate::reader::try_read_nil;
+        use crate::value::Value;
+
+        #[test]
+        fn try_read_nil_test() {
+            assert_eq!(Value::Nil, try_read_nil("nil ").ok().unwrap().1);
         }
     }
 
