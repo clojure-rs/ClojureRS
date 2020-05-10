@@ -8,6 +8,7 @@
 //! not;  since this is about being a 'free-er' Clojure, especially since it can't compete with it in raw
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
+use itertools::join;
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
     terminated, Err::Incomplete, IResult,
@@ -166,6 +167,26 @@ fn consume_clojure_whitespaces_parser(input: &str) -> IResult<&str, ()> {
     parser(input).map(|(rest, _)| (rest, ()))
 }
 
+// This parser is made with nom's function combinator, rather than macros,
+// both because nom is soft deprecating the macros (and we too should move away from them),
+// but also because in doing so this is how we parse 'complete' text, rather than streamed text.
+//
+// The difference?  When streamed, typing 1234 and hitting enter will be feeding
+// "1234/n" to our reader, and it will take this to mean *more* of this number may
+// be coming. So to finish typing a number, you have to eventually go out of your way
+// to hit " ", else you'll get
+//
+// user> 1234
+// 456
+// 1232 ...
+//
+// This function, unlike the other subparsers of a parser, is made external to the function
+// just because type inference doesn't play nice with defining this inline 
+
+fn identifier_tail(input: &str) -> IResult<&str, &str> {
+    nom::bytes::complete::take_while(is_identifier_char)(input)
+}
+
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
 /// Example Failures:  'a,  12b,   ,cat  
@@ -177,13 +198,13 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
        )
     );
 
-    named!(identifier_tail<&str, &str>, take_while!(is_identifier_char));
+    // identifier_tail<&str,&str> defined above to have magic 'complete' powers
 
     named!(identifier <&str, String>,
          do_parse!(
              head: identifier_head >>
              rest_input: identifier_tail >>
-             (cons_str(head, rest_input))
+             (cons_str(head, &rest_input))
          )
     );
 
@@ -197,7 +218,7 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     named!(namespace_parser <&str,String>,
 	   do_parse!(
 	       ns: identifier_parser >>
-	       tag!("/") >>
+	       complete!(tag!("/")) >>
 	       (ns)));
 
     let (rest_input, ns) = opt(namespace_parser)(input)?;
@@ -208,6 +229,13 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     }
 }
 
+// Helper function to integer_parser for same reason as
+// identifier_tail. See comment above said function for explanation
+
+fn integer_tail(input: &str) -> IResult<&str, &str> {
+    nom::bytes::complete::take_while1(|c: char| c.is_digit(10))(input)
+}
+    
 /// Parses valid integers
 /// Example Successes: 1, 2, 4153,  -12421
 ///
@@ -219,7 +247,8 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
            |maybe_minus| maybe_minus.unwrap_or("")
        )
     );
-    named!(integer_tail<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
+    // integer_tail<&str,&str> above function 
+    
     named!(integer_lexer <&str, String>,
          do_parse!(
              sign: integer_sign >>
@@ -235,22 +264,14 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
 ///
 ///
 pub fn double_parser(input: &str) -> IResult<&str, f64> {
-    named!(integer_sign<&str, &str>,
-       map!(
-           opt!(take_while_m_n!(1, 1, is_minus_char)),
-           |maybe_minus| maybe_minus.unwrap_or("")
-       )
-    );
-    named!(integer_part<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
     named!(decimal_point<&str, &str>, take_while_m_n!(1, 1, is_period_char));
-    named!(decimal_part<&str, &str>, take_while1!(|c: char| c.is_digit(10)));
+    
     named!(double_lexer <&str, String>,
          do_parse!(
-             sign: integer_sign >>
-             integer: integer_part >>
-             point: decimal_point >>
-             decimal: decimal_part >>
-             (format!("{}{}{}{}",sign,integer, point, decimal))
+             integer: integer_parser >> //integer_part >>
+             point: complete!(decimal_point) >>
+             decimal: integer_tail >> //decimal_part >>
+             (format!("{}{}{}",integer, point, decimal))
          )
     );
     double_lexer(input).map(|(rest, digits)| (rest, digits.parse().unwrap()))
