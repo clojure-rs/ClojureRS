@@ -71,7 +71,7 @@ mod tests {
             let blank = BlankFn {};
             let s = " \thello \n   \r ";
             let args = vec![Rc::new(Value::String(String::from(s)))];
-            assert_eq!(Value::Boolean(true), blank.invoke(args));
+            assert_eq!(Value::Boolean(false), blank.invoke(args));
         }
 
         #[test]
