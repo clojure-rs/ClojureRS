@@ -326,17 +326,6 @@ pub fn try_read_bool(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, Value::Boolean(bool.parse().unwrap())))
 }
 
-// Tries to parse &str into Value::Nil
-/// Expects:
-///     nil
-/// Example success:
-///     nil => Value::Nil
-pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
-    named!(nil_parser<&str,&str>, tag!("nil"));
-    let (rest_input, nil) = nil_parser(input)?;
-    Ok((rest_input, Value::Nil))
-}
-
 /// Tries to parse &str into Value::double
 ///
 pub fn try_read_f64(input: &str) -> IResult<&str, Value> {
