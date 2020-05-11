@@ -208,6 +208,9 @@ impl Environment {
         let thread_sleep_fn = clojure_std::thread::SleepFn {};
         let nanotime_fn = clojure_std::time::NanoTimeFn {};
 
+	      let get_fn = rust_core::GetFn {};
+        let map_fn = rust_core::MapFn {};
+	
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros
@@ -216,15 +219,17 @@ impl Environment {
         let def_macro = Value::DefMacro {};
         let fn_macro = Value::FnMacro {};
         let defmacro_macro = Value::DefmacroMacro {};
+	      let if_macro = Value::IfMacro {};
         let environment = Rc::new(Environment::new_main_environment());
 
-	let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
-	let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
+	      let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
+	      let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
+        let load_file_fn = rust_core::LoadFileFn::new(Rc::clone(&environment));
+	      // @TODO after we merge this with all the other commits we have,
+	      //       just change all the `insert`s here to use insert_in_namespace
+	      //       I prefer explicity and the non-dependence-on-environmental-factors
+	      environment.change_namespace(Symbol::intern("clojure.core"));
 
-	// @TODO after we merge this with all the other commits we have,
-	//       just change all the `insert`s here to use insert_in_namespace
-	//       I prefer explicity and the non-dependence-on-environmental-factors
-	environment.change_namespace(Symbol::intern("clojure.core"));
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());
@@ -258,11 +263,14 @@ impl Environment {
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
         environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
+        environment.insert(Symbol::intern("map"), map_fn.to_rc_value());
+
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
         environment.insert(Symbol::intern("do-fn*"), do_fn.to_rc_value());
         environment.insert(Symbol::intern("do"), do_macro.to_rc_value());
         environment.insert(Symbol::intern("def"), def_macro.to_rc_value());
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
+	      environment.insert(Symbol::intern("if"), if_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
 	environment.insert(Symbol::intern("ns"), ns_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
@@ -270,8 +278,10 @@ impl Environment {
             Symbol::intern("lexical-eval"),
             lexical_eval_fn.to_rc_value(),
         );
+	      environment.insert(Symbol::intern("load-file"), load_file_fn.to_rc_value());
         environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
-        environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
+	      environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
+	      environment.insert(Symbol::intern("get"), get_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
         environment.insert(
             Symbol::intern("print-string"),

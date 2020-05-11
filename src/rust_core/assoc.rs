@@ -3,7 +3,7 @@ use crate::value::{Value, ToValue};
 use std::rc::Rc;
 use crate::util::IsEven;
 use itertools::Itertools;
-use crate::persistent_list_map::IPersistentListMap;
+use crate::persistent_list_map::IPersistentMap;
 
 /// (assoc map key val & kvs)
 ///

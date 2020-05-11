@@ -1,3 +1,29 @@
+use crate::value::Value;
+use std::rc::Rc;
+
+use crate::environment::Environment;
+use crate::ifn::IFn;
+use crate::persistent_list::{
+    PersistentList,
+    PersistentList::{Cons, Empty},
+    ToPersistentList, ToPersistentListIter,
+};
+use crate::persistent_list_map::IPersistentMap;
+use crate::persistent_vector::{PersistentVector, ToPersistentVectorIter};
+use crate::symbol::Symbol;
+use crate::keyword::Keyword;
+use crate::type_tag::TypeTag;
+use crate::value::{Evaluable, ToValue};
+use crate::repl::Repl;
+use crate::error_message;
+use crate::util::IsEven;
+
+use itertools::Itertools;
+
+use crate::protocol::ProtocolCastable;
+use crate::protocol::Protocol; 
+use crate::iterable::Iterable;
+
 // This module will hold core function and macro primitives that aren't special cases
 // (like the quote macro, or let), and can't be implemented in clojure itself
 
@@ -42,8 +68,12 @@ pub(crate) mod concat;
 pub use self::concat::*;
 pub(crate) mod assoc;
 pub use self::assoc::*;
+pub(crate) mod get;
+pub use self::get::*;
+pub(crate) mod map;
+pub use self::map::*;
 
-// input and output
+// input and outputy
 pub(crate) mod print_string;
 pub use self::print_string::*;
 pub(crate) mod string_print;
@@ -52,3 +82,8 @@ pub use self::string_print::*;
 // other
 pub(crate) mod slurp;
 pub use self::slurp::*;
+
+pub(crate) mod load_file;
+pub use self::load_file::*;
+
+

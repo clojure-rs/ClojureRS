@@ -16,7 +16,7 @@ impl ToValue for DivideFn {
 impl IFn for DivideFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         match args.len() {
-            0 => error_message::wrong_arg_count(1,args.len()),
+            0 => error_message::zero_arg_count(args.len()),
             1 => {
                 let val = args.get(0).unwrap().to_value();
                 match val {

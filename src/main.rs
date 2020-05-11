@@ -20,6 +20,8 @@ mod symbol;
 mod type_tag;
 mod util;
 mod value;
+mod protocol;
+mod iterable;
 
 fn main() {
     //
