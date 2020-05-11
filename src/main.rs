@@ -19,6 +19,8 @@ mod type_tag;
 mod util;
 mod value;
 mod error_message;
+mod protocol;
+mod iterable;
 
 fn main() {
     //
