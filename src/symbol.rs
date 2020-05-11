@@ -59,9 +59,7 @@ mod tests {
 
     mod symbol_tests {
         use crate::symbol::Symbol;
-        use std::cell::RefCell;
         use std::collections::HashMap;
-        use std::rc::Rc;
 
         #[test]
         fn test_intern() {
@@ -119,6 +117,7 @@ mod tests {
                 }
             );
         }
+        #[test]
         fn test_work_with_hashmap() {
             let mut hashmap = HashMap::new();
             hashmap.insert(Symbol::intern("+"), 1_i32);

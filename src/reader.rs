@@ -10,7 +10,7 @@
 
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
-    terminated, Err::Incomplete, IResult, Needed,
+    terminated, Err::Incomplete, IResult,
 };
 
 use crate::keyword::Keyword;
@@ -22,8 +22,6 @@ use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
-use nom::error::ErrorKind;
-use nom::Err::Error;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -577,7 +575,6 @@ mod tests {
 
     mod symbol_parser_tests {
         use crate::reader::symbol_parser;
-        use crate::reader::try_read_symbol;
         use crate::symbol::Symbol;
 
         #[test]

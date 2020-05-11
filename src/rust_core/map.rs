@@ -4,9 +4,7 @@ use crate::iterable::Iterable;
 use crate::persistent_list::PersistentList;
 use crate::protocol::ProtocolCastable;
 use crate::type_tag::TypeTag;
-use crate::util::IsEven;
 use crate::value::{ToValue, Value};
-use itertools::Itertools;
 use std::rc::Rc;
 
 // This is a tide me over rust wrapper, as map is implemented in lower level primitives

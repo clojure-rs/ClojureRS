@@ -8,7 +8,6 @@ use crate::persistent_vector::ToPersistentVectorIter;
 use crate::protocol::Protocol;
 use crate::value::ToValue;
 use crate::value::Value;
-use std::iter::FromIterator;
 use std::rc::Rc;
 
 //
