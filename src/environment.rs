@@ -303,7 +303,7 @@ impl Environment {
 
 #[cfg(test)]
 mod tests {
-    mod environment_val_tests {
+    mod environment_val {
 	      use crate::environment::EnvironmentVal;
 	      use crate::symbol::Symbol;
 	      use crate::value::{Value};
@@ -316,7 +316,7 @@ mod tests {
 	      ////////////////////////////////////////////////////////////////////////////////
 
 	      #[test]
-        fn test_get_current_namespace() {
+        fn get_current_namespace() {
 	          let env_val = EnvironmentVal::new_main_val();
 
 	          assert_eq!(Symbol::intern("user"),env_val.get_current_namespace());
@@ -339,7 +339,7 @@ mod tests {
 	      //////////////////////////////////////////////////////////////////////////////
 	      
 	      #[test]
-        fn test_get_from_namespace() {
+        fn get_from_namespace() {
 	          let env_val = EnvironmentVal::new_main_val();
 
 	          env_val.insert_into_namespace(
@@ -377,7 +377,7 @@ mod tests {
 	      }
 
     }
-    mod environment_tests {
+    mod environment {
 	      use crate::environment::Environment;
 	      use crate::environment::Environment::*;
 	      use crate::environment::EnvironmentVal;
@@ -392,7 +392,7 @@ mod tests {
 	      //
 	      ////////////////////////////////////////////////////////////////////////
 	      #[test]
-        fn test_get__plus() {
+        fn get_plus() {
 	          let add_fn = rust_core::AddFn {};
 
 	          let environment = Rc::new(Environment::new_main_environment());
@@ -406,7 +406,7 @@ mod tests {
 		            assert_eq!(8.to_value(),add_ifn.invoke(vec![3_i32.to_rc_value(),5_i32.to_rc_value()]));
 		            return;
 	          }
-	          panic!("test_get_plus: plus is: {:#?}",plus);
+	          panic!("get_plus: plus is: {:#?}",plus);
 	      }
 	      /////////////////////////////////////////////////////////////////////////
 	      //
@@ -414,7 +414,7 @@ mod tests {
 	      //
 	      /////////////////////////////////////////////////////////////////////////
 	      #[test]
-        fn test_insert__plus() {
+        fn insert_plus() {
 	          let add_fn = rust_core::AddFn {};
 
 	          let environment = Rc::new(Environment::new_main_environment());

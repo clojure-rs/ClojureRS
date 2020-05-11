@@ -106,7 +106,7 @@ impl Namespaces {
 #[cfg(test)]
 mod tests {
 
-    mod namespaces_tests {
+    mod namespaces {
         use crate::namespace::Namespaces;
         use crate::symbol::Symbol;
         use crate::value::Value;
@@ -118,7 +118,7 @@ mod tests {
         //
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         #[test]
-        fn get_namespace_get_empty_and_fail() {
+        fn get_get_empty_and_fail() {
             let namespaces = Namespaces::new();
             let clojure_core_plus = Symbol::intern("clojure.core/+");
             match &*namespaces.get(&Symbol::intern("clojure.your/+"), &clojure_core_plus) {
@@ -133,7 +133,7 @@ mod tests {
         }
 
         #[test]
-        fn get_namespace_qualified_symbol_overriding_namespace() {
+        fn get_qualified_symbol_overriding_namespace() {
             let namespaces = Namespaces::new();
 
             let clojure_core1_plus_1 = Symbol::intern("clojure.core1/+1");
@@ -156,7 +156,7 @@ mod tests {
         }
 
         #[test]
-        fn get_namespace_overwritten_namespace_again() {
+        fn get_overwritten_namespace_again() {
             let namespaces = Namespaces::new();
 
             let clojure_core_plus = Symbol::intern("clojure.core/+");
@@ -178,7 +178,7 @@ mod tests {
         }
 
         #[test]
-        fn get_namespace_namespace_symbol_and_symbol_separate() {
+        fn get_namespace_symbol_and_symbol_separate() {
             let namespaces = Namespaces::new();
 
             // add namespace core2/+2
@@ -204,7 +204,7 @@ mod tests {
             }
         }
         #[test]
-        fn get_namespace_wrong_ns_right_name() {
+        fn get_wrong_ns_right_name() {
             let namespaces = Namespaces::new();
             namespaces.insert_into_namespace(
                 &Symbol::intern("core2"),
