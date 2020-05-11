@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::error_message;
 use crate::type_tag::TypeTag;
 
-/// clojure.string/blank? ; returns true if nil, empty or whitespace
+/// clojure.string/includes? ; returns true if string contains substring
 #[derive(Debug, Clone)]
 pub struct IncludesFn {}
 impl ToValue for IncludesFn {
@@ -41,38 +41,38 @@ mod tests {
 
         #[test]
         fn hello_includes_ell() {
-            let blank = IncludesFn {};
+            let includes = IncludesFn {};
             let s = "hello";
             let substring = "ell";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(true), blank.invoke(args));
+            assert_eq!(Value::Boolean(true), includes.invoke(args));
         }
 
         #[test]
         fn hello_does_not_include_leh() {
-            let blank = IncludesFn {};
+            let includes = IncludesFn {};
             let s = "hello";
             let substring = "leh";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(false), blank.invoke(args));
+            assert_eq!(Value::Boolean(false), includes.invoke(args));
         }
 
         #[test]
         fn hello_includes_empty_string() {
-            let blank = IncludesFn {};
+            let includes = IncludesFn {};
             let s = "hello";
             let substring = "";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(true), blank.invoke(args));
+            assert_eq!(Value::Boolean(true), includes.invoke(args));
         }
     }
 }

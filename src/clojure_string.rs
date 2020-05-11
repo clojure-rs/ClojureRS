@@ -5,4 +5,7 @@ pub(crate) mod join;
 pub(crate) mod lower_case;
 pub(crate) mod reverse;
 pub(crate) mod starts_with_qmark_;
+pub(crate) mod trim;
+pub(crate) mod triml;
+pub(crate) mod trimr;
 pub(crate) mod upper_case;

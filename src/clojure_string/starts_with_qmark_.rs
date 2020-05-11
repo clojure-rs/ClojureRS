@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::error_message;
 use crate::type_tag::TypeTag;
 
-/// clojure.string/blank? ; returns true if nil, empty or whitespace
+/// clojure.string/starts-with? ; returns true if string starts with substring
 #[derive(Debug, Clone)]
 pub struct StartsWithFn {}
 impl ToValue for StartsWithFn {
@@ -41,38 +41,38 @@ mod tests {
 
         #[test]
         fn hello_starts_with_hel() {
-            let blank = StartsWithFn {};
+            let starts_with = StartsWithFn {};
             let s = "hello";
             let substring = "hel";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(true), blank.invoke(args));
+            assert_eq!(Value::Boolean(true), starts_with.invoke(args));
         }
 
         #[test]
         fn hello_does_not_start_with_leh() {
-            let blank = StartsWithFn {};
+            let starts_with = StartsWithFn {};
             let s = "hello";
             let substring = "leh";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(false), blank.invoke(args));
+            assert_eq!(Value::Boolean(false), starts_with.invoke(args));
         }
 
         #[test]
         fn hello_starts_with_empty_string() {
-            let blank = StartsWithFn {};
+            let starts_with = StartsWithFn {};
             let s = "hello";
             let substring = "";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(true), blank.invoke(args));
+            assert_eq!(Value::Boolean(true), starts_with.invoke(args));
         }
     }
 }

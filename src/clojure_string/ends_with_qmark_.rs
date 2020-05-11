@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::error_message;
 use crate::type_tag::TypeTag;
 
-/// clojure.string/blank? ; returns true if nil, empty or whitespace
+/// clojure.string/ends-with? ; returns true if string ends with substring
 #[derive(Debug, Clone)]
 pub struct EndsWithFn {}
 impl ToValue for EndsWithFn {
@@ -41,38 +41,38 @@ mod tests {
 
         #[test]
         fn hello_ends_with_lo() {
-            let blank = EndsWithFn {};
+            let ends_with = EndsWithFn {};
             let s = "hello";
             let substring = "lo";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(true), blank.invoke(args));
+            assert_eq!(Value::Boolean(true), ends_with.invoke(args));
         }
 
         #[test]
         fn hello_does_not_end_with_klo() {
-            let blank = EndsWithFn {};
+            let ends_with = EndsWithFn {};
             let s = "hello";
             let substring = "klo";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(false), blank.invoke(args));
+            assert_eq!(Value::Boolean(false), ends_with.invoke(args));
         }
 
         #[test]
         fn hello_ends_with_empty_string() {
-            let blank = EndsWithFn {};
+            let ends_with = EndsWithFn {};
             let s = "hello";
             let substring = "";
             let args = vec![
                 Rc::new(Value::String(String::from(s))),
                 Rc::new(Value::String(String::from(substring))),
             ];
-            assert_eq!(Value::Boolean(true), blank.invoke(args));
+            assert_eq!(Value::Boolean(true), ends_with.invoke(args));
         }
     }
 }

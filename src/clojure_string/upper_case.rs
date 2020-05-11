@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::error_message;
 use crate::type_tag::TypeTag;
 
-/// clojure.string/upper-case ; converts characters to uppercase
+/// clojure.string/upper-case ; converts characters to upper case
 #[derive(Debug, Clone)]
 pub struct UpperCaseFn {}
 impl ToValue for UpperCaseFn {
@@ -28,20 +28,20 @@ impl IFn for UpperCaseFn {
 
 #[cfg(test)]
 mod tests {
-    mod reverse_tests {
+    mod upper_case_tests {
         use crate::clojure_string::upper_case::UpperCaseFn;
         use crate::ifn::IFn;
         use crate::value::Value;
         use std::rc::Rc;
 
         #[test]
-        fn reverse_string() {
-            let reverse = UpperCaseFn {};
+        fn upper_case_string() {
+            let upper_case = UpperCaseFn {};
             let s = "1.2.3 hello";
             let args = vec![Rc::new(Value::String(String::from(s)))];
             assert_eq!(
                 Value::String(String::from("1.2.3 HELLO")),
-                reverse.invoke(args)
+                upper_case.invoke(args)
             );
         }
     }
