@@ -24,11 +24,17 @@ impl IFn for BlankFn {
                     if s.len() == 0 {
                         Value::Boolean(true)
                     } else {
-                        return Value::Boolean(s.chars().filter(|c| !c.is_whitespace()).collect::<Vec<char>>().len() == 0)
+                        return Value::Boolean(
+                            s.chars()
+                                .filter(|c| !c.is_whitespace())
+                                .collect::<Vec<char>>()
+                                .len()
+                                == 0,
+                        );
                     }
                 }
                 Value::String(s) => Value::String(s.chars().rev().collect()),
-                _a => error_message::type_mismatch(TypeTag::String, &_a.to_value())
+                _a => error_message::type_mismatch(TypeTag::String, &_a.to_value()),
             }
         }
     }
@@ -37,10 +43,10 @@ impl IFn for BlankFn {
 #[cfg(test)]
 mod tests {
     mod reverse_tests {
-        use crate::value::Value;
-        use std::rc::Rc;
         use crate::clojure_string::blank_qmark_::BlankFn;
         use crate::ifn::IFn;
+        use crate::value::Value;
+        use std::rc::Rc;
 
         #[test]
         fn is_non_empty_string_blank() {
