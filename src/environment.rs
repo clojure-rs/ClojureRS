@@ -214,6 +214,7 @@ impl Environment {
         let trim_fn = clojure_string::trim::TrimFn {};
         let triml_fn = clojure_string::triml::TrimLFn {};
         let trimr_fn = clojure_string::trimr::TrimRFn {};
+        let trim_newline_fn = clojure_string::trim_newline::TrimNewlineFn {};
 
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
@@ -325,6 +326,12 @@ impl Environment {
             &Symbol::intern("clojure.string"),
             Symbol::intern("trimr"),
             trimr_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("trim-newline"),
+            trim_newline_fn.to_rc_value(),
         );
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
