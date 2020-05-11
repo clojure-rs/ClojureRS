@@ -210,6 +210,7 @@ impl Environment {
         let lower_case_fn = clojure_string::lower_case::LowerCaseFn {};
         let starts_with_fn = clojure_string::starts_with_qmark_::StartsWithFn {};
         let ends_with_fn = clojure_string::ends_with_qmark_::EndsWithFn {};
+        let includes_fn = clojure_string::includes_qmark_::IncludesFn {};
 
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
@@ -297,6 +298,12 @@ impl Environment {
             &Symbol::intern("clojure.string"),
             Symbol::intern("ends-with?"),
             ends_with_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("includes?"),
+            includes_fn.to_rc_value(),
         );
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
