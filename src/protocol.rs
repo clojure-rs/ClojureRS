@@ -17,21 +17,21 @@ use std::rc::Rc;
 /// you're done
 pub trait Protocol: Sized {
     fn try_as_protocol(val: &Rc<Value>) -> Option<Self>; // where Self:Sized;
-    /// Panics if your Value isn't an instance of Protocol 
+    /// Panics if your Value isn't an instance of Protocol
     fn as_protocol(val: &Rc<Value>) -> Self {
         Self::try_as_protocol(val).unwrap()
     }
     fn try_unwrap(&self) -> Option<Rc<Value>>;
-    /// Panics if your Value isn't an instance of Protocol 
-    fn unwrap(&self) -> Rc<Value>{
-        self.try_unwrap().unwrap()  
+    /// Panics if your Value isn't an instance of Protocol
+    fn unwrap(&self) -> Rc<Value> {
+        self.try_unwrap().unwrap()
     }
 }
 pub trait ProtocolCastable {
     fn try_as_protocol<T: Protocol>(&self) -> Option<T>;
-    fn as_protocol<T: Protocol>(&self) -> T; 
+    fn as_protocol<T: Protocol>(&self) -> T;
 }
-impl ProtocolCastable for Rc<Value>{
+impl ProtocolCastable for Rc<Value> {
     fn try_as_protocol<T: Protocol>(&self) -> Option<T> {
         T::try_as_protocol(self)
     }

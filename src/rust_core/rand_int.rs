@@ -1,8 +1,8 @@
-use crate::ifn::IFn;
-use crate::value::{Value, ToValue};
-use std::rc::Rc;
-use rand::{thread_rng, Rng};
 use crate::error_message;
+use crate::ifn::IFn;
+use crate::value::{ToValue, Value};
+use rand::{thread_rng, Rng};
+use std::rc::Rc;
 
 /// (rand) or (rand n)
 ///
@@ -21,13 +21,14 @@ impl IFn for RandIntFn {
                 match arg {
                     Value::I32(i_) => Value::I32(thread_rng().gen_range(0, i_)),
                     Value::F64(f_) => Value::I32(thread_rng().gen_range(0, f_ as i32)),
-                    _ => Value::Condition(format!( // TODO: what error message should be returned regarding using typetags?
-                                                   "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
-                                                   arg.type_tag()
-                    ))
+                    _ => Value::Condition(format!(
+                        // TODO: what error message should be returned regarding using typetags?
+                        "Type mismatch; Expecting: (i32 | i64 | f32 | f64), Found: {}",
+                        arg.type_tag()
+                    )),
                 }
-            },
-            _ => error_message::wrong_arg_count(1, args.len())
+            }
+            _ => error_message::wrong_arg_count(1, args.len()),
         }
     }
 }

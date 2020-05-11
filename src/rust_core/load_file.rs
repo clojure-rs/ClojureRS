@@ -1,9 +1,9 @@
-use crate::repl::Repl;
-use crate::ifn::IFn;
-use crate::value::{Value, ToValue};
-use std::rc::Rc;
 use crate::environment::Environment;
+use crate::ifn::IFn;
+use crate::repl::Repl;
 use crate::type_tag::TypeTag;
+use crate::value::{ToValue, Value};
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct LoadFileFn {

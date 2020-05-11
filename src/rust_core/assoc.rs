@@ -1,9 +1,9 @@
 use crate::ifn::IFn;
-use crate::value::{Value, ToValue};
-use std::rc::Rc;
-use crate::util::IsEven;
-use itertools::Itertools;
 use crate::persistent_list_map::IPersistentMap;
+use crate::util::IsEven;
+use crate::value::{ToValue, Value};
+use itertools::Itertools;
+use std::rc::Rc;
 
 /// (assoc map key val & kvs)
 ///

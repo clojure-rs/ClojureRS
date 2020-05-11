@@ -65,7 +65,7 @@ use crate::value::Value::*;
 
 impl PartialEq for Value {
     // @TODO implement our generic IFns some other way? After all, again, this isn't Java
-    // @TODO improve this? This is a hack 
+    // @TODO improve this? This is a hack
     fn eq(&self, other: &Value) -> bool {
         //
         match (self, other) {
@@ -138,7 +138,7 @@ impl Hash for Value {
             DefMacro => ValueHash::DefMacro.hash(state),
             FnMacro => ValueHash::FnMacro.hash(state),
             LetMacro => ValueHash::LetMacro.hash(state),
-	    IfMacro => ValueHash::IfMacro.hash(state),
+            IfMacro => ValueHash::IfMacro.hash(state),
 
             String(string) => string.hash(state),
             Nil => ValueHash::Nil.hash(state),
@@ -166,7 +166,7 @@ impl fmt::Display for Value {
             DefMacro => std::string::String::from("#macro[def*]"),
             DefmacroMacro => std::string::String::from("#macro[defmacro*]"),
             FnMacro => std::string::String::from("#macro[fn*]"),
-	    IfMacro => std::string::String::from("#macro[if*]"),
+            IfMacro => std::string::String::from("#macro[if*]"),
             LetMacro => std::string::String::from("#macro[let*]"),
             Value::String(string) => string.clone(),
             Nil => std::string::String::from("nil"),
@@ -210,7 +210,7 @@ impl Value {
             Value::DefmacroMacro => TypeTag::Macro,
             Value::LetMacro => TypeTag::Macro,
             Value::FnMacro => TypeTag::Macro,
-	    Value::IfMacro => TypeTag::Macro,
+            Value::IfMacro => TypeTag::Macro,
             Value::String(_) => TypeTag::String,
             Value::Nil => TypeTag::Nil,
         }
@@ -499,23 +499,28 @@ impl Value {
                     )))),
                     Ordering::Equal => Some(args.nth(0)),
                 }
-            },
-	    IfMacro => {
-		if args.len() != 2 && args.len() != 3 {
-		    return Some(Rc::new(Value::Condition(format!(
-			"Wrong number of arguments (Given: {}, Expected: 2 or 3)",
-			args.len()
-                    ))))
-		}
-		let arg_refs = PersistentList::iter(args).collect::<Vec<Rc<Value>>>();
-		let condition = arg_refs.get(0).unwrap().eval(Rc::clone(environment));
+            }
+            IfMacro => {
+                if args.len() != 2 && args.len() != 3 {
+                    return Some(Rc::new(Value::Condition(format!(
+                        "Wrong number of arguments (Given: {}, Expected: 2 or 3)",
+                        args.len()
+                    ))));
+                }
+                let arg_refs = PersistentList::iter(args).collect::<Vec<Rc<Value>>>();
+                let condition = arg_refs.get(0).unwrap().eval(Rc::clone(environment));
 
-		if condition.is_truthy() {
-		    Some(arg_refs.get(1).unwrap().eval_to_rc(Rc::clone(environment)))
-		} else {
-		    Some(arg_refs.get(2).unwrap_or(&Rc::new(Value::Nil)).eval_to_rc(Rc::clone(environment)))
-		} 
-	    }
+                if condition.is_truthy() {
+                    Some(arg_refs.get(1).unwrap().eval_to_rc(Rc::clone(environment)))
+                } else {
+                    Some(
+                        arg_refs
+                            .get(2)
+                            .unwrap_or(&Rc::new(Value::Nil))
+                            .eval_to_rc(Rc::clone(environment)),
+                    )
+                }
+            }
             //
             // If we're not a valid IFn
             //

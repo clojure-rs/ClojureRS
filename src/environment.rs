@@ -22,34 +22,34 @@ pub struct EnvironmentVal {
     namespaces: Namespaces,
 }
 impl EnvironmentVal {
-    fn change_namespace(&self,name: Symbol){
-	self.curr_ns_sym.replace(name);
+    fn change_namespace(&self, name: Symbol) {
+        self.curr_ns_sym.replace(name);
     }
-    fn insert_into_namespace(&self,namespace: &Symbol, sym: Symbol, val: Rc<Value>) {
-	self.namespaces.insert_into_namespace(namespace,sym,val);
-    }	
-    fn insert_into_current_namespace(&self,sym: Symbol, val: Rc<Value>){
-	self.namespaces.insert_into_namespace(&*self.curr_ns_sym.borrow(),sym,val);
+    fn insert_into_namespace(&self, namespace: &Symbol, sym: Symbol, val: Rc<Value>) {
+        self.namespaces.insert_into_namespace(namespace, sym, val);
     }
-    fn get_from_namespace(&self,namespace: &Symbol,sym: &Symbol) -> Rc<Value>
-    {
-	self.namespaces.get(namespace,sym)
+    fn insert_into_current_namespace(&self, sym: Symbol, val: Rc<Value>) {
+        self.namespaces
+            .insert_into_namespace(&*self.curr_ns_sym.borrow(), sym, val);
+    }
+    fn get_from_namespace(&self, namespace: &Symbol, sym: &Symbol) -> Rc<Value> {
+        self.namespaces.get(namespace, sym)
     }
     fn get_current_namespace(&self) -> Symbol {
-	self.curr_ns_sym.borrow().clone()
+        self.curr_ns_sym.borrow().clone()
     }
     // @TODO as mentioned, we've been working with a memory model where values exist
     //       in our system once-ish and we reference them all over with Rc<..>
     //       Look into possibly working this into that (if its even significant);
     /// Default main environment
     fn new_main_val() -> EnvironmentVal {
-	let curr_ns_sym = Symbol::intern("user");
-	let curr_ns     = Namespace::from_sym(curr_ns_sym.clone());
-	let namespaces  = Namespaces(RefCell::new(HashMap::new()));
-	namespaces.insert(curr_ns_sym.clone(),curr_ns);
+        let curr_ns_sym = Symbol::intern("user");
+        let curr_ns = Namespace::from_sym(curr_ns_sym.clone());
+        let namespaces = Namespaces(RefCell::new(HashMap::new()));
+        namespaces.insert(curr_ns_sym.clone(), curr_ns);
         EnvironmentVal {
             curr_ns_sym: RefCell::new(curr_ns_sym),
-            namespaces
+            namespaces,
         }
     }
 }
@@ -68,42 +68,37 @@ pub enum Environment {
 }
 use Environment::*;
 impl Environment {
-    pub fn change_namespace(&self,symbol: Symbol) {
-	let symbol = symbol.unqualified();
-	
-	match self.get_main_environment() {
-	    MainEnvironment(EnvironmentVal { curr_ns_sym, ..}) => {
-		curr_ns_sym.replace(symbol);
-	    },
-	    LocalEnvironment(..) => {
-		panic!(
-		    "get_main_environment() returns LocalEnvironment,\
+    pub fn change_namespace(&self, symbol: Symbol) {
+        let symbol = symbol.unqualified();
+
+        match self.get_main_environment() {
+            MainEnvironment(EnvironmentVal { curr_ns_sym, .. }) => {
+                curr_ns_sym.replace(symbol);
+            }
+            LocalEnvironment(..) => panic!(
+                "get_main_environment() returns LocalEnvironment,\
 		     but by definition should only return MainEnvironment"
-		)
-	    }
-	}
+            ),
+        }
     }
     // @TODO consider 'get_current_..' for consistency?
     // @TODO consider 'current_namespace_sym'? after all, its not the namespace itself
     pub fn get_current_namespace(&self) -> Symbol {
-	match self.get_main_environment() {
-	    MainEnvironment(EnvironmentVal { curr_ns_sym, ..}) =>
-		curr_ns_sym.borrow().clone(),
-	    LocalEnvironment(..) => {
-		panic!(
-		    "In get_current_namespace_name(): get_main_environment() returns LocalEnvironment,\
+        match self.get_main_environment() {
+            MainEnvironment(EnvironmentVal { curr_ns_sym, .. }) => curr_ns_sym.borrow().clone(),
+            LocalEnvironment(..) => panic!(
+                "In get_current_namespace_name(): get_main_environment() returns LocalEnvironment,\
 		     but by definition should only return MainEnvironment"
-		)
-	    }
-	}
+            ),
+        }
     }
     // Note; since we're now dealing with curr_ns as a refcell, we're
     // returning a String instead of a &str, as I suspect a &str could
     // risk becoming invalid as curr_ns changes
     pub fn get_current_namespace_name(&self) -> String {
-	self.get_current_namespace().name.clone()
+        self.get_current_namespace().name.clone()
     }
-    
+
     pub fn new_main_environment() -> Environment {
         MainEnvironment(EnvironmentVal::new_main_val())
     }
@@ -111,27 +106,23 @@ impl Environment {
         LocalEnvironment(outer_environment, RefCell::new(HashMap::new()))
     }
     /// Insert a binding into an arbitrary namespace
-    fn insert_into_namespace(&self,namespace: &Symbol, sym: Symbol, val: Rc<Value>) {
-	match self.get_main_environment() {
-	    MainEnvironment(env_val) => env_val.insert_into_namespace(namespace,sym,val),
-	    LocalEnvironment(..) => {
-		panic!(
-		    "get_main_environment() returns LocalEnvironment,\
+    fn insert_into_namespace(&self, namespace: &Symbol, sym: Symbol, val: Rc<Value>) {
+        match self.get_main_environment() {
+            MainEnvironment(env_val) => env_val.insert_into_namespace(namespace, sym, val),
+            LocalEnvironment(..) => panic!(
+                "get_main_environment() returns LocalEnvironment,\
 		     but by definition should only return MainEnvironment"
-		)
-	    }
-	}
+            ),
+        }
     }
-    pub fn insert_into_current_namespace(&self,sym: Symbol, val: Rc<Value>){
-	match self.get_main_environment() {
-	    MainEnvironment(env_val) => env_val.insert_into_current_namespace(sym,val),
-	    LocalEnvironment(..) => {
-		panic!(
-		    "get_main_environment() returns LocalEnvironment,\
+    pub fn insert_into_current_namespace(&self, sym: Symbol, val: Rc<Value>) {
+        match self.get_main_environment() {
+            MainEnvironment(env_val) => env_val.insert_into_current_namespace(sym, val),
+            LocalEnvironment(..) => panic!(
+                "get_main_environment() returns LocalEnvironment,\
 		     but by definition should only return MainEnvironment"
-		)
-	    }
-	}
+            ),
+        }
     }
     /// Insert into the environment around you;  the local bindings,
     /// or the current namespace, if this is top level
@@ -141,7 +132,8 @@ impl Environment {
     ///   (let [a 1] ..) ;; => local_environment.insert(a,1)  
     pub fn insert(&self, sym: Symbol, val: Rc<Value>) {
         match self {
-            MainEnvironment(_) => { self.insert_into_current_namespace(sym, val);
+            MainEnvironment(_) => {
+                self.insert_into_current_namespace(sym, val);
             }
             LocalEnvironment(_, mappings) => {
                 mappings.borrow_mut().insert(sym, val);
@@ -149,9 +141,9 @@ impl Environment {
         }
     }
     fn get_main_environment(&self) -> &Self {
-	match self {
+        match self {
             MainEnvironment(_) => self,
-            LocalEnvironment(parent_env, ..) => parent_env.get_main_environment() 
+            LocalEnvironment(parent_env, ..) => parent_env.get_main_environment(),
         }
     }
 
@@ -160,29 +152,28 @@ impl Environment {
     /// try our main environment (unless its namespace qualified)
     pub fn get(&self, sym: &Symbol) -> Rc<Value> {
         match self {
-            MainEnvironment(env_val) => { 
-		// If we've recieved a qualified symbol like
-		// clojure.core/+ 
-		if sym.ns != "" {
-		    // Use that namespace 
-		    env_val.get_from_namespace(&Symbol::intern(&sym.ns),sym)
-		}
-		else {
-		    env_val.get_from_namespace(
-			&env_val.get_current_namespace(),
-			&Symbol::intern(&sym.name)
-		    )
-		}
-	    },
+            MainEnvironment(env_val) => {
+                // If we've recieved a qualified symbol like
+                // clojure.core/+
+                if sym.ns != "" {
+                    // Use that namespace
+                    env_val.get_from_namespace(&Symbol::intern(&sym.ns), sym)
+                } else {
+                    env_val.get_from_namespace(
+                        &env_val.get_current_namespace(),
+                        &Symbol::intern(&sym.name),
+                    )
+                }
+            }
             LocalEnvironment(parent_env, mappings) => {
-		if sym.ns != "" {
-		    return self.get_main_environment().get(sym);
-		}
-		match mappings.borrow().get(sym) {
+                if sym.ns != "" {
+                    return self.get_main_environment().get(sym);
+                }
+                match mappings.borrow().get(sym) {
                     Some(val) => Rc::clone(val),
                     None => parent_env.get(sym),
-		}
-	    }
+                }
+            }
         }
     }
     pub fn clojure_core_environment() -> Rc<Environment> {
@@ -208,9 +199,9 @@ impl Environment {
         let thread_sleep_fn = clojure_std::thread::SleepFn {};
         let nanotime_fn = clojure_std::time::NanoTimeFn {};
 
-	      let get_fn = rust_core::GetFn {};
+        let get_fn = rust_core::GetFn {};
         let map_fn = rust_core::MapFn {};
-	
+
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros
@@ -219,17 +210,16 @@ impl Environment {
         let def_macro = Value::DefMacro {};
         let fn_macro = Value::FnMacro {};
         let defmacro_macro = Value::DefmacroMacro {};
-	      let if_macro = Value::IfMacro {};
+        let if_macro = Value::IfMacro {};
         let environment = Rc::new(Environment::new_main_environment());
 
-	      let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
-	      let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
+        let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
+        let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
         let load_file_fn = rust_core::LoadFileFn::new(Rc::clone(&environment));
-	      // @TODO after we merge this with all the other commits we have,
-	      //       just change all the `insert`s here to use insert_in_namespace
-	      //       I prefer explicity and the non-dependence-on-environmental-factors
-	      environment.change_namespace(Symbol::intern("clojure.core"));
-
+        // @TODO after we merge this with all the other commits we have,
+        //       just change all the `insert`s here to use insert_in_namespace
+        //       I prefer explicity and the non-dependence-on-environmental-factors
+        environment.change_namespace(Symbol::intern("clojure.core"));
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());
@@ -251,10 +241,7 @@ impl Environment {
             thread_sleep_fn.to_rc_value(),
         );
 
-        environment.insert(
-	    Symbol::intern("System_nanotime"),
-	    nanotime_fn.to_rc_value()
-	);
+        environment.insert(Symbol::intern("System_nanotime"), nanotime_fn.to_rc_value());
 
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
@@ -270,18 +257,18 @@ impl Environment {
         environment.insert(Symbol::intern("do"), do_macro.to_rc_value());
         environment.insert(Symbol::intern("def"), def_macro.to_rc_value());
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
-	      environment.insert(Symbol::intern("if"), if_macro.to_rc_value());
+        environment.insert(Symbol::intern("if"), if_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
-	environment.insert(Symbol::intern("ns"), ns_macro.to_rc_value());
+        environment.insert(Symbol::intern("ns"), ns_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
         environment.insert(
             Symbol::intern("lexical-eval"),
             lexical_eval_fn.to_rc_value(),
         );
-	      environment.insert(Symbol::intern("load-file"), load_file_fn.to_rc_value());
+        environment.insert(Symbol::intern("load-file"), load_file_fn.to_rc_value());
         environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
-	      environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
-	      environment.insert(Symbol::intern("get"), get_fn.to_rc_value());
+        environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
+        environment.insert(Symbol::intern("get"), get_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
         environment.insert(
             Symbol::intern("print-string"),
@@ -294,159 +281,163 @@ impl Environment {
         // @TODO its time for a RT (runtime), which environment seems to be becoming
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
 
-	// We can add this back once we have requires
-	// environment.change_namespace(Symbol::intern("user"));
+        // We can add this back once we have requires
+        // environment.change_namespace(Symbol::intern("user"));
 
         environment
     }
 }
 
-
 #[cfg(test)]
-mod tests {    
+mod tests {
     mod environment_val_tests {
-	use crate::environment::Environment;
-	use crate::environment::Environment::*;
-	use crate::environment::EnvironmentVal;
-	use crate::symbol::Symbol;
-	use crate::value::{ToValue,Value};
-	use crate::ifn::IFn;
-	use crate::rust_core;
-	use std::rc::Rc;
+        use crate::environment::Environment;
+        use crate::environment::Environment::*;
+        use crate::environment::EnvironmentVal;
+        use crate::ifn::IFn;
+        use crate::rust_core;
+        use crate::symbol::Symbol;
+        use crate::value::{ToValue, Value};
+        use std::rc::Rc;
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	// pub fn get_current_namespace(&self) -> Symbol {
-	//
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	#[test]
+        //////////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // pub fn get_current_namespace(&self) -> Symbol {
+        //
+        //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        #[test]
         fn test_get_current_namespace() {
-	    let env_val = EnvironmentVal::new_main_val();
+            let env_val = EnvironmentVal::new_main_val();
 
-	    assert_eq!(Symbol::intern("user"),env_val.get_current_namespace());
+            assert_eq!(Symbol::intern("user"), env_val.get_current_namespace());
 
-	    env_val.change_namespace(Symbol::intern("core"));
-	    assert_eq!(Symbol::intern("core"),env_val.get_current_namespace());
+            env_val.change_namespace(Symbol::intern("core"));
+            assert_eq!(Symbol::intern("core"), env_val.get_current_namespace());
 
-	    // @TODO add this invariant back next, and remove this comment; 5.9.2020
-	    // env_val.change_namespace(Symbol::intern_with_ns("not-ns","ns"));
-	    // assert_eq!(Symbol::intern("ns"),env_val.get_current_namespace())
-		;
-				     
-	    // @TODO add case for local environment 	
-	}
-	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	//  fn get_from_namespace(&self,namespace: &Symbol,sym: &Symbol) -> Rc<Value>
-	//
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	#[test]
+            // @TODO add case for local environment
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        //  fn get_from_namespace(&self,namespace: &Symbol,sym: &Symbol) -> Rc<Value>
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        #[test]
         fn test_get_from_namespace() {
-	    let env_val = EnvironmentVal::new_main_val();
+            let env_val = EnvironmentVal::new_main_val();
 
-	    env_val.insert_into_namespace(
-		&Symbol::intern("core"),Symbol::intern("+"),Rc::new(Value::Nil)
-	    );
-	    env_val.insert_into_namespace(
-		&Symbol::intern_with_ns("dragon","core"),
-		Symbol::intern("+2"),
-		Rc::new(Value::Nil)
-	    );
-	    env_val.insert_into_namespace(
-		&Symbol::intern_with_ns("dragon","core"),
-		Symbol::intern_with_ns("override","+3"),
-		Rc::new(Value::Nil)
-	    );
+            env_val.insert_into_namespace(
+                &Symbol::intern("core"),
+                Symbol::intern("+"),
+                Rc::new(Value::Nil),
+            );
+            env_val.insert_into_namespace(
+                &Symbol::intern_with_ns("dragon", "core"),
+                Symbol::intern("+2"),
+                Rc::new(Value::Nil),
+            );
+            env_val.insert_into_namespace(
+                &Symbol::intern_with_ns("dragon", "core"),
+                Symbol::intern_with_ns("override", "+3"),
+                Rc::new(Value::Nil),
+            );
 
-	    assert_eq!(Rc::new(Value::Nil),
-		      env_val.get_from_namespace(
-			  &Symbol::intern("core"),
-			  &Symbol::intern("+")
-		      ));
+            assert_eq!(
+                Rc::new(Value::Nil),
+                env_val.get_from_namespace(&Symbol::intern("core"), &Symbol::intern("+"))
+            );
 
-	    assert_eq!(Rc::new(Value::Nil),
-		      env_val.get_from_namespace(
-			  &Symbol::intern("core"),
-			  &Symbol::intern("+2")
-		      ));
+            assert_eq!(
+                Rc::new(Value::Nil),
+                env_val.get_from_namespace(&Symbol::intern("core"), &Symbol::intern("+2"))
+            );
 
-	    assert_eq!(Rc::new(Value::Nil),
-		      env_val.get_from_namespace(
-			  &Symbol::intern("override"),
-			  &Symbol::intern("+3")
-		      ));
-	
-	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	//  get_from_namespace
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
+            assert_eq!(
+                Rc::new(Value::Nil),
+                env_val.get_from_namespace(&Symbol::intern("override"), &Symbol::intern("+3"))
+            );
+        }
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        //  get_from_namespace
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
     }
     mod environment_tests {
-	use crate::environment::Environment;
-	use crate::environment::Environment::*;
-	use crate::environment::EnvironmentVal;
-	use crate::symbol::Symbol;
-	use crate::value::{ToValue,Value};
-	use crate::ifn::IFn;
-	use crate::rust_core;
-	use std::rc::Rc;
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	// pub fn get(&self, sym: &Symbol) -> Rc<Value> {
-	//
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	#[test]
+        use crate::environment::Environment;
+        use crate::environment::Environment::*;
+        use crate::environment::EnvironmentVal;
+        use crate::ifn::IFn;
+        use crate::rust_core;
+        use crate::symbol::Symbol;
+        use crate::value::{ToValue, Value};
+        use std::rc::Rc;
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // pub fn get(&self, sym: &Symbol) -> Rc<Value> {
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        #[test]
         fn test_get__plus() {
-	    let add_fn = rust_core::AddFn {};
-	    
-	    let environment = Rc::new(Environment::new_main_environment());
-	    environment.insert(Symbol::intern("+"),add_fn.to_rc_value());
+            let add_fn = rust_core::AddFn {};
 
-	    let plus = environment.get(&Symbol::intern("+"));
+            let environment = Rc::new(Environment::new_main_environment());
+            environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
 
-	    assert_eq!(8.to_value(),add_fn.invoke(vec![3_i32.to_rc_value(),5_i32.to_rc_value()]));
-	    
-	    if let Value::IFn(add_ifn) = &*plus {
-		assert_eq!(8.to_value(),add_ifn.invoke(vec![3_i32.to_rc_value(),5_i32.to_rc_value()]));
-		return;
-	    }
-	    panic!("test_get_plus: plus is: {:#?}",plus);
-	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	// pub fn insert(&self, sym: Symbol, val: Rc<Value>) {
-	//
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	#[test]
+            let plus = environment.get(&Symbol::intern("+"));
+
+            assert_eq!(
+                8.to_value(),
+                add_fn.invoke(vec![3_i32.to_rc_value(), 5_i32.to_rc_value()])
+            );
+
+            if let Value::IFn(add_ifn) = &*plus {
+                assert_eq!(
+                    8.to_value(),
+                    add_ifn.invoke(vec![3_i32.to_rc_value(), 5_i32.to_rc_value()])
+                );
+                return;
+            }
+            panic!("test_get_plus: plus is: {:#?}", plus);
+        }
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // pub fn insert(&self, sym: Symbol, val: Rc<Value>) {
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        #[test]
         fn test_insert__plus() {
-	    let add_fn = rust_core::AddFn {};
-	    
-	    let environment = Rc::new(Environment::new_main_environment());
-	    environment.insert(Symbol::intern("+"),add_fn.to_rc_value());
+            let add_fn = rust_core::AddFn {};
 
-	    let plus : Rc<Value> = match &*environment {
-		MainEnvironment(EnvironmentVal { curr_ns_sym, namespaces }) => {
-		    namespaces
-			.0
-			.borrow()
-			.get(&Symbol::intern("user"))
-			.unwrap()
-			.get(&Symbol::intern("+"))
-		},
-		_ => panic!("new_main_environment() should return Main")
-	    };
+            let environment = Rc::new(Environment::new_main_environment());
+            environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
 
-	    assert_eq!(8.to_value(),add_fn.invoke(vec![3_i32.to_rc_value(),5_i32.to_rc_value()]));
-	    
-	    if let Value::IFn(add_ifn) = &*plus {
-		assert_eq!(8.to_value(),add_ifn.invoke(vec![3_i32.to_rc_value(),5_i32.to_rc_value()]));
-		return;
-	    }
-	    panic!("plus should be IFn, is: {:#?}",plus);
-	}
+            let plus: Rc<Value> = match &*environment {
+                MainEnvironment(EnvironmentVal {
+                    curr_ns_sym,
+                    namespaces,
+                }) => namespaces
+                    .0
+                    .borrow()
+                    .get(&Symbol::intern("user"))
+                    .unwrap()
+                    .get(&Symbol::intern("+")),
+                _ => panic!("new_main_environment() should return Main"),
+            };
+
+            assert_eq!(
+                8.to_value(),
+                add_fn.invoke(vec![3_i32.to_rc_value(), 5_i32.to_rc_value()])
+            );
+
+            if let Value::IFn(add_ifn) = &*plus {
+                assert_eq!(
+                    8.to_value(),
+                    add_ifn.invoke(vec![3_i32.to_rc_value(), 5_i32.to_rc_value()])
+                );
+                return;
+            }
+            panic!("plus should be IFn, is: {:#?}", plus);
+        }
     }
 }

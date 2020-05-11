@@ -9,8 +9,8 @@
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
 use nom::{
-    branch::alt, bytes::complete::tag, map, sequence::preceded, take_until, terminated,
-    combinator::opt, Err::Incomplete, IResult, Needed,
+    branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
+    terminated, Err::Incomplete, IResult, Needed,
 };
 
 use crate::keyword::Keyword;
@@ -194,19 +194,19 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
 
 /// Parses valid Clojure symbol
 /// Example Successes: a , b , |ab123|
-///                    namespace.subnamespace/a    cat/b   a.b.c/|ab123| 
+///                    namespace.subnamespace/a    cat/b   a.b.c/|ab123|
 pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     named!(namespace_parser <&str,String>,
 	   do_parse!(
 	       ns: identifier_parser >>
 	       tag!("/") >>
 	       (ns)));
-    
-    let (rest_input,ns)   = opt(namespace_parser)(input)?;
-    let (rest_input,name) = identifier_parser(rest_input)?; 
+
+    let (rest_input, ns) = opt(namespace_parser)(input)?;
+    let (rest_input, name) = identifier_parser(rest_input)?;
     match ns {
-	Some(ns) => Ok((rest_input,Symbol::intern_with_ns(&ns,&name))),
-	None     => Ok((rest_input,Symbol::intern(&name)))   
+        Some(ns) => Ok((rest_input, Symbol::intern_with_ns(&ns, &name))),
+        None => Ok((rest_input, Symbol::intern(&name))),
     }
 }
 
@@ -341,7 +341,6 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
     to_value_parser(symbol_parser)(input)
 }
 
-
 /// Tries to parse a &str that says 'nil' into Value::Nil
 /// Example Successes:
 ///    nil => Value::Nil
@@ -349,8 +348,8 @@ pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
     named!(nil<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("nil")));
 
     let (rest_input, _) = nil(input)?;
-    
-    Ok((rest_input,Value::Nil))
+
+    Ok((rest_input, Value::Nil))
 }
 
 // @TODO allow escaped strings
@@ -466,7 +465,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
         consume_clojure_whitespaces_parser,
         alt((
             try_read_quoted,
-	          try_read_nil,
+            try_read_nil,
             try_read_map,
             try_read_string,
             try_read_f64,
@@ -577,17 +576,14 @@ mod tests {
     }
 
     mod symbol_parser_tests {
-	use crate::reader::try_read_symbol;
         use crate::reader::symbol_parser;
+        use crate::reader::try_read_symbol;
         use crate::symbol::Symbol;
 
         #[test]
         fn identifier_parser_parses_valid_identifier() {
             assert_eq!(
-                Some((
-                    " this",
-                    Symbol::intern("input->output?")
-                )),
+                Some((" this", Symbol::intern("input->output?"))),
                 symbol_parser("input->output? this").ok()
             );
         }
@@ -602,17 +598,14 @@ mod tests {
             assert_eq!(None, symbol_parser("").ok());
         }
 
-	#[test]
+        #[test]
         fn symbol_parser_normal_symbol_test() {
-            assert_eq!(
-                Symbol::intern("a"),
-                symbol_parser("a ").ok().unwrap().1
-            );
+            assert_eq!(Symbol::intern("a"), symbol_parser("a ").ok().unwrap().1);
         }
-	#[test]
-	fn symbol_parser_namespace_qualified_symbol_test() {
+        #[test]
+        fn symbol_parser_namespace_qualified_symbol_test() {
             assert_eq!(
-                Symbol::intern_with_ns("clojure.core","a"),
+                Symbol::intern_with_ns("clojure.core", "a"),
                 symbol_parser("clojure.core/a ").ok().unwrap().1
             );
         }

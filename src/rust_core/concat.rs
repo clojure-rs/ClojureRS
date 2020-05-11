@@ -1,10 +1,9 @@
 use crate::ifn::IFn;
-use crate::value::{Value, ToValue};
+use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
-use crate::persistent_list::{ToPersistentListIter, PersistentList};
+use crate::persistent_list::{PersistentList, ToPersistentListIter};
 use crate::persistent_vector::ToPersistentVectorIter;
-
 
 /// (concat x y & zs)
 ///

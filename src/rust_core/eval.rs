@@ -1,7 +1,7 @@
-use crate::ifn::IFn;
-use crate::value::{Value, ToValue, Evaluable};
-use std::rc::Rc;
 use crate::environment::Environment;
+use crate::ifn::IFn;
+use crate::value::{Evaluable, ToValue, Value};
+use std::rc::Rc;
 
 use crate::error_message;
 
@@ -28,7 +28,7 @@ impl IFn for EvalFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
         // @TODO generalize arity exceptions, and other exceptions
         if args.len() != 1 {
-            return error_message::wrong_arg_count(1, args.len())
+            return error_message::wrong_arg_count(1, args.len());
         }
         let arg = args.get(0).unwrap();
         arg.eval(Rc::clone(&self.enclosing_environment))

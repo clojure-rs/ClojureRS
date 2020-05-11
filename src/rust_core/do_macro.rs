@@ -1,7 +1,7 @@
-use crate::value::{ToValue, Value};
-use std::rc::Rc;
 use crate::ifn::IFn;
 use crate::symbol::Symbol;
+use crate::value::{ToValue, Value};
+use std::rc::Rc;
 
 use crate::persistent_list::ToPersistentList;
 

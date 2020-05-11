@@ -2,7 +2,9 @@ use crate::value::Value;
 use std::rc::Rc;
 
 use crate::environment::Environment;
+use crate::error_message;
 use crate::ifn::IFn;
+use crate::keyword::Keyword;
 use crate::persistent_list::{
     PersistentList,
     PersistentList::{Cons, Empty},
@@ -10,19 +12,17 @@ use crate::persistent_list::{
 };
 use crate::persistent_list_map::IPersistentMap;
 use crate::persistent_vector::{PersistentVector, ToPersistentVectorIter};
-use crate::symbol::Symbol;
-use crate::keyword::Keyword;
-use crate::type_tag::TypeTag;
-use crate::value::{Evaluable, ToValue};
 use crate::repl::Repl;
-use crate::error_message;
+use crate::symbol::Symbol;
+use crate::type_tag::TypeTag;
 use crate::util::IsEven;
+use crate::value::{Evaluable, ToValue};
 
 use itertools::Itertools;
 
-use crate::protocol::ProtocolCastable;
-use crate::protocol::Protocol; 
 use crate::iterable::Iterable;
+use crate::protocol::Protocol;
+use crate::protocol::ProtocolCastable;
 
 // This module will hold core function and macro primitives that aren't special cases
 // (like the quote macro, or let), and can't be implemented in clojure itself
@@ -85,5 +85,3 @@ pub use self::slurp::*;
 
 pub(crate) mod load_file;
 pub use self::load_file::*;
-
-
