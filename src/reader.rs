@@ -364,8 +364,8 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    nil => Value::Nil
 pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
-    let (rest_input, _) = verify(identifier_parser,|ident: &str| ident == "nil")(input)?;
-    Ok((rest_input,Value::Nil))
+    let (rest_input, _) = verify(identifier_parser, |ident: &str| ident == "nil")(input)?;
+    Ok((rest_input, Value::Nil))
 }
 
 // @TODO allow escaped strings
@@ -386,6 +386,23 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
     );
 
     to_value_parser(string_parser)(rest_input)
+}
+
+/// Tries to parse &str into Value::Pattern
+/// Example Successes:
+///    #"this is pretty straightforward" => Value::Pattern("this is pretty straightforward")
+pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
+    named!(hash_quotation<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#\"")));
+
+    let (rest_input, _) = hash_quotation(input)?;
+    named!(
+        pattern_parser<&str, regex::Regex>,
+        map!(
+            terminated!(take_until!("\""), tag("\"")),
+            |v| regex::Regex::new(v).unwrap()
+        )
+    );
+    to_value_parser(pattern_parser)(rest_input)
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
@@ -492,6 +509,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_keyword,
             try_read_list,
             try_read_vector,
+            try_read_pattern,
         )),
     )(input)
 }
@@ -726,8 +744,8 @@ mod tests {
         use crate::persistent_vector;
         use crate::reader::try_read;
         use crate::symbol::Symbol;
-        use crate::value::Value;
         use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
+        use crate::value::{ToValue, Value};
 
         #[test]
         fn try_read_empty_map_test() {
@@ -808,6 +826,14 @@ mod tests {
         #[test]
         fn try_read_bool_false_test() {
             assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
+        }
+
+        #[test]
+        fn try_read_regex_pattern_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("hello").unwrap()),
+                try_read("#\"hello\" ").ok().unwrap().1
+            );
         }
     }
 
