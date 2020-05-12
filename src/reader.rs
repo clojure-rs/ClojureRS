@@ -487,6 +487,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_f64,
             try_read_i32,
             try_read_bool,
+            try_read_nil,
             try_read_symbol,
             try_read_keyword,
             try_read_list,
