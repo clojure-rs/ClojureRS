@@ -835,6 +835,14 @@ mod tests {
                 try_read("#\"hello\" ").ok().unwrap().1
             );
         }
+
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("hel\"lo").unwrap()),
+                try_read("#\"hel\"lo\" ").ok().unwrap().1
+            );
+        }
     }
 
     mod consume_clojure_whitespaces_tests {
