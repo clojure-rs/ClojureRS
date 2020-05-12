@@ -60,6 +60,7 @@ pub enum Value {
 
     String(std::string::String),
     Nil,
+    Pattern(regex::Regex),
 }
 use crate::value::Value::*;
 
@@ -89,6 +90,7 @@ impl PartialEq for Value {
             (LetMacro, LetMacro) => true,
             (String(string), String(string2)) => string == string2,
             (Nil, Nil) => true,
+            (Pattern(p1), Pattern(p2)) => p1.as_str() == p2.as_str(),
             _ => false,
         }
     }
@@ -141,6 +143,7 @@ impl Hash for Value {
             IfMacro => ValueHash::IfMacro.hash(state),
 
             String(string) => string.hash(state),
+            Pattern(p) => p.as_str().hash(state),
             Nil => ValueHash::Nil.hash(state),
         }
         // self.id.hash(state);
@@ -169,6 +172,9 @@ impl fmt::Display for Value {
             IfMacro => std::string::String::from("#macro[if*]"),
             LetMacro => std::string::String::from("#macro[let*]"),
             Value::String(string) => string.clone(),
+            Pattern(pattern) => {
+                std::string::String::from("#\"".to_owned() + pattern.as_str().clone() + "\"")
+            }
             Nil => std::string::String::from("nil"),
         };
         write!(f, "{}", str)
@@ -213,6 +219,7 @@ impl Value {
             Value::IfMacro => TypeTag::Macro,
             Value::String(_) => TypeTag::String,
             Value::Nil => TypeTag::Nil,
+            Value::Pattern(_) => TypeTag::Pattern,
         }
     }
 
@@ -579,6 +586,11 @@ impl ToValue for std::string::String {
 impl ToValue for str {
     fn to_value(&self) -> Value {
         Value::String(std::string::String::from(self))
+    }
+}
+impl ToValue for regex::Regex {
+    fn to_value(&self) -> Value {
+        Value::Pattern(self.clone())
     }
 }
 impl ToValue for Symbol {
