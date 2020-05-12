@@ -8,7 +8,7 @@
 //! not;  since this is about being a 'free-er' Clojure, especially since it can't compete with it in raw
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
-use itertools::join;
+use nom::combinator::verify;
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
     terminated, Err::Incomplete, IResult,
@@ -326,17 +326,6 @@ pub fn try_read_bool(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, Value::Boolean(bool.parse().unwrap())))
 }
 
-// Tries to parse &str into Value::Nil
-/// Expects:
-///     nil
-/// Example success:
-///     nil => Value::Nil
-pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
-    named!(nil_parser<&str,&str>, tag!("nil"));
-    let (rest_input, nil) = nil_parser(input)?;
-    Ok((rest_input, Value::Nil))
-}
-
 /// Tries to parse &str into Value::double
 ///
 pub fn try_read_f64(input: &str) -> IResult<&str, Value> {
@@ -375,11 +364,8 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    nil => Value::Nil
 pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
-    named!(nil<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("nil")));
-
-    let (rest_input, _) = nil(input)?;
-
-    Ok((rest_input, Value::Nil))
+    let (rest_input, _) = verify(identifier_parser,|ident: &str| ident == "nil")(input)?;
+    Ok((rest_input,Value::Nil))
 }
 
 // @TODO allow escaped strings
@@ -501,7 +487,6 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_f64,
             try_read_i32,
             try_read_bool,
-            try_read_nil,
             try_read_symbol,
             try_read_keyword,
             try_read_list,
