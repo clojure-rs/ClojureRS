@@ -394,7 +394,7 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
     named!(hash_quotation<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#\"")));
 
-    let (rest_input, _) = hash_quotation(input)?;
+    let (rest_input, _) = hash_quotation(&input.escape_default().to_string())?;
     named!(
         pattern_parser<&str, regex::Regex>,
         map!(
