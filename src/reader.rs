@@ -11,7 +11,7 @@
 use nom::combinator::verify;
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
-    terminated, Err::Incomplete, IResult,
+    terminated, AsChar, Err::Incomplete, IResult,
 };
 
 use crate::keyword::Keyword;
@@ -23,6 +23,8 @@ use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
+use nom::Err::Error;
+use std::borrow::Borrow;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -389,20 +391,29 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 }
 
 /// Tries to parse &str into Value::Pattern
+/// Reader Macro for Regex
 /// Example Successes:
 ///    #"this is pretty straightforward" => Value::Pattern("this is pretty straightforward")
 pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
     named!(hash_quotation<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#\"")));
 
-    let (rest_input, _) = hash_quotation(&input.escape_default().to_string())?;
-    named!(
-        pattern_parser<&str, regex::Regex>,
-        map!(
-            terminated!(take_until!("\""), tag("\"")),
-            |v| regex::Regex::new(v).unwrap()
-        )
-    );
-    to_value_parser(pattern_parser)(rest_input)
+    let (rest_input, _) = hash_quotation(input)?;
+
+    let mut iterator = rest_input.clone().chars().into_iter();
+    let mut prev: char = iterator.next().unwrap();
+    let mut till_quote: String = String::from(prev.to_string());
+    while let ch = iterator.next().unwrap() {
+        if (ch.is_whitespace() && prev == '"') {
+            till_quote = till_quote.trim_end_matches("\"").to_string();
+            break;
+        };
+        till_quote = String::from(till_quote + ch.to_string().as_str());
+        prev = ch;
+    }
+    Ok((
+        &till_quote,
+        Value::Pattern(regex::Regex::new(&till_quote).unwrap()),
+    ))
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
@@ -839,8 +850,8 @@ mod tests {
         #[test]
         fn try_read_regex_pattern_escaped_quote_test() {
             assert_eq!(
-                Value::Pattern(regex::Regex::new("hel\"lo").unwrap()),
-                try_read("#\"hel\"lo\" ").ok().unwrap().1
+                Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o").unwrap()),
+                try_read("#\"h\"e\"l\"l\"o\" something").ok().unwrap().1
             );
         }
     }
