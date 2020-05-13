@@ -3,6 +3,7 @@ extern crate nom;
 extern crate itertools;
 
 mod clojure_std;
+mod clojure_string;
 mod environment;
 mod error_message;
 mod ifn;

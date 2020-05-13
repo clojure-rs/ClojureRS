@@ -181,7 +181,7 @@ fn consume_clojure_whitespaces_parser(input: &str) -> IResult<&str, ()> {
 // 1232 ...
 //
 // This function, unlike the other subparsers of a parser, is made external to the function
-// just because type inference doesn't play nice with defining this inline 
+// just because type inference doesn't play nice with defining this inline
 
 fn identifier_tail(input: &str) -> IResult<&str, &str> {
     nom::bytes::complete::take_while(is_identifier_char)(input)
@@ -235,7 +235,7 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
 fn integer_tail(input: &str) -> IResult<&str, &str> {
     nom::bytes::complete::take_while1(|c: char| c.is_digit(10))(input)
 }
-    
+
 /// Parses valid integers
 /// Example Successes: 1, 2, 4153,  -12421
 ///
@@ -247,8 +247,8 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
            |maybe_minus| maybe_minus.unwrap_or("")
        )
     );
-    // integer_tail<&str,&str> above function 
-    
+    // integer_tail<&str,&str> above function
+
     named!(integer_parser <&str, String>,
          do_parse!(
              sign: integer_sign >>
@@ -265,7 +265,7 @@ pub fn integer_parser(input: &str) -> IResult<&str, i32> {
 ///
 pub fn double_parser(input: &str) -> IResult<&str, f64> {
     named!(decimal_point<&str, &str>, take_while_m_n!(1, 1, is_period_char));
-    
+
     named!(double_parser <&str, String>,
          do_parse!(
              integer: integer_parser >> //integer_part >>

@@ -1,4 +1,5 @@
 use crate::clojure_std;
+use crate::clojure_string;
 use crate::namespace::{Namespace, Namespaces};
 use crate::repl::Repl;
 use crate::rust_core;
@@ -201,6 +202,20 @@ impl Environment {
         let get_fn = rust_core::GetFn {};
         let map_fn = rust_core::MapFn {};
 
+        // clojure.string
+        let reverse_fn = clojure_string::reverse::ReverseFn {};
+        let join_fn = clojure_string::join::JoinFn {};
+        let blank_fn = clojure_string::blank_qmark_::BlankFn {};
+        let upper_case_fn = clojure_string::upper_case::UpperCaseFn {};
+        let lower_case_fn = clojure_string::lower_case::LowerCaseFn {};
+        let starts_with_fn = clojure_string::starts_with_qmark_::StartsWithFn {};
+        let ends_with_fn = clojure_string::ends_with_qmark_::EndsWithFn {};
+        let includes_fn = clojure_string::includes_qmark_::IncludesFn {};
+        let trim_fn = clojure_string::trim::TrimFn {};
+        let triml_fn = clojure_string::triml::TrimLFn {};
+        let trimr_fn = clojure_string::trimr::TrimRFn {};
+        let trim_newline_fn = clojure_string::trim_newline::TrimNewlineFn {};
+
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
         // Hardcoded macros
@@ -245,6 +260,79 @@ impl Environment {
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
         environment.insert(Symbol::intern("rust-slurp"), slurp_fn.to_rc_value());
+
+        // clojure.string
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("reverse"),
+            reverse_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("join"),
+            join_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("blank?"),
+            blank_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("upper-case"),
+            upper_case_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("lower-case"),
+            lower_case_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("starts-with?"),
+            starts_with_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("ends-with?"),
+            ends_with_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("includes?"),
+            includes_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("trim"),
+            trim_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("triml"),
+            triml_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("trimr"),
+            trimr_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("trim-newline"),
+            trim_newline_fn.to_rc_value(),
+        );
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
