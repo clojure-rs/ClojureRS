@@ -1,13 +1,10 @@
+use crate::iterable::Iterable;
 use crate::ifn::IFn;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 use crate::error_message;
-use crate::persistent_list::PersistentList::Cons;
-use crate::persistent_list::ToPersistentListIter;
-use crate::persistent_vector::ToPersistentVectorIter;
-use crate::type_tag::TypeTag;
-use itertools::Itertools;
+use crate::protocol::ProtocolCastable;
 
 /// clojure.string/join ; joins a coll of items together as a string
 /// (join
@@ -22,55 +19,34 @@ impl ToValue for JoinFn {
 }
 impl IFn for JoinFn {
     fn invoke(&self, args: Vec<Rc<Value>>) -> Value {
-        if args.len() == 1 || args.len() == 2 {
-            let separator = if args.len() == 2 {
-                args.get(0).unwrap().to_string()
-            } else {
-                String::from("")
-            };
-            let coll = if args.len() == 1 {
-                args.get(0)
-            } else {
-                args.get(1)
-            };
-            match coll.unwrap().to_value() {
-                Value::PersistentList(Cons(head, tail, count)) => {
-                    return if count == 0 {
-                        Value::String(String::from(""))
-                    } else if count == 1 {
-                        Value::String(head.to_string())
-                    } else {
-                        Value::String(
-                            String::from(head.to_string())
-                                + separator.as_str()
-                                + tail
-                                    .iter()
-                                    .map(|x| x.to_string())
-                                    .collect::<Vec<std::string::String>>()
-                                    .join(&separator)
-                                    .as_str(),
-                        )
-                    }
-                }
-                Value::PersistentVector(pvec) => {
-                    return if pvec.vals.len() == 0 {
-                        Value::String(String::from(""))
-                    } else {
-                        Value::String(String::from(
-                            pvec.vals
-                                .iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<std::string::String>>()
-                                .join(&separator)
-                                .as_str(),
-                        ))
-                    }
-                }
-                _ => Value::String(String::from("")),
-            }
-        } else {
+        if args.len() != 1 && args.len() != 2 {
             return error_message::wrong_varg_count(&[1, 2], args.len());
         }
+        
+        let separator = if args.len() == 1 {
+            String::from("")
+        } else {
+            args.get(0).unwrap().to_string()
+        };
+
+        let coll = if args.len() == 1 {
+            args.get(0)
+        } else {
+            args.get(1)
+        };
+        if let Some(iterable) = coll.unwrap().try_as_protocol::<Iterable>() {
+            Value::String(
+                iterable
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<std::string::String>>()
+                    .join(&separator)
+            )
+        }
+        else {
+            Value::String(String::from(""))
+        }
+        
     }
 }
 
