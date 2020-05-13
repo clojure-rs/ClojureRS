@@ -31,14 +31,18 @@ impl Repl {
     }
     pub fn run(&self) {
         let stdin = io::stdin();
-        let mut stdin_reader = stdin.lock();
 
         loop {
             print!("{}=> ", self.environment.get_current_namespace_name());
             let _ = io::stdout().flush();
 
-            // Read
-            let next = Repl::read(&mut stdin_reader);
+            let next = {
+                let mut stdin_reader = stdin.lock();
+                // Read
+                Repl::read(&mut stdin_reader)
+                // Release stdin.lock
+            };
+
             // Eval
             let evaled_next = self.eval(&next);
             // Print

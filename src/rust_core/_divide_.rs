@@ -71,7 +71,7 @@ mod tests {
         use std::rc::Rc;
 
         #[test]
-        fn divide_without_arguments_returns_one() {
+        fn divide_without_arguments_returns_error() {
             let divide = DivideFn {};
             let args = vec![];
             assert_eq!(

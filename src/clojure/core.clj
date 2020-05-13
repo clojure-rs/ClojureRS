@@ -1,3 +1,6 @@
+(def *flush-on-newline* true)
+(def *print-readably* true)
+
 (def list (fn [& ls] ls))
 
 (defmacro defn [name args & body]
@@ -8,8 +11,27 @@
 (defn apply [f args]
   (lexical-eval (concat (list f) args)))
 
-(defn println [& more]
+(defn newline
+  []
+  (system-newline))
+
+(defn flush
+  []
+  (flush-stdout))
+
+(defn pr [& more]
   (print-string (apply str more)))
+
+(defn prn [& more]
+  (apply pr more)
+  (newline)
+  (flush))
+
+(defn print [& more]
+  (apply pr more))
+
+(defn println [& more]
+  (apply prn more))
 
 (defn inc [x]
   (+ x 1))
@@ -18,9 +40,9 @@
   (- x 1))
 
 (defmacro time [expr]
-  (list (quote let) [(quote start) (quote (System_nanotime)) (quote ret) expr]
+  (list (quote let) [(quote start) (quote (System/nanoTime)) (quote ret) expr]
         (quote (do
-        (println (str "Elapsed time: " (_slash_ (- (System_nanotime) start) 1000000.0) " msecs"))
+        (println (str "Elapsed time: " (_slash_ (- (System/nanoTime) start) 1000000.0) " msecs"))
         ret))))
 
 (defn slurp [f & opts]
