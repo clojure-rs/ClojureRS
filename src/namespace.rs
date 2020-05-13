@@ -30,7 +30,7 @@ impl Namespace {
     }
 }
 #[derive(Debug, Clone)]
-pub struct Namespaces(pub RefCell<HashMap<Symbol, Namespace>>);
+pub struct Namespaces(RefCell<HashMap<Symbol, Namespace>>);
 
 impl Namespaces {
     pub fn new() -> Namespaces {

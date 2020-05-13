@@ -527,11 +527,7 @@ mod tests {
                     curr_ns_sym: _,
                     namespaces,
                 }) => namespaces
-                    .0
-                    .borrow()
-                    .get(&Symbol::intern("user"))
-                    .unwrap()
-                    .get(&Symbol::intern("+")),
+                    .get(&Symbol::intern("user"),&Symbol::intern("+")),
                 _ => panic!("new_main_environment() should return Main"),
             };
 
