@@ -399,20 +399,49 @@ pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
 
     let (rest_input, _) = hash_quotation(input)?;
 
-    let mut iterator = rest_input.clone().chars().into_iter();
+    // println!("regexquoted: {:#?}", regex::Regex::quote(rest_input));
+    let mut iterator = rest_input.escape_default();
     let mut prev: char = iterator.next().unwrap();
+    let mut prev_prev_was_escape = false;
+    let mut is_escaping = false;
     let mut till_quote: String = String::from(prev.to_string());
+    println!("first char: {:#?}", till_quote);
     while let ch = iterator.next().unwrap() {
-        if (ch.is_whitespace() && prev == '"') {
+        if ch == '\\' && prev == '\\' {
+            is_escaping = true;
+        }
+        println!(
+            "LOOP: next char to handle: {:#?} prev: {:#?} is escaping {} and prev prev was escaping {}",
+            ch, prev, is_escaping, prev_prev_was_escape
+        );
+        if ch == '\"' && prev == '\\' && !prev_prev_was_escape {
+            println!(
+                "GONNA END: next char to handle: {:#?} prev: {:#?} is escaping {}",
+                ch, prev, is_escaping
+            );
             till_quote = till_quote.trim_end_matches("\"").to_string();
             break;
         };
-        till_quote = String::from(till_quote + ch.to_string().as_str());
+        if ch == '\"' && is_escaping {
+            till_quote = String::from(till_quote + ch.to_string().as_str());
+        } else if ch != '\\' {
+            till_quote = String::from(till_quote + ch.to_string().as_str());
+            //is_escaping = false;
+            prev_prev_was_escape = false;
+        }
+        prev_prev_was_escape = is_escaping;
         prev = ch;
     }
+    println!("till quote: {} {:#?}", till_quote, till_quote);
+    let to_trim = till_quote.to_owned() + "\"";
+    println!(
+        "rest input trimmed: {}",
+        rest_input.trim_start_matches(&to_trim)
+    );
+    let regex = regex::Regex::new(till_quote.as_str()).unwrap();
     Ok((
-        &till_quote,
-        Value::Pattern(regex::Regex::new(&till_quote).unwrap()),
+        rest_input.trim_start_matches(&to_trim),
+        Value::Pattern(regex),
     ))
 }
 
@@ -839,20 +868,49 @@ mod tests {
             assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
         }
 
-        #[test]
-        fn try_read_regex_pattern_test() {
-            assert_eq!(
-                Value::Pattern(regex::Regex::new("hello").unwrap()),
-                try_read("#\"hello\" ").ok().unwrap().1
-            );
-        }
+        mod regex_tests {
+            use crate::reader::try_read;
+            use crate::value::Value;
 
-        #[test]
-        fn try_read_regex_pattern_escaped_quote_test() {
-            assert_eq!(
-                Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o").unwrap()),
-                try_read("#\"h\"e\"l\"l\"o\" something").ok().unwrap().1
-            );
+            #[test]
+            fn try_read_simple_regex_pattern_test() {
+                assert_eq!(
+                    Value::Pattern(regex::Regex::new("a").unwrap()),
+                    try_read(r###"#"a" "###).ok().unwrap().1
+                );
+            }
+
+            #[test]
+            fn try_read_regex_pattern_test() {
+                assert_eq!(
+                    Value::Pattern(regex::Regex::new("hello").unwrap()),
+                    try_read("#\"hello\" ").ok().unwrap().1
+                );
+            }
+
+            #[test]
+            fn try_read_regex_pattern_escaped_quote_test() {
+                assert_eq!(
+                    Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o").unwrap()),
+                    try_read(r#"#"h\"e\"l\"l\"o\"" something"#).ok().unwrap().1
+                );
+            }
+
+            #[test]
+            fn try_read_regex_pattern_escaped_quote_prefixed_by_whitespace_test() {
+                assert_eq!(
+                    Value::Pattern(regex::Regex::new("h\"e\"l\"l \"o").unwrap()),
+                    try_read("#\"h\"e\"l\"l \"o\" something").ok().unwrap().1
+                );
+            }
+
+            #[test]
+            fn try_read_regex_pattern_escaped_quote_suffixed_by_whitespace_test() {
+                assert_eq!(
+                    Value::Pattern(regex::Regex::new("h\"e\"l\" l \"o").unwrap()),
+                    try_read("#\"h\"e\"l\" l \"o\" something").ok().unwrap().1
+                );
+            }
         }
     }
 
