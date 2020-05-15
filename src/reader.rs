@@ -876,7 +876,15 @@ mod tests {
             fn try_read_simple_regex_pattern_test() {
                 assert_eq!(
                     Value::Pattern(regex::Regex::new("a").unwrap()),
-                    try_read(r###"#"a" "###).ok().unwrap().1
+                    try_read(r##"#"a" "##).ok().unwrap().1
+                );
+            }
+
+            #[test]
+            fn try_read_simple_with_escaped_quote_regex_pattern_test() {
+                assert_eq!(
+                    Value::Pattern(regex::Regex::new("a").unwrap()),
+                    try_read(r###"#"a\"" "###).ok().unwrap().1
                 );
             }
 
