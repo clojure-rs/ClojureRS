@@ -29,6 +29,10 @@ impl Repl {
     pub fn read<R: BufRead>(reader: &mut R) -> Value {
         reader::read(reader)
     }
+    // @TODO add to reader.rs and wrap here 
+    pub fn read_string(string: &str) -> Value {
+        Repl::read(&mut string.as_bytes())
+    }
     pub fn run(&self) {
         let stdin = io::stdin();
 
@@ -86,6 +90,38 @@ impl Default for Repl {
     fn default() -> Repl {
         Repl {
             environment: Environment::clojure_core_environment(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::repl::Repl;
+    use crate::value::Value;
+    //@TODO separate into individual tests 
+    #[test]
+    fn read_string() {
+        let num = Repl::read_string("1");
+        match num {
+            Value::I32(_) => {},
+            _ => panic!("Reading of integer should have returned Value::I32")
+        }
+        let list = Repl::read_string("(+ 1 2)");
+        match list {
+            Value::PersistentList(_) => {},
+            _ => panic!("Reading of integer should have returned Value::PersistentList")
+        }
+
+        let vector = Repl::read_string("[1 2 a]");
+        match vector {
+            Value::PersistentVector(_) => {},
+            _ => panic!("Reading of integer should have returned Value::PersistentVector")
+        }
+
+        let symbol = Repl::read_string("abc");
+        match symbol {
+            Value::Symbol(_) => {},
+            _ => panic!("Reading of integer should have returned Value::Symbol")
         }
     }
 }
