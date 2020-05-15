@@ -1,5 +1,5 @@
-use crate::iterable::Iterable;
 use crate::ifn::IFn;
+use crate::iterable::Iterable;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
@@ -22,7 +22,7 @@ impl IFn for JoinFn {
         if args.len() != 1 && args.len() != 2 {
             return error_message::wrong_varg_count(&[1, 2], args.len());
         }
-        
+
         let separator = if args.len() == 1 {
             String::from("")
         } else {
@@ -40,19 +40,17 @@ impl IFn for JoinFn {
                     .iter()
                     .map(|x| x.to_string())
                     .collect::<Vec<std::string::String>>()
-                    .join(&separator)
+                    .join(&separator),
             )
-        }
-        else {
+        } else {
             Value::String(String::from(""))
         }
-        
     }
 }
 
 #[cfg(test)]
 mod tests {
-    mod reverse_tests {
+    mod join_tests {
         use crate::clojure_string::join::JoinFn;
         use crate::ifn::IFn;
         use crate::persistent_list::PersistentList;

@@ -33,7 +33,7 @@ impl IFn for IncludesFn {
 
 #[cfg(test)]
 mod tests {
-    mod reverse_tests {
+    mod includes_tests {
         use crate::clojure_string::includes_qmark_::IncludesFn;
         use crate::ifn::IFn;
         use crate::value::Value;

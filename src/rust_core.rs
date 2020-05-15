@@ -47,6 +47,13 @@ pub use self::get::*;
 pub(crate) mod map;
 pub use self::map::*;
 
+pub(crate) mod more;
+pub use self::more::*;
+pub(crate) mod first;
+pub use self::first::*;
+pub(crate) mod second;
+pub use self::second::*;
+
 // input and output
 pub(crate) mod system_newline;
 pub use self::system_newline::*;
@@ -58,7 +65,6 @@ pub(crate) mod string_print;
 pub use self::string_print::*;
 pub(crate) mod read_line;
 pub use self::read_line::*;
-
 
 // other
 pub(crate) mod slurp;

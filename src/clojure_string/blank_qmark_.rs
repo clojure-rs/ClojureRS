@@ -42,7 +42,7 @@ impl IFn for BlankFn {
 
 #[cfg(test)]
 mod tests {
-    mod reverse_tests {
+    mod blank_tests {
         use crate::clojure_string::blank_qmark_::BlankFn;
         use crate::ifn::IFn;
         use crate::value::Value;

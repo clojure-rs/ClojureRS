@@ -1,6 +1,6 @@
 use crate::clojure_std;
 use crate::clojure_string;
-use crate::namespace::{Namespaces};
+use crate::namespace::Namespaces;
 use crate::repl::Repl;
 use crate::rust_core;
 use crate::symbol::Symbol;
@@ -194,6 +194,9 @@ impl Environment {
         let print_string_fn = rust_core::PrintStringFn {};
         let read_line_fn = rust_core::ReadLineFn {};
         let assoc_fn = rust_core::AssocFn {};
+        let more_fn = rust_core::MoreFn {};
+        let first_fn = rust_core::FirstFn {};
+        let second_fn = rust_core::SecondFn {};
 
         // rust implementations of core functions
         let slurp_fn = rust_core::slurp::SlurpFn {};
@@ -255,23 +258,23 @@ impl Environment {
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
 
         // Thread namespace
-		environment.insert_into_namespace(
-			&Symbol::intern("Thread"),
-			Symbol::intern("sleep"),
-			thread_sleep_fn.to_rc_value()
-		);
+        environment.insert_into_namespace(
+            &Symbol::intern("Thread"),
+            Symbol::intern("sleep"),
+            thread_sleep_fn.to_rc_value(),
+        );
 
-		// System namespace
-		environment.insert_into_namespace(
-			&Symbol::intern("System"),
-			Symbol::intern("nanoTime"),
-			nanotime_fn.to_rc_value()
-		);
-		environment.insert_into_namespace(
-			&Symbol::intern("System"),
-			Symbol::intern("getenv"),
-			get_env_fn.to_rc_value()
-		);
+        // System namespace
+        environment.insert_into_namespace(
+            &Symbol::intern("System"),
+            Symbol::intern("nanoTime"),
+            nanotime_fn.to_rc_value(),
+        );
+        environment.insert_into_namespace(
+            &Symbol::intern("System"),
+            Symbol::intern("getenv"),
+            get_env_fn.to_rc_value(),
+        );
 
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
@@ -373,7 +376,9 @@ impl Environment {
         environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
         environment.insert(Symbol::intern("get"), get_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
-
+        environment.insert(Symbol::intern("more"), more_fn.to_rc_value());
+        environment.insert(Symbol::intern("first"), first_fn.to_rc_value());
+        environment.insert(Symbol::intern("second"), second_fn.to_rc_value());
         // input and output
         environment.insert(
             Symbol::intern("system-newline"),
@@ -389,7 +394,7 @@ impl Environment {
         );
         environment.insert(Symbol::intern("read-line"), read_line_fn.to_rc_value());
 
-        environment.insert(Symbol::intern("="),equals_fn.to_rc_value());
+        environment.insert(Symbol::intern("="), equals_fn.to_rc_value());
         //
         // Read in clojure.core
         //
@@ -528,8 +533,7 @@ mod tests {
                 MainEnvironment(EnvironmentVal {
                     curr_ns_sym: _,
                     namespaces,
-                }) => namespaces
-                    .get(&Symbol::intern("user"),&Symbol::intern("+")),
+                }) => namespaces.get(&Symbol::intern("user"), &Symbol::intern("+")),
                 _ => panic!("new_main_environment() should return Main"),
             };
 
