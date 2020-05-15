@@ -26,7 +26,7 @@ mod value;
 mod user_action;
 
 fn main() {
-    let cli_args: user_action::Action = user_action::parse_args();
+    let cli_args: user_action::Action = user_action::parse_args( std::env::args().collect() );
 
     // instantiate the core environment
     let repl = repl::Repl::default();
