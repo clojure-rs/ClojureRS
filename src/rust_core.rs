@@ -66,3 +66,6 @@ pub use self::slurp::*;
 
 pub(crate) mod load_file;
 pub use self::load_file::*;
+
+pub(crate) mod equals;
+pub use self::equals::*;
