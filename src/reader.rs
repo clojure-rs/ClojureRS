@@ -845,61 +845,51 @@ mod tests {
         fn try_read_bool_false_test() {
             assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
         }
+    }
+    mod regex_tests {
+        use crate::reader::try_read;
+        use crate::value::Value;
 
-        mod regex_tests {
-            use crate::reader::try_read;
-            use crate::value::Value;
+        #[test]
+        fn try_read_simple_regex_pattern_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("a").unwrap()),
+                try_read(r###"#"a" "###).ok().unwrap().1
+            );
+        }
 
-            #[test]
-            fn try_read_simple_regex_pattern_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("a").unwrap()),
-                    try_read(r##"#"a" "##).ok().unwrap().1
-                );
-            }
+        #[test]
+        fn try_read_regex_pattern_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("hello").unwrap()),
+                try_read("#\"hello\" ").ok().unwrap().1
+            );
+        }
 
-            #[test]
-            fn try_read_simple_with_escaped_quote_regex_pattern_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("a").unwrap()),
-                    try_read(r###"#"a\"" "###).ok().unwrap().1
-                );
-            }
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o\"").unwrap()),
+                try_read(r#"#"h\"e\"l\"l\"o\"" something"#).ok().unwrap().1
+            );
+        }
 
-            #[test]
-            fn try_read_regex_pattern_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("hello").unwrap()),
-                    try_read("#\"hello\" ").ok().unwrap().1
-                );
-            }
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_prefixed_by_whitespace_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\"l \"o").unwrap()),
+                try_read(r#"#"h\"e\"l\"l \"o""#).ok().unwrap().1
+            );
+        }
 
-            #[test]
-            fn try_read_regex_pattern_escaped_quote_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o").unwrap()),
-                    try_read(r#"#"h\"e\"l\"l\"o\"" something"#).ok().unwrap().1
-                );
-            }
-
-            #[test]
-            fn try_read_regex_pattern_escaped_quote_prefixed_by_whitespace_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("h\"e\"l\"l \"o").unwrap()),
-                    try_read("#\"h\"e\"l\"l \"o\" something").ok().unwrap().1
-                );
-            }
-
-            #[test]
-            fn try_read_regex_pattern_escaped_quote_suffixed_by_whitespace_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("h\"e\"l\" l \"o").unwrap()),
-                    try_read("#\"h\"e\"l\" l \"o\" something").ok().unwrap().1
-                );
-            }
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_suffixed_by_whitespace_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\" l \"o").unwrap()),
+                try_read(r#"#"h\"e\"l\" l \"o" something"#).ok().unwrap().1
+            );
         }
     }
-
     mod consume_clojure_whitespaces_tests {
         use crate::reader::consume_clojure_whitespaces_parser;
         #[test]
