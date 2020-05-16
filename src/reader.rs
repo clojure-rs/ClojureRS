@@ -379,10 +379,21 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 
     let (rest_input, _) = quotation(input)?;
 
+    named!(escaped_string_parser<&str, String >, escaped_transform!(take_till1!(|ch| { ch == '\\' || ch == '\"'}), '\\', alt!(
+        tag!("t")   => { |_| "\t"   } |
+        tag!("b")   => { |_| "\x08" } |
+        tag!("n")   => { |_| "\n"   } |
+        tag!("r")   => { |_| "\r"   } |
+        tag!("f")   => { |_| "\x0C" } |
+        tag!("'")   => { |_| "'"    } |
+        tag!("\"")  => { |_| "\""   } |
+        tag!("\\")  => { |_| "\\"   }
+    )));
+
     named!(
         string_parser<&str, String>,
         map!(
-            terminated!(take_until!("\""), tag("\"")),
+            terminated!(escaped_string_parser, tag("\"")),
             |v| String::from(v)
         )
     );
@@ -390,57 +401,24 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
     to_value_parser(string_parser)(rest_input)
 }
 
-/// Tries to parse &str into Value::Pattern
-/// Reader Macro for Regex
-/// Example Successes:
-///    #"this is pretty straightforward" => Value::Pattern("this is pretty straightforward")
 pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
-    named!(hash_quotation<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#\"")));
+    named!(hash_parser<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#")));
 
-    let (rest_input, _) = hash_quotation(input)?;
+    let (rest_input, _) = hash_parser(input)?; 
+    let (rest_input,regex_string_val) = try_read_string(rest_input)?;
 
-    // println!("regexquoted: {:#?}", regex::Regex::quote(rest_input));
-    let mut iterator = rest_input.escape_default();
-    let mut prev: char = iterator.next().unwrap();
-    let mut prev_prev_was_escape = false;
-    let mut is_escaping = false;
-    let mut till_quote: String = String::from(prev.to_string());
-    println!("first char: {:#?}", till_quote);
-    while let ch = iterator.next().unwrap() {
-        if ch == '\\' && prev == '\\' {
-            is_escaping = true;
-        }
-        println!(
-            "LOOP: next char to handle: {:#?} prev: {:#?} is escaping {} and prev prev was escaping {}",
-            ch, prev, is_escaping, prev_prev_was_escape
-        );
-        if ch == '\"' && prev == '\\' && !prev_prev_was_escape {
-            println!(
-                "GONNA END: next char to handle: {:#?} prev: {:#?} is escaping {}",
-                ch, prev, is_escaping
-            );
-            till_quote = till_quote.trim_end_matches("\"").to_string();
-            break;
-        };
-        if ch == '\"' && is_escaping {
-            till_quote = String::from(till_quote + ch.to_string().as_str());
-        } else if ch != '\\' {
-            till_quote = String::from(till_quote + ch.to_string().as_str());
-            //is_escaping = false;
-            prev_prev_was_escape = false;
-        }
-        prev_prev_was_escape = is_escaping;
-        prev = ch;
+    let mut regex_string = String::from("");
+
+    // @TODO separate try_read_string into a parser, so we don't have to read a Value
+    // and then unwrap it 
+    match regex_string_val {
+        Value::String(reg_str) => { regex_string = reg_str; },
+        _ => { panic!("try_read_string returned something that wasn't string"); }
     }
-    println!("till quote: {} {:#?}", till_quote, till_quote);
-    let to_trim = till_quote.to_owned() + "\"";
-    println!(
-        "rest input trimmed: {}",
-        rest_input.trim_start_matches(&to_trim)
-    );
-    let regex = regex::Regex::new(till_quote.as_str()).unwrap();
+
+    let regex = regex::Regex::new(regex_string.as_str()).unwrap();
     Ok((
-        rest_input.trim_start_matches(&to_trim),
+        rest_input,
         Value::Pattern(regex),
     ))
 }
@@ -921,7 +899,50 @@ mod tests {
             }
         }
     }
+    mod regex_tests {
+        use crate::reader::try_read;
+        use crate::value::Value;
 
+        #[test]
+        fn try_read_simple_regex_pattern_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("a").unwrap()),
+                try_read(r###"#"a" "###).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("hello").unwrap()),
+                try_read("#\"hello\" ").ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o\"").unwrap()),
+                try_read(r#"#"h\"e\"l\"l\"o\"" something"#).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_prefixed_by_whitespace_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\"l \"o").unwrap()),
+                try_read(r#"#"h\"e\"l\"l \"o""#).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_suffixed_by_whitespace_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\" l \"o").unwrap()),
+                try_read(r#"#"h\"e\"l\" l \"o" something"#).ok().unwrap().1
+            );
+        }
+    }
     mod consume_clojure_whitespaces_tests {
         use crate::reader::consume_clojure_whitespaces_parser;
         #[test]

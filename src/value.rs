@@ -1,3 +1,4 @@
+use core::fmt::Display;
 use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::keyword::Keyword;
@@ -621,6 +622,14 @@ impl ToValue for PersistentVector {
 impl ToValue for PersistentListMap {
     fn to_value(&self) -> Value {
         Value::PersistentListMap(self.clone())
+    }
+}
+impl<T: Display> ToValue for Result<Value,T> {
+    fn to_value(&self) -> Value {
+        match self {
+            Ok(val) => val.clone(),
+            Err(err) => Value::Condition(err.to_string())
+        }
     }
 }
 
