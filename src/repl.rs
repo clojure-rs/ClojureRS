@@ -6,8 +6,7 @@ use std::io::Write;
 
 use crate::environment::Environment;
 use crate::reader;
-use crate::value::Evaluable;
-use crate::value::Value;
+use crate::value::{Value,Evaluable,ToValue};
 use std::rc::Rc;
 
 pub struct Repl {
@@ -83,6 +82,9 @@ impl Repl {
 
             last_val = Repl::read(&mut reader);
         }
+    }
+    pub fn eval_file(&self, filepath: &str) -> Value {
+        self.try_eval_file(filepath).to_value()
     }
 }
 
