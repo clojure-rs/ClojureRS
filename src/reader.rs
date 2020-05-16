@@ -379,10 +379,21 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 
     let (rest_input, _) = quotation(input)?;
 
+    named!(escaped_string_parser<&str, String >, escaped_transform!(take_till1!(|ch| { ch == '\\' || ch == '\"'}), '\\', alt!(
+        tag!("t")   => { |_| "\t"   } |
+        tag!("b")   => { |_| "\x08" } |
+        tag!("n")   => { |_| "\n"   } |
+        tag!("r")   => { |_| "\r"   } |
+        tag!("f")   => { |_| "\x0C" } |
+        tag!("'")   => { |_| "'"    } |
+        tag!("\"")  => { |_| "\""   } |
+        tag!("\\")  => { |_| "\\"   }
+    )));
+
     named!(
         string_parser<&str, String>,
         map!(
-            terminated!(take_until!("\""), tag("\"")),
+            terminated!(escaped_string_parser, tag("\"")),
             |v| String::from(v)
         )
     );
