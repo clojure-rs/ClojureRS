@@ -39,7 +39,7 @@ fn main() {
 
 	// eval the expression
 	user_action::Action::Evaluate(expression) => {
-	    println!("{:?}", repl::Repl::eval(&repl, &repl::Repl::read_string(&expression)));
+	    println!("{}", repl::Repl::eval(&repl, &repl::Repl::read_string(&expression)));
 	}, 
 
 	// Start repl
