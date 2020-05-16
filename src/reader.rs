@@ -404,23 +404,24 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
 pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
     named!(hash_parser<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#")));
 
-    let (rest_input, _) = hash_parser(input)?; 
-    let (rest_input,regex_string_val) = try_read_string(rest_input)?;
+    let (rest_input, _) = hash_parser(input)?;
+    let (rest_input, regex_string_val) = try_read_string(rest_input)?;
 
     let mut regex_string = String::from("");
 
     // @TODO separate try_read_string into a parser, so we don't have to read a Value
-    // and then unwrap it 
+    // and then unwrap it
     match regex_string_val {
-        Value::String(reg_str) => { regex_string = reg_str; },
-        _ => { panic!("try_read_string returned something that wasn't string"); }
+        Value::String(reg_str) => {
+            regex_string = reg_str;
+        }
+        _ => {
+            panic!("try_read_string returned something that wasn't string");
+        }
     }
 
     let regex = regex::Regex::new(regex_string.as_str()).unwrap();
-    Ok((
-        rest_input,
-        Value::Pattern(regex),
-    ))
+    Ok((rest_input, Value::Pattern(regex)))
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
@@ -845,60 +846,8 @@ mod tests {
         fn try_read_bool_false_test() {
             assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
         }
-
-        mod regex_tests {
-            use crate::reader::try_read;
-            use crate::value::Value;
-
-            #[test]
-            fn try_read_simple_regex_pattern_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("a").unwrap()),
-                    try_read(r##"#"a" "##).ok().unwrap().1
-                );
-            }
-
-            #[test]
-            fn try_read_simple_with_escaped_quote_regex_pattern_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("a").unwrap()),
-                    try_read(r###"#"a\"" "###).ok().unwrap().1
-                );
-            }
-
-            #[test]
-            fn try_read_regex_pattern_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("hello").unwrap()),
-                    try_read("#\"hello\" ").ok().unwrap().1
-                );
-            }
-
-            #[test]
-            fn try_read_regex_pattern_escaped_quote_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o").unwrap()),
-                    try_read(r#"#"h\"e\"l\"l\"o\"" something"#).ok().unwrap().1
-                );
-            }
-
-            #[test]
-            fn try_read_regex_pattern_escaped_quote_prefixed_by_whitespace_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("h\"e\"l\"l \"o").unwrap()),
-                    try_read("#\"h\"e\"l\"l \"o\" something").ok().unwrap().1
-                );
-            }
-
-            #[test]
-            fn try_read_regex_pattern_escaped_quote_suffixed_by_whitespace_test() {
-                assert_eq!(
-                    Value::Pattern(regex::Regex::new("h\"e\"l\" l \"o").unwrap()),
-                    try_read("#\"h\"e\"l\" l \"o\" something").ok().unwrap().1
-                );
-            }
-        }
     }
+
     mod regex_tests {
         use crate::reader::try_read;
         use crate::value::Value;
@@ -943,6 +892,7 @@ mod tests {
             );
         }
     }
+
     mod consume_clojure_whitespaces_tests {
         use crate::reader::consume_clojure_whitespaces_parser;
         #[test]

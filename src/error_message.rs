@@ -44,3 +44,7 @@ pub fn index_cannot_be_negative(ind: usize) -> Value {
 pub fn generic_err(error: Box<dyn Error>) -> Value {
     Value::Condition(error.to_string())
 }
+
+pub fn unknown_err(error: String) -> Value {
+    Value::Condition(error)
+}
