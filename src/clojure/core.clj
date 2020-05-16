@@ -1,10 +1,5 @@
-"strings work as temporary comments"
-
 (def *flush-on-newline* true)
 (def *print-readably* true)
-
-"TODO: #Condition[Execution Error: clojure.lang.Nil cannot be cast to clojure.lang.IFn] when succesful"
-"Bug in do"
 
 (defmacro when [test & body]
   (list 'if test (concat (list 'do) body)))
