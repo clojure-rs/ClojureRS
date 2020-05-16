@@ -146,7 +146,7 @@ fn is_period_char(chr: char) -> bool {
 ///
 /// Clojure defines a whitespace as either a comma or an unicode whitespace.
 fn is_clojure_whitespace(c: char) -> bool {
-    c.is_whitespace() || c == ','
+    c.is_whitespace() || c == ',' 
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //     End predicates
@@ -163,8 +163,25 @@ fn is_clojure_whitespace(c: char) -> bool {
 ///
 /// A whitespace is either an ASCII whitespace or a comma.
 fn consume_clojure_whitespaces_parser(input: &str) -> IResult<&str, ()> {
-    named!(parser<&str, &str>, take_while!(is_clojure_whitespace));
-    parser(input).map(|(rest, _)| (rest, ()))
+    named!(comment_parser<&str,&str>, delimited!(tag(";"),take_until!("\n"),tag("\n")));
+
+    named!(whitespace_parser<&str,()>,
+           value!((),
+               many0!(alt!(comment_parser | 
+                           take_while1!(is_clojure_whitespace))))
+    );
+
+    named!(no_whitespace_parser<&str,()>, value!((),tag!("")));
+
+    // @TODO rename / check that all parsers are consistent? 
+    named!(parser<&str,()>,
+           // Because 'whitespace_parser' loops, we cannot include the case where there's no whitespace at all in
+           // its definition -- nom wouldn't allow it, as it would loop forever consuming no whitespace 
+           // So instead, we eat up all the whitespace first, and then use the no_whitespace_parser as our sort-of
+           // base-case after
+           alt!(whitespace_parser | no_whitespace_parser)
+    );
+    parser(input)
 }
 
 // This parser is made with nom's function combinator, rather than macros,
@@ -515,9 +532,12 @@ pub fn read<R: BufRead>(reader: &mut R) -> Value {
     // loop over and ask for more lines, accumulating them in input_buffer until we can read
     loop {
         let maybe_line = reader.by_ref().lines().next();
+        
         match maybe_line {
             Some(Err(e)) => return Value::Condition(format!("Reader error: {}", e)),
-            Some(Ok(line)) => input_buffer.push_str(&line),
+            // `lines` does not include \n,  but \n is part of the whitespace given to the reader
+            // (and is important for reading comments) so we will push a newline as well 
+            Some(Ok(line)) => { input_buffer.push_str(&line); input_buffer.push_str("\n"); },
             None => {
                 return Value::Condition(String::from("Tried to read empty stream; unexpected EOF"))
             }
@@ -831,6 +851,47 @@ mod tests {
             let s = "1, 2, 3";
             assert_eq!(
                 Some(("1, 2, 3", ())),
+                consume_clojure_whitespaces_parser(&s).ok()
+            );
+        }
+
+        #[test]
+        fn consume_whitespaces_with_comments_then_no_whitespace() {
+            let s = ", ,,  \n; Line starts as comment\n  ; Line does not start as comment\n1, 2, 3, 4 5,,6 ";
+            assert_eq!(
+                Some(("1, 2, 3, 4 5,,6 ", ())),
+                consume_clojure_whitespaces_parser(&s).ok()
+            );
+        }
+
+        #[test]
+        fn consume_whitespaces_with_comments_then_whitespace() {
+            let s = ", ,,  \n; Line starts as comment\n  ; Line does not start as comment\n,   1, 2, 3, 4 5,,6 ";
+            assert_eq!(
+                Some(("1, 2, 3, 4 5,,6 ", ())),
+                consume_clojure_whitespaces_parser(&s).ok()
+            );
+        }
+        #[test]
+        fn consume_whitespaces_with_comments() {
+            let mut s = "; Line starts as comment\n\n,   1, 2, 3, 4 5,,6 ";
+            assert_eq!(
+                Some(("1, 2, 3, 4 5,,6 ", ())),
+                consume_clojure_whitespaces_parser(&s).ok()
+            );
+
+            s = "; Line starts as comment\n\n1, 2, 3, 4 5,,6 ";
+            assert_eq!(
+                Some(("1, 2, 3, 4 5,,6 ", ())),
+                consume_clojure_whitespaces_parser(&s).ok()
+            );
+        }
+
+        #[test]
+        fn consume_whitespaces_multiline() {
+            let s = " , , ,\n    \n\n\n,   1, 2, 3, 4 5,,6 ";
+            assert_eq!(
+                Some(("1, 2, 3, 4 5,,6 ", ())),
                 consume_clojure_whitespaces_parser(&s).ok()
             );
         }
