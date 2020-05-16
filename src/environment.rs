@@ -402,11 +402,6 @@ impl Environment {
         //
         // @TODO its time for a RT (runtime), which environment seems to be becoming
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
-        println!(
-            "{:#?} {:#?}",
-            &environment.get_current_namespace(),
-            &environment.get_current_namespace_name()
-        );
         // TODO: should read into namespace if (ns ..) is given in source file
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/string.clj");
 

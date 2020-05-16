@@ -1,4 +1,3 @@
-use core::fmt::Display;
 use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::keyword::Keyword;
@@ -10,6 +9,7 @@ use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
+use core::fmt::Display;
 
 extern crate rand;
 use rand::Rng;
@@ -173,9 +173,9 @@ impl fmt::Display for Value {
             IfMacro => std::string::String::from("#macro[if*]"),
             LetMacro => std::string::String::from("#macro[let*]"),
             Value::String(string) => string.clone(),
-            Pattern(pattern) => {
-                std::string::String::from("#\"".to_owned() + pattern.as_str().clone() + "\"")
-            }
+            Pattern(pattern) => std::string::String::from(
+                "#\"".to_owned() + &pattern.as_str().escape_default().to_string().clone() + "\"",
+            ),
             Nil => std::string::String::from("nil"),
         };
         write!(f, "{}", str)
@@ -624,11 +624,11 @@ impl ToValue for PersistentListMap {
         Value::PersistentListMap(self.clone())
     }
 }
-impl<T: Display> ToValue for Result<Value,T> {
+impl<T: Display> ToValue for Result<Value, T> {
     fn to_value(&self) -> Value {
         match self {
             Ok(val) => val.clone(),
-            Err(err) => Value::Condition(err.to_string())
+            Err(err) => Value::Condition(err.to_string()),
         }
     }
 }
