@@ -7,7 +7,7 @@
 "Bug in do"
 
 (defmacro when [test & body]
-  (list 'if test (list 'do body) nil))
+  (list 'if test (concat (list 'do) body)))
 
 (def list (fn [& ls] ls))
 
