@@ -18,6 +18,7 @@ pub enum TypeTag {
     Integer,
     ISeq,
     Nil,
+    Pattern,
 }
 
 use TypeTag::*;
@@ -40,6 +41,7 @@ impl fmt::Display for TypeTag {
             TypeTag::Integer => std::string::String::from("clojure.lang.Integer"),
             ISeq => std::string::String::from("clojure.lang.ISeq"),
             Nil => std::string::String::from("clojure.lang.Nil"),
+            Pattern => std::string::String::from("rust.regex"),
         };
         write!(f, "{}", str)
     }

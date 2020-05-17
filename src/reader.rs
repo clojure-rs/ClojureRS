@@ -11,7 +11,7 @@
 use nom::combinator::verify;
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
-    terminated, Err::Incomplete, IResult,
+    terminated, AsChar, Err::Incomplete, IResult,
 };
 
 use crate::keyword::Keyword;
@@ -23,6 +23,8 @@ use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
+use nom::Err::Error;
+use std::borrow::Borrow;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -246,6 +248,32 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     }
 }
 
+pub fn string_parser(input: &str) -> IResult<&str, String> {
+    // Convert escaped characters like \n to their actual counterparts -- like an actual newline
+    named!(escaped_string_parser<&str, String>, escaped_transform!(take_till1!(|ch| { ch == '\\' || ch == '\"'}), '\\', alt!(
+        tag!("t")   => { |_| "\t"   } |
+        tag!("b")   => { |_| "\x08" } |
+        tag!("n")   => { |_| "\n"   } |
+        tag!("r")   => { |_| "\r"   } |
+        tag!("f")   => { |_| "\x0C" } |
+        tag!("'")   => { |_| "'"    } |
+        tag!("\"")  => { |_| "\""   } |
+        tag!("\\")  => { |_| "\\"   }
+    )));
+
+    named!(empty_string_parser <&str, String>, map!(tag!("\"\""),|_| String::from("")));
+
+    named!(
+        string_parser<&str, String>,
+        alt!(
+            delimited!(tag("\""),escaped_string_parser, tag("\"")) |
+            // Base case; empty string
+            empty_string_parser)
+    );
+
+    string_parser(input)
+}
+
 // Helper function to integer_parser for same reason as
 // identifier_tail. See comment above said function for explanation
 
@@ -381,8 +409,8 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    nil => Value::Nil
 pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
-    let (rest_input, _) = verify(identifier_parser,|ident: &str| ident == "nil")(input)?;
-    Ok((rest_input,Value::Nil))
+    let (rest_input, _) = verify(identifier_parser, |ident: &str| ident == "nil")(input)?;
+    Ok((rest_input, Value::Nil))
 }
 
 // @TODO allow escaped strings
@@ -390,19 +418,18 @@ pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    "this is pretty straightforward" => Value::String("this is pretty straightforward")
 pub fn try_read_string(input: &str) -> IResult<&str, Value> {
-    named!(quotation<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("\"")));
+    to_value_parser(string_parser)(input)
+}
 
-    let (rest_input, _) = quotation(input)?;
+pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
+    named!(hash_parser<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#")));
 
-    named!(
-        string_parser<&str, String>,
-        map!(
-            terminated!(take_until!("\""), tag("\"")),
-            |v| String::from(v)
-        )
-    );
+    let (rest_input, _) = hash_parser(input)?;
+    let (rest_input, regex_string) = string_parser(rest_input)?;
 
-    to_value_parser(string_parser)(rest_input)
+    // If an error is thrown,  this will be coerced into a condition
+    let regex = regex::Regex::new(regex_string.as_str()).to_value();
+    Ok((rest_input, regex))
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
@@ -509,6 +536,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_keyword,
             try_read_list,
             try_read_vector,
+            try_read_pattern,
         )),
     )(input)
 }
@@ -746,8 +774,8 @@ mod tests {
         use crate::persistent_vector;
         use crate::reader::try_read;
         use crate::symbol::Symbol;
-        use crate::value::Value;
         use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
+        use crate::value::{ToValue, Value};
 
         #[test]
         fn try_read_empty_map_test() {
@@ -762,6 +790,30 @@ mod tests {
             assert_eq!(
                 Value::String(String::from("a string")),
                 try_read("\"a string\" ").ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_string_empty() {
+            assert_eq!(
+                Value::String(String::from("")),
+                try_read("\"\"").ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_string_escaped_quotes() {
+            assert_eq!(
+                Value::String(String::from("\" \" c c caf \" fadsg")),
+                try_read(r#""\" \" c c caf \" fadsg""#).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_string_newlines() {
+            assert_eq!(
+                Value::String(String::from("\n fadsg \n")),
+                try_read(r#""\n fadsg \n""#).ok().unwrap().1
             );
         }
 
@@ -828,6 +880,51 @@ mod tests {
         #[test]
         fn try_read_bool_false_test() {
             assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
+        }
+    }
+
+    mod regex_tests {
+        use crate::reader::try_read;
+        use crate::value::Value;
+
+        #[test]
+        fn try_read_simple_regex_pattern_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("a").unwrap()),
+                try_read(r###"#"a" "###).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("hello").unwrap()),
+                try_read("#\"hello\" ").ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o\"").unwrap()),
+                try_read(r#"#"h\"e\"l\"l\"o\"" something"#).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_prefixed_by_whitespace_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\"l \"o").unwrap()),
+                try_read(r#"#"h\"e\"l\"l \"o""#).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_regex_pattern_escaped_quote_suffixed_by_whitespace_test() {
+            assert_eq!(
+                Value::Pattern(regex::Regex::new("h\"e\"l\" l \"o").unwrap()),
+                try_read(r#"#"h\"e\"l\" l \"o" something"#).ok().unwrap().1
+            );
         }
     }
 

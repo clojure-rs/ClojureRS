@@ -1,6 +1,6 @@
 use crate::clojure_std;
 use crate::clojure_string;
-use crate::namespace::{Namespaces};
+use crate::namespace::Namespaces;
 use crate::repl::Repl;
 use crate::rust_core;
 use crate::symbol::Symbol;
@@ -219,6 +219,7 @@ impl Environment {
         let triml_fn = clojure_string::triml::TrimLFn {};
         let trimr_fn = clojure_string::trimr::TrimRFn {};
         let trim_newline_fn = clojure_string::trim_newline::TrimNewlineFn {};
+        let split_fn = clojure_string::split::SplitFn {};
 
         // Hardcoded fns
         let lexical_eval_fn = Value::LexicalEvalFn {};
@@ -255,23 +256,23 @@ impl Environment {
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
 
         // Thread namespace
-		environment.insert_into_namespace(
-			&Symbol::intern("Thread"),
-			Symbol::intern("sleep"),
-			thread_sleep_fn.to_rc_value()
-		);
+        environment.insert_into_namespace(
+            &Symbol::intern("Thread"),
+            Symbol::intern("sleep"),
+            thread_sleep_fn.to_rc_value(),
+        );
 
-		// System namespace
-		environment.insert_into_namespace(
-			&Symbol::intern("System"),
-			Symbol::intern("nanoTime"),
-			nanotime_fn.to_rc_value()
-		);
-		environment.insert_into_namespace(
-			&Symbol::intern("System"),
-			Symbol::intern("getenv"),
-			get_env_fn.to_rc_value()
-		);
+        // System namespace
+        environment.insert_into_namespace(
+            &Symbol::intern("System"),
+            Symbol::intern("nanoTime"),
+            nanotime_fn.to_rc_value(),
+        );
+        environment.insert_into_namespace(
+            &Symbol::intern("System"),
+            Symbol::intern("getenv"),
+            get_env_fn.to_rc_value(),
+        );
 
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
@@ -350,6 +351,12 @@ impl Environment {
             trim_newline_fn.to_rc_value(),
         );
 
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.string"),
+            Symbol::intern("split"),
+            split_fn.to_rc_value(),
+        );
+
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
         environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
@@ -389,12 +396,14 @@ impl Environment {
         );
         environment.insert(Symbol::intern("read-line"), read_line_fn.to_rc_value());
 
-        environment.insert(Symbol::intern("="),equals_fn.to_rc_value());
+        environment.insert(Symbol::intern("="), equals_fn.to_rc_value());
         //
         // Read in clojure.core
         //
         // @TODO its time for a RT (runtime), which environment seems to be becoming
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
+        // TODO: should read into namespace if (ns ..) is given in source file
+        let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/string.clj");
 
         // We can add this back once we have requires
         // environment.change_namespace(Symbol::intern("user"));
@@ -528,8 +537,7 @@ mod tests {
                 MainEnvironment(EnvironmentVal {
                     curr_ns_sym: _,
                     namespaces,
-                }) => namespaces
-                    .get(&Symbol::intern("user"),&Symbol::intern("+")),
+                }) => namespaces.get(&Symbol::intern("user"), &Symbol::intern("+")),
                 _ => panic!("new_main_environment() should return Main"),
             };
 

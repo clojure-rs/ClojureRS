@@ -1,4 +1,3 @@
-use core::fmt::Display;
 use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::keyword::Keyword;
@@ -10,6 +9,7 @@ use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
+use core::fmt::Display;
 
 extern crate rand;
 use rand::Rng;
@@ -61,6 +61,7 @@ pub enum Value {
 
     String(std::string::String),
     Nil,
+    Pattern(regex::Regex),
 }
 use crate::value::Value::*;
 
@@ -90,6 +91,7 @@ impl PartialEq for Value {
             (LetMacro, LetMacro) => true,
             (String(string), String(string2)) => string == string2,
             (Nil, Nil) => true,
+            (Pattern(p1), Pattern(p2)) => p1.as_str() == p2.as_str(),
             _ => false,
         }
     }
@@ -142,6 +144,7 @@ impl Hash for Value {
             IfMacro => ValueHash::IfMacro.hash(state),
 
             String(string) => string.hash(state),
+            Pattern(p) => p.as_str().hash(state),
             Nil => ValueHash::Nil.hash(state),
         }
         // self.id.hash(state);
@@ -170,6 +173,9 @@ impl fmt::Display for Value {
             IfMacro => std::string::String::from("#macro[if*]"),
             LetMacro => std::string::String::from("#macro[let*]"),
             Value::String(string) => string.clone(),
+            Pattern(pattern) => std::string::String::from(
+                "#\"".to_owned() + &pattern.as_str().escape_default().to_string().clone() + "\"",
+            ),
             Nil => std::string::String::from("nil"),
         };
         write!(f, "{}", str)
@@ -214,6 +220,7 @@ impl Value {
             Value::IfMacro => TypeTag::Macro,
             Value::String(_) => TypeTag::String,
             Value::Nil => TypeTag::Nil,
+            Value::Pattern(_) => TypeTag::Pattern,
         }
     }
 
@@ -541,82 +548,110 @@ impl Value {
         true
     }
 }
+
 pub trait ToValue {
     fn to_value(&self) -> Value;
     fn to_rc_value(&self) -> Rc<Value> {
         Rc::new(self.to_value())
     }
 }
+
 impl ToValue for Value {
     fn to_value(&self) -> Value {
         self.clone()
     }
 }
+
 impl ToValue for Rc<Value> {
     fn to_value(&self) -> Value {
         (**self).clone()
     }
 }
+
 impl ToValue for i32 {
     fn to_value(&self) -> Value {
         Value::I32(*self)
     }
 }
+
 impl ToValue for f64 {
     fn to_value(&self) -> Value {
         Value::F64(*self)
     }
 }
+
 impl ToValue for bool {
     fn to_value(&self) -> Value {
         Value::Boolean(*self)
     }
 }
+
 impl ToValue for std::string::String {
     fn to_value(&self) -> Value {
         Value::String(self.clone())
     }
 }
+
+// Not sure why this has to be done separately from the `str` implementation
+impl ToValue for &str {
+    fn to_value(&self) -> Value {
+        Value::String(std::string::String::from(*self))
+    }
+}
+
 impl ToValue for str {
     fn to_value(&self) -> Value {
         Value::String(std::string::String::from(self))
     }
 }
+
+impl ToValue for regex::Regex {
+    fn to_value(&self) -> Value {
+        Value::Pattern(self.clone())
+    }
+}
+
 impl ToValue for Symbol {
     fn to_value(&self) -> Value {
         Value::Symbol(self.clone())
     }
 }
+
 impl ToValue for Keyword {
     fn to_value(&self) -> Value {
         Value::Keyword(self.clone())
     }
 }
+
 impl ToValue for Rc<dyn IFn> {
     fn to_value(&self) -> Value {
         Value::IFn(Rc::clone(self))
     }
 }
+
 impl ToValue for PersistentList {
     fn to_value(&self) -> Value {
         Value::PersistentList(self.clone())
     }
 }
+
 impl ToValue for PersistentVector {
     fn to_value(&self) -> Value {
         Value::PersistentVector(self.clone())
     }
 }
+
 impl ToValue for PersistentListMap {
     fn to_value(&self) -> Value {
         Value::PersistentListMap(self.clone())
     }
 }
-impl<T: Display> ToValue for Result<Value,T> {
+
+impl<T: Display, V: ToValue> ToValue for Result<V, T> {
     fn to_value(&self) -> Value {
         match self {
-            Ok(val) => val.clone(),
-            Err(err) => Value::Condition(err.to_string())
+            Ok(val) => val.to_value(),
+            Err(err) => Value::Condition(err.to_string()),
         }
     }
 }

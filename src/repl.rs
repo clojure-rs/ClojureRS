@@ -6,7 +6,7 @@ use std::io::Write;
 
 use crate::environment::Environment;
 use crate::reader;
-use crate::value::{Value,Evaluable,ToValue};
+use crate::value::{Evaluable, ToValue, Value};
 use std::rc::Rc;
 
 pub struct Repl {
@@ -28,7 +28,7 @@ impl Repl {
     pub fn read<R: BufRead>(reader: &mut R) -> Value {
         reader::read(reader)
     }
-    // @TODO add to reader.rs and wrap here 
+    // @TODO add to reader.rs and wrap here
     pub fn read_string(string: &str) -> Value {
         Repl::read(&mut string.as_bytes())
     }
@@ -100,30 +100,30 @@ impl Default for Repl {
 mod tests {
     use crate::repl::Repl;
     use crate::value::Value;
-    //@TODO separate into individual tests 
+    //@TODO separate into individual tests
     #[test]
     fn read_string() {
         let num = Repl::read_string("1");
         match num {
-            Value::I32(_) => {},
-            _ => panic!("Reading of integer should have returned Value::I32")
+            Value::I32(_) => {}
+            _ => panic!("Reading of integer should have returned Value::I32"),
         }
         let list = Repl::read_string("(+ 1 2)");
         match list {
-            Value::PersistentList(_) => {},
-            _ => panic!("Reading of integer should have returned Value::PersistentList")
+            Value::PersistentList(_) => {}
+            _ => panic!("Reading of integer should have returned Value::PersistentList"),
         }
 
         let vector = Repl::read_string("[1 2 a]");
         match vector {
-            Value::PersistentVector(_) => {},
-            _ => panic!("Reading of integer should have returned Value::PersistentVector")
+            Value::PersistentVector(_) => {}
+            _ => panic!("Reading of integer should have returned Value::PersistentVector"),
         }
 
         let symbol = Repl::read_string("abc");
         match symbol {
-            Value::Symbol(_) => {},
-            _ => panic!("Reading of integer should have returned Value::Symbol")
+            Value::Symbol(_) => {}
+            _ => panic!("Reading of integer should have returned Value::Symbol"),
         }
     }
 }
