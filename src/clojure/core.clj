@@ -1,6 +1,9 @@
 (def *flush-on-newline* true)
 (def *print-readably* true)
 
+(defmacro when [test & body]
+  (list 'if test (concat (list 'do) body)))
+
 (def list (fn [& ls] ls))
 
 (defmacro defn [name args & body]
@@ -25,7 +28,9 @@
 (defn prn [& more]
   (apply pr more)
   (newline)
-  (flush))
+  (when *flush-on-newline*
+    (flush)
+    nil))
 
 (defn print [& more]
   (apply pr more))
@@ -47,3 +52,17 @@
 
 (defn slurp [f & opts]
   (rust-slurp f opts))
+
+"basic operations on collections"
+
+(defn rest [x]
+  (more x))
+
+(defn next [x]
+  (let [result (rest x)]
+    (if (= '() result)
+      nil
+      result)))
+
+(defn ffirst [x]
+  (first (first x)))

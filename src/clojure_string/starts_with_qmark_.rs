@@ -33,7 +33,7 @@ impl IFn for StartsWithFn {
 
 #[cfg(test)]
 mod tests {
-    mod reverse_tests {
+    mod starts_with_tests {
         use crate::clojure_string::starts_with_qmark_::StartsWithFn;
         use crate::ifn::IFn;
         use crate::value::Value;

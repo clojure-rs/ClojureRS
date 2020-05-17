@@ -194,6 +194,9 @@ impl Environment {
         let print_string_fn = rust_core::PrintStringFn {};
         let read_line_fn = rust_core::ReadLineFn {};
         let assoc_fn = rust_core::AssocFn {};
+        let more_fn = rust_core::MoreFn {};
+        let first_fn = rust_core::FirstFn {};
+        let second_fn = rust_core::SecondFn {};
 
         // rust implementations of core functions
         let slurp_fn = rust_core::slurp::SlurpFn {};
@@ -380,7 +383,9 @@ impl Environment {
         environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
         environment.insert(Symbol::intern("get"), get_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
-
+        environment.insert(Symbol::intern("more"), more_fn.to_rc_value());
+        environment.insert(Symbol::intern("first"), first_fn.to_rc_value());
+        environment.insert(Symbol::intern("second"), second_fn.to_rc_value());
         // input and output
         environment.insert(
             Symbol::intern("system-newline"),

@@ -33,7 +33,7 @@ impl IFn for EndsWithFn {
 
 #[cfg(test)]
 mod tests {
-    mod reverse_tests {
+    mod ends_with_tests {
         use crate::clojure_string::ends_with_qmark_::EndsWithFn;
         use crate::ifn::IFn;
         use crate::value::Value;

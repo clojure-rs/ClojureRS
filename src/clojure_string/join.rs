@@ -50,7 +50,7 @@ impl IFn for JoinFn {
 
 #[cfg(test)]
 mod tests {
-    mod reverse_tests {
+    mod join_tests {
         use crate::clojure_string::join::JoinFn;
         use crate::ifn::IFn;
         use crate::persistent_list::PersistentList;
