@@ -375,10 +375,7 @@ pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    "this is pretty straightforward" => Value::String("this is pretty straightforward")
 pub fn try_read_string(input: &str) -> IResult<&str, Value> {
-    named!(quotation<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("\"")));
-
-    let (rest_input, _) = quotation(input)?;
-
+    // Convert escaped characters like \n to their actual counterparts -- like an actual newline 
     named!(escaped_string_parser<&str, String >, escaped_transform!(take_till1!(|ch| { ch == '\\' || ch == '\"'}), '\\', alt!(
         tag!("t")   => { |_| "\t"   } |
         tag!("b")   => { |_| "\x08" } |
@@ -389,16 +386,18 @@ pub fn try_read_string(input: &str) -> IResult<&str, Value> {
         tag!("\"")  => { |_| "\""   } |
         tag!("\\")  => { |_| "\\"   }
     )));
+    
+    named!(empty_string_parser <&str, String>, map!(tag!("\"\""),|v| String::from("")));
 
     named!(
         string_parser<&str, String>,
-        map!(
-            terminated!(escaped_string_parser, tag("\"")),
-            |v| String::from(v)
-        )
+        alt!(
+            delimited!(tag("\""),escaped_string_parser, tag("\"")) | 
+            // Base case; empty string 
+            empty_string_parser)
     );
 
-    to_value_parser(string_parser)(rest_input)
+    to_value_parser(string_parser)(input)
 }
 
 pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
@@ -779,6 +778,31 @@ mod tests {
             assert_eq!(
                 Value::String(String::from("a string")),
                 try_read("\"a string\" ").ok().unwrap().1
+            );
+        }
+
+        
+        #[test]
+        fn try_read_string_empty() {
+            assert_eq!(
+                Value::String(String::from("")),
+                try_read("\"\"").ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_string_escaped_quotes() {
+            assert_eq!(
+                Value::String(String::from("\" \" c c caf \" fadsg")),
+                try_read(r#""\" \" c c caf \" fadsg""#).ok().unwrap().1
+            );
+        }
+
+        #[test]
+        fn try_read_string_newlines() {
+            assert_eq!(
+                Value::String(String::from("\n fadsg \n")),
+                try_read(r#""\n fadsg \n""#).ok().unwrap().1
             );
         }
 
