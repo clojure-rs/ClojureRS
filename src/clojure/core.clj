@@ -25,11 +25,10 @@
 (defn pr [& more]
   (print-string (apply str more)))
 
-"TODO: use when"
 (defn prn [& more]
   (apply pr more)
   (newline)
-  (if *flush-on-newline*
+  (when *flush-on-newline*
     (flush)
     nil))
 
