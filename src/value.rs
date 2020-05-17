@@ -548,86 +548,109 @@ impl Value {
         true
     }
 }
+
 pub trait ToValue {
     fn to_value(&self) -> Value;
     fn to_rc_value(&self) -> Rc<Value> {
         Rc::new(self.to_value())
     }
 }
+
 impl ToValue for Value {
     fn to_value(&self) -> Value {
         self.clone()
     }
 }
+
 impl ToValue for Rc<Value> {
     fn to_value(&self) -> Value {
         (**self).clone()
     }
 }
+
 impl ToValue for i32 {
     fn to_value(&self) -> Value {
         Value::I32(*self)
     }
 }
+
 impl ToValue for f64 {
     fn to_value(&self) -> Value {
         Value::F64(*self)
     }
 }
+
 impl ToValue for bool {
     fn to_value(&self) -> Value {
         Value::Boolean(*self)
     }
 }
+
 impl ToValue for std::string::String {
     fn to_value(&self) -> Value {
         Value::String(self.clone())
     }
 }
+
+// Not sure why this has to be done separately from the `str` implementation
+impl ToValue for &str {
+    fn to_value(&self) -> Value {
+        Value::String(std::string::String::from(*self))
+    }
+}
+
 impl ToValue for str {
     fn to_value(&self) -> Value {
         Value::String(std::string::String::from(self))
     }
 }
+
 impl ToValue for regex::Regex {
     fn to_value(&self) -> Value {
         Value::Pattern(self.clone())
     }
 }
+
 impl ToValue for Symbol {
     fn to_value(&self) -> Value {
         Value::Symbol(self.clone())
     }
 }
+
 impl ToValue for Keyword {
     fn to_value(&self) -> Value {
         Value::Keyword(self.clone())
     }
 }
+
 impl ToValue for Rc<dyn IFn> {
     fn to_value(&self) -> Value {
         Value::IFn(Rc::clone(self))
     }
 }
+
 impl ToValue for PersistentList {
     fn to_value(&self) -> Value {
         Value::PersistentList(self.clone())
     }
 }
+
 impl ToValue for PersistentVector {
     fn to_value(&self) -> Value {
         Value::PersistentVector(self.clone())
     }
 }
+
 impl ToValue for PersistentListMap {
     fn to_value(&self) -> Value {
         Value::PersistentListMap(self.clone())
     }
 }
-impl<T: Display> ToValue for Result<Value, T> {
+
+impl<T: Display, V: ToValue> ToValue for Result<V, T> {
     fn to_value(&self) -> Value {
         match self {
-            Ok(val) => val.clone(),
+            Ok(val) => val.to_value(),
             Err(err) => Value::Condition(err.to_string()),
         }
     }

@@ -232,7 +232,7 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
 }
 
 pub fn string_parser(input: &str) -> IResult<&str, String> {
-    // Convert escaped characters like \n to their actual counterparts -- like an actual newline 
+    // Convert escaped characters like \n to their actual counterparts -- like an actual newline
     named!(escaped_string_parser<&str, String>, escaped_transform!(take_till1!(|ch| { ch == '\\' || ch == '\"'}), '\\', alt!(
         tag!("t")   => { |_| "\t"   } |
         tag!("b")   => { |_| "\x08" } |
@@ -243,18 +243,18 @@ pub fn string_parser(input: &str) -> IResult<&str, String> {
         tag!("\"")  => { |_| "\""   } |
         tag!("\\")  => { |_| "\\"   }
     )));
-    
+
     named!(empty_string_parser <&str, String>, map!(tag!("\"\""),|_| String::from("")));
 
     named!(
         string_parser<&str, String>,
         alt!(
-            delimited!(tag("\""),escaped_string_parser, tag("\"")) | 
-            // Base case; empty string 
+            delimited!(tag("\""),escaped_string_parser, tag("\"")) |
+            // Base case; empty string
             empty_string_parser)
     );
 
-   string_parser(input) 
+    string_parser(input)
 }
 
 // Helper function to integer_parser for same reason as
@@ -773,7 +773,6 @@ mod tests {
             );
         }
 
-        
         #[test]
         fn try_read_string_empty() {
             assert_eq!(
