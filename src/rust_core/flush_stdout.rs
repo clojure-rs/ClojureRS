@@ -1,12 +1,11 @@
 use crate::ifn::IFn;
-use crate::value::{Value, ToValue, Evaluable};
+use crate::value::{Value, ToValue};
 use std::rc::Rc;
 
 use std::io;
 
 use crate::error_message;
-use nom::lib::std::convert::TryFrom;
-use std::io::{Read, Write};
+use std::io::{Write};
 
 /// Read a line from stdin TODO: should be aware of *in*
 /// (defn read-line [])

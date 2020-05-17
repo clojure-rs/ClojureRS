@@ -3,32 +3,76 @@ use crate::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+/// This is a list of namespaces your namespace has completely referred, and the symbols
+/// that your namespace has individually referred 
+/// Example:
+/// ```clojure
+/// (ns cats (:require [dogs :refer :all] [chickens :refer [a b c]))`
+/// ```
+/// =>
+/// ```
+/// Refers {
+///    refers: [
+///        Symbol::intern("clojure.core"),
+///        Symbol::intern("dogs")
+///    },
+///    syms:  {
+///        Symbol::intern("chickens") : [ Symbol::intern("a"),..,Symbol::intern("c")]
+///    }
+/// }
+/// ``
+#[derive(Debug, Clone)]
+pub struct Refers {
+    /// Namespaces that you have completely referred into your namespace;
+    /// Basically, `[blah :refer :all]`
+    pub namespaces: Vec<Symbol>,
+    /// Symbols that you have individually referred into your namespace from another;
+    /// Basically, `[blah :refer [a b c]]`
+    pub syms: HashMap<Symbol,Vec<Symbol>>
+}
+impl Default for Refers {
+    fn default() -> Self {
+        Refers {
+            namespaces: vec![Symbol::intern("clojure.core")],
+            syms: HashMap::new() 
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Namespace {
     pub name: Symbol,
     mappings: RefCell<HashMap<Symbol, Rc<Value>>>,
+    pub refers: RefCell<Refers>
 }
 impl Namespace {
-    pub fn new(name: &Symbol, mappings: RefCell<HashMap<Symbol, Rc<Value>>>) -> Namespace {
+    fn new(name: &Symbol, mappings: HashMap<Symbol, Rc<Value>>,refers: Refers) -> Namespace {
         Namespace {
             name: name.unqualified(),
-            mappings,
+            mappings: RefCell::new(mappings),
+            refers: RefCell::new(refers)
         }
     }
     pub fn from_sym(name: &Symbol) -> Namespace {
-        Namespace::new(name, RefCell::new(HashMap::new()))
+        Namespace::new(name, HashMap::new(), Refers::default())
     }
     pub fn insert(&self, sym: &Symbol, val: Rc<Value>) {
         self.mappings.borrow_mut().insert(sym.unqualified(), val);
     }
-    pub fn get(&self, sym: &Symbol) -> Rc<Value> {
+    pub fn try_get(&self, sym: &Symbol) -> Option<Rc<Value>> {
         match self.mappings.borrow_mut().get(&sym.unqualified()) {
-            Some(val) => Rc::clone(val),
+            Some(val) => Some(Rc::clone(val)),
+            None => None 
+        }
+    }
+    pub fn get(&self, sym: &Symbol) -> Rc<Value> {
+        match self.try_get(sym) {
+            Some(val) => val,
             None => Rc::new(Value::Condition(format!("1 Undefined symbol {}", sym.name))),
         }
     }
 }
+
 #[derive(Debug, Clone)]
 pub struct Namespaces(pub RefCell<HashMap<Symbol, Namespace>>);
 
@@ -84,26 +128,88 @@ impl Namespaces {
             }
         }
     }
-    /// Get value of sym at namespace
-    pub fn get(&self, namespace_sym: &Symbol, sym: &Symbol) -> Rc<Value> {
+    /// Like get, but slightly lower level; returns a None on failure rather than a
+    /// Value::Condition. See docs for get 
+    pub fn try_get(&self, namespace_sym: &Symbol, sym: &Symbol) -> Option<Rc<Value>> {
         // When storing / retrieving from namespaces, we want
         // namespace_sym unqualified keys
         let mut namespace_sym = namespace_sym.unqualified();
-
+        // Ie, a scenario like get(.. , 'clojure.core/+) or get(.., 'shortcut/+)
+        let mut grabbing_from_namespace_directly = false;
         // @TODO just make it an Optional<String>
         // If our sym is namespace qualified,  use that as our namespace
         if sym.has_ns() {
+            grabbing_from_namespace_directly = true;
             namespace_sym = Symbol::intern(&sym.ns);
         }
 
         let sym = sym.unqualified();
         let namespaces = self.0.borrow();
         let namespace = namespaces.get(&namespace_sym);
-
+        //@TODO change to map 
         match namespace {
-            Some(namespace) => Rc::clone(&namespace.get(&sym)),
+            Some(namespace) => {
+                // If we cannot find the symbol, and its not a direct grab from a specific namespace,
+                // we should see if we can find it in one of our referred namespaces or symbols
+                let val = namespace.try_get(&sym);
+                match val {
+                    Some(_) => val,
+                    None => {
+                        if grabbing_from_namespace_directly {
+                            return None;
+                        }
+                        let refers = namespace.refers.borrow();
+                        let referred_namespaces = &refers.namespaces;
+                        for referred_namespace_sym in referred_namespaces.into_iter() {
+                            if *referred_namespace_sym == namespace_sym {
+                                continue;
+                            }
+                            let try_get_sym_from_other_ns = self.try_get(&referred_namespace_sym,&sym);
+                            if let Some(val) = &try_get_sym_from_other_ns {
+                                return try_get_sym_from_other_ns;
+                            }
+                        }
+                        None 
+                        //
+                        // Big @TODO
+                        // lookup iterating through hashmap
+                        //
+                        // let referred_syms = refers.syms;
+                        // for referred_sym in referred_syms.into_iter() {
+                        // }
+                    }
+                }
+            },
+            None => None 
+        }
+    }
+    /// Get value of sym in namespace
+    /// Note;
+    /// ```
+    ///  get('clojure.core,'+)
+    /// ```
+    /// Will be asking what '+ means in 'clojure.core, so
+    /// this will only return a value if there is a 'clojure.core/+
+    /// But
+    /// ```
+    /// get('clojure.core, 'clojure.other/+)
+    /// ```
+    /// Will always mean the same thing, no matter what namespace we're in; it will mean
+    /// the value '+ belonging to clojure.other,  the namespace you're in is irrelevant
+    ///
+    /// Finally,
+    /// ```
+    /// get('clojure.core, 'shortcut/+)
+    /// ```
+    /// Will depend on what shortcut expands to in clojure.core (assuming shortcut is not an actual namespace here)
+    /// 
+    /// As we can see, this is a relatively high level function meant to be getting _whatever_
+    /// a user has typed in for a symbol while inside a namespace 
+    pub fn get(&self, namespace_sym: &Symbol, sym: &Symbol) -> Rc<Value> {
+        match self.try_get(namespace_sym,sym) {
+            Some(val) => val,
             // @TODO should this be a condition or nil?
-            _ => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name))),
+            None => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name)))
         }
     }
 }
@@ -115,15 +221,16 @@ mod tests {
     // a struct
     mod namespace_struct {
         use crate::namespace::Namespace;
+        use crate::namespace::Refers;
         use crate::symbol::Symbol;
         use crate::value::Value;
         use std::cell::RefCell;
         use std::collections::HashMap;
         use std::rc::Rc;
-
+        
         #[test]
         fn new() {
-            let namespace = Namespace::new(&Symbol::intern("a"), RefCell::new(HashMap::new()));
+            let namespace = Namespace::new(&Symbol::intern("a"), HashMap::new(), Refers::default());
             assert_eq!(namespace.name, Symbol::intern("a"));
             assert!(namespace.mappings.borrow().is_empty());
         }
@@ -132,7 +239,8 @@ mod tests {
         fn new_removes_namespace_from_qualified_symbol() {
             let namespace = Namespace::new(
                 &Symbol::intern_with_ns("ns", "a"),
-                RefCell::new(HashMap::new()),
+                HashMap::new(),
+                Refers::default()
             );
             assert_eq!(namespace.name, Symbol::intern("a"));
             assert!(namespace.name != Symbol::intern_with_ns("ns", "a"));
@@ -140,10 +248,11 @@ mod tests {
         }
         #[test]
         fn new_namespace_starts_empty() {
-            let namespace = Namespace::new(&Symbol::intern("a"), RefCell::new(HashMap::new()));
+            let namespace = Namespace::new(&Symbol::intern("a"), HashMap::new(),Refers::default());
             let namespace2 = Namespace::new(
                 &Symbol::intern_with_ns("ns", "b"),
-                RefCell::new(HashMap::new()),
+                HashMap::new(),
+                Refers::default()
             );
             assert!(namespace.mappings.borrow().is_empty());
             assert!(namespace2.mappings.borrow().is_empty());
@@ -418,6 +527,29 @@ mod tests {
                     assert!(true);
                 }
             }
+        }
+        #[test]
+        fn get_from_referred_namespace() {
+            let namespaces = Namespaces::new();
+            namespaces.insert_into_namespace(
+                &Symbol::intern("clojure.core"),
+                &Symbol::intern("+"),
+                Rc::new(Value::Nil),
+            );
+
+            namespaces.insert_into_namespace(
+                &Symbol::intern("user"),
+                &Symbol::intern("-"),
+                Rc::new(Value::Nil),
+            );
+
+            match &*namespaces.get(&Symbol::intern("user"),&Symbol::intern("+")) {
+                Value::Condition(_) => {
+                    panic!("Namespace user failed to grab clojure.core/+ as a referred symbol");
+                }
+                _ => {}
+            }
+
         }
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //

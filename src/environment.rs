@@ -1,6 +1,6 @@
 use crate::clojure_std;
 use crate::clojure_string;
-use crate::namespace::{Namespace, Namespaces};
+use crate::namespace::{Namespaces};
 use crate::repl::Repl;
 use crate::rust_core;
 use crate::symbol::Symbol;
@@ -23,8 +23,21 @@ pub struct EnvironmentVal {
     namespaces: Namespaces,
 }
 impl EnvironmentVal {
+    // @TODO is this wrapper really necessary, or is it just inviting an invariant break? 
+    /// Note; do not use. Does not enforce the invariant that namespace exist
+    /// Use change_or_create_namespace instead 
     fn change_namespace(&self, name: Symbol) {
         self.curr_ns_sym.replace(name);
+    }
+    fn change_or_create_namespace(&self, symbol: &Symbol)
+    {
+        if self.has_namespace(symbol) { 
+            self.change_namespace(symbol.unqualified());
+        }
+        else {
+            self.create_namespace(symbol);
+            self.change_namespace(symbol.unqualified());
+        }
     }
     fn insert_into_namespace(&self, namespace: &Symbol, sym: Symbol, val: Rc<Value>) {
         self.namespaces.insert_into_namespace(namespace, &sym, val);
@@ -33,11 +46,18 @@ impl EnvironmentVal {
         self.namespaces
             .insert_into_namespace(&*self.curr_ns_sym.borrow(), &sym, val);
     }
+    fn has_namespace(&self, namespace: &Symbol) -> bool {
+        self.namespaces.has_namespace(namespace)
+    }
     fn get_from_namespace(&self, namespace: &Symbol, sym: &Symbol) -> Rc<Value> {
         self.namespaces.get(namespace, sym)
     }
     fn get_current_namespace(&self) -> Symbol {
         self.curr_ns_sym.borrow().clone()
+    }
+
+    fn create_namespace(&self,symbol: &Symbol) {
+        self.namespaces.create_namespace(symbol);
     }
     // @TODO as mentioned, we've been working with a memory model where values exist
     //       in our system once-ish and we reference them all over with Rc<..>
@@ -68,16 +88,27 @@ pub enum Environment {
 }
 use Environment::*;
 impl Environment {
-    pub fn change_namespace(&self, symbol: Symbol) {
-        let symbol = symbol.unqualified();
-
+    pub fn has_namespace(&self, symbol: &Symbol) -> bool {
         match self.get_main_environment() {
-            MainEnvironment(EnvironmentVal { curr_ns_sym, .. }) => {
-                curr_ns_sym.replace(symbol);
+            MainEnvironment(env_val) => {                
+                env_val.has_namespace(symbol)
             }
             LocalEnvironment(..) => panic!(
                 "get_main_environment() returns LocalEnvironment,\
-		                 but by definition should only return MainEnvironment"
+		             but by definition should only return MainEnvironment"
+            ),
+        }
+    }
+    /// Changes the current namespace, or creates one first if
+    /// namespace doesn't already exist 
+    pub fn change_or_create_namespace(&self, symbol: &Symbol) {
+        match self.get_main_environment() {
+            MainEnvironment(env_val) => {
+                env_val.change_or_create_namespace(symbol);
+            }
+            LocalEnvironment(..) => panic!(
+                "get_main_environment() returns LocalEnvironment,\
+		             but by definition should only return MainEnvironment"
             ),
         }
     }
@@ -155,13 +186,13 @@ impl Environment {
             MainEnvironment(env_val) => {
                 // If we've recieved a qualified symbol like
                 // clojure.core/+
-                if sym.ns != "" {
+                if sym.has_ns() {
                     // Use that namespace
                     env_val.get_from_namespace(&Symbol::intern(&sym.ns), sym)
                 } else {
                     env_val.get_from_namespace(
                         &env_val.get_current_namespace(),
-                        &Symbol::intern(&sym.name),
+                        &sym,
                     )
                 }
             }
@@ -237,7 +268,7 @@ impl Environment {
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
         //       I prefer explicity and the non-dependence-on-environmental-factors
-        environment.change_namespace(Symbol::intern("clojure.core"));
+        environment.change_or_create_namespace(&Symbol::intern("clojure.core"));
 
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());
@@ -395,7 +426,7 @@ impl Environment {
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
 
         // We can add this back once we have requires
-        // environment.change_namespace(Symbol::intern("user"));
+        // environment.change_or_create_namespace(Symbol::intern("user"));
 
         environment
     }
@@ -421,11 +452,11 @@ mod tests {
 
             assert_eq!(Symbol::intern("user"), env_val.get_current_namespace());
 
-            env_val.change_namespace(Symbol::intern("core"));
+            env_val.change_or_create_namespace(&Symbol::intern("core"));
             assert_eq!(Symbol::intern("core"), env_val.get_current_namespace());
 
             // @TODO add this invariant back next, and remove this comment; 5.9.2020
-            // env_val.change_namespace(Symbol::intern_with_ns("not-ns","ns"));
+            // env_val.change_or_create_namespace(Symbol::intern_with_ns("not-ns","ns"));
             // assert_eq!(Symbol::intern("ns"),env_val.get_current_namespace())
 
             // @TODO add case for local environment

@@ -31,7 +31,7 @@ impl IFn for NsMacro {
         let namespace = args.get(0).unwrap();
         match &**namespace {
             Value::Symbol(sym) => {
-                self.enclosing_environment.change_namespace(sym.clone());
+                self.enclosing_environment.change_or_create_namespace(sym);
                 Value::Nil
             }
             _ => error_message::type_mismatch(TypeTag::Symbol, &**namespace),
