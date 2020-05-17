@@ -231,6 +231,32 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     }
 }
 
+pub fn string_parser(input: &str) -> IResult<&str, String> {
+    // Convert escaped characters like \n to their actual counterparts -- like an actual newline 
+    named!(escaped_string_parser<&str, String>, escaped_transform!(take_till1!(|ch| { ch == '\\' || ch == '\"'}), '\\', alt!(
+        tag!("t")   => { |_| "\t"   } |
+        tag!("b")   => { |_| "\x08" } |
+        tag!("n")   => { |_| "\n"   } |
+        tag!("r")   => { |_| "\r"   } |
+        tag!("f")   => { |_| "\x0C" } |
+        tag!("'")   => { |_| "'"    } |
+        tag!("\"")  => { |_| "\""   } |
+        tag!("\\")  => { |_| "\\"   }
+    )));
+    
+    named!(empty_string_parser <&str, String>, map!(tag!("\"\""),|_| String::from("")));
+
+    named!(
+        string_parser<&str, String>,
+        alt!(
+            delimited!(tag("\""),escaped_string_parser, tag("\"")) | 
+            // Base case; empty string 
+            empty_string_parser)
+    );
+
+   string_parser(input) 
+}
+
 // Helper function to integer_parser for same reason as
 // identifier_tail. See comment above said function for explanation
 
@@ -375,28 +401,6 @@ pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    "this is pretty straightforward" => Value::String("this is pretty straightforward")
 pub fn try_read_string(input: &str) -> IResult<&str, Value> {
-    // Convert escaped characters like \n to their actual counterparts -- like an actual newline 
-    named!(escaped_string_parser<&str, String >, escaped_transform!(take_till1!(|ch| { ch == '\\' || ch == '\"'}), '\\', alt!(
-        tag!("t")   => { |_| "\t"   } |
-        tag!("b")   => { |_| "\x08" } |
-        tag!("n")   => { |_| "\n"   } |
-        tag!("r")   => { |_| "\r"   } |
-        tag!("f")   => { |_| "\x0C" } |
-        tag!("'")   => { |_| "'"    } |
-        tag!("\"")  => { |_| "\""   } |
-        tag!("\\")  => { |_| "\\"   }
-    )));
-    
-    named!(empty_string_parser <&str, String>, map!(tag!("\"\""),|v| String::from("")));
-
-    named!(
-        string_parser<&str, String>,
-        alt!(
-            delimited!(tag("\""),escaped_string_parser, tag("\"")) | 
-            // Base case; empty string 
-            empty_string_parser)
-    );
-
     to_value_parser(string_parser)(input)
 }
 
@@ -404,23 +408,11 @@ pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
     named!(hash_parser<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#")));
 
     let (rest_input, _) = hash_parser(input)?;
-    let (rest_input, regex_string_val) = try_read_string(rest_input)?;
+    let (rest_input, regex_string) = string_parser(rest_input)?;
 
-    let mut regex_string = String::from("");
-
-    // @TODO separate try_read_string into a parser, so we don't have to read a Value
-    // and then unwrap it
-    match regex_string_val {
-        Value::String(reg_str) => {
-            regex_string = reg_str;
-        }
-        _ => {
-            panic!("try_read_string returned something that wasn't string");
-        }
-    }
-
-    let regex = regex::Regex::new(regex_string.as_str()).unwrap();
-    Ok((rest_input, Value::Pattern(regex)))
+    // If an error is thrown,  this will be coerced into a condition
+    let regex = regex::Regex::new(regex_string.as_str()).to_value();
+    Ok((rest_input, regex))
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
