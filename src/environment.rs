@@ -249,6 +249,7 @@ impl Environment {
         let subtract_fn = rust_core::SubtractFn {};
         let multiply_fn = rust_core::MultiplyFn {};
         let divide_fn = rust_core::DivideFn {};
+        let rem_fn = rust_core::RemFn {};
         let rand_fn = rust_core::RandFn {};
         let rand_int_fn = rust_core::RandIntFn {};
         let str_fn = rust_core::StrFn {};
@@ -315,7 +316,8 @@ impl Environment {
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());
         environment.insert(Symbol::intern("*"), multiply_fn.to_rc_value());
-        environment.insert(Symbol::intern("_slash_"), divide_fn.to_rc_value());
+        environment.insert(Symbol::intern("/"), divide_fn.to_rc_value());
+        environment.insert(Symbol::intern("rem"), rem_fn.to_rc_value());
         environment.insert(Symbol::intern("rand"), rand_fn.to_rc_value());
         environment.insert(Symbol::intern("rand-int"), rand_int_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
