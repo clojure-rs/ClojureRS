@@ -5,6 +5,13 @@
 pub(crate) mod eval;
 pub use self::eval::*;
 
+pub(crate) mod meta;
+pub use self::meta::*;
+pub(crate) mod with_meta;
+pub use self::with_meta::*;
+pub(crate) mod print_doc;
+pub use self::print_doc::*;
+
 // macros
 pub(crate) mod do_macro;
 pub use self::do_macro::*;

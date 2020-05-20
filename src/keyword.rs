@@ -10,7 +10,7 @@ pub struct Keyword {
 impl Keyword {
     pub fn intern(name: &str) -> Keyword {
         Keyword {
-            sym: Symbol::intern(name),
+            sym: Symbol::intern_with_ns_empty_meta("", name),
         }
     }
     // Note; normally 'with_x' would imply x is the second argument
@@ -18,7 +18,7 @@ impl Keyword {
     // Clojure proper has
     pub fn intern_with_ns(ns: &str, name: &str) -> Keyword {
         Keyword {
-            sym: Symbol::intern_with_ns(name, ns),
+            sym: Symbol::intern_with_ns_empty_meta(name, ns),
         }
     }
 }

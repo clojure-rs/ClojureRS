@@ -1,5 +1,55 @@
+use crate::keyword::Keyword;
+use crate::maps::MapEntry;
+use crate::persistent_list_map::PersistentListMap;
+use crate::persistent_list_map::PersistentListMap::Empty;
+use crate::value::ToValue;
 use std::fmt;
 use std::hash::Hash;
+
+/// Constructs base meta if none provided
+/// {:line 1
+///  :column 1
+///  :file "NO_SOURCE_PATH"
+///  :name <something>
+///  :ns <namespace>}
+///
+fn base_meta(ns: &str, name: &str) -> PersistentListMap {
+    let meta = vec![
+        MapEntry {
+            key: Keyword::intern("line").to_rc_value(),
+            val: 1_i32.to_rc_value(),
+        },
+        MapEntry {
+            key: Keyword::intern("column").to_rc_value(),
+            val: 1_i32.to_rc_value(),
+        },
+        MapEntry {
+            key: Keyword::intern("file").to_rc_value(),
+            val: "NO_SOURCE_PATH".to_rc_value(),
+        },
+        MapEntry {
+            key: Keyword::intern("ns").to_rc_value(),
+            val: Symbol::intern_with_ns_empty_meta("", ns).to_rc_value(),
+        },
+        MapEntry {
+            key: Keyword::intern("name").to_rc_value(),
+            val: Symbol::intern_with_ns_empty_meta("", name).to_rc_value(),
+        },
+        MapEntry {
+            key: Keyword::intern("doc").to_rc_value(),
+            val: "TODO\ndocumentation".to_rc_value(),
+        },
+    ]
+    .into_iter()
+    .collect::<PersistentListMap>();
+    // println!("base meta: {:#?}", meta);
+    return meta;
+}
+
+fn with_meta(meta: PersistentListMap) -> PersistentListMap {
+    println!("meta: {:#?}", meta);
+    return meta;
+}
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Symbol {
@@ -11,6 +61,7 @@ pub struct Symbol {
     //       route, the sort of invariants ADTs are good at.
     //       Most likely, we will reimplement this as Option<String>
     pub ns: String,
+    pub meta: PersistentListMap,
 }
 impl Symbol {
     pub fn intern(name: &str) -> Symbol {
@@ -37,6 +88,22 @@ impl Symbol {
         Symbol {
             name: String::from(name),
             ns: String::from(ns),
+            meta: base_meta(ns, name),
+        }
+    }
+    pub fn intern_with_ns_meta(ns: &str, name: &str, meta: PersistentListMap) -> Symbol {
+        Symbol {
+            name: String::from(name),
+            ns: String::from(ns),
+            meta: with_meta(meta),
+        }
+    }
+
+    pub fn intern_with_ns_empty_meta(ns: &str, name: &str) -> Symbol {
+        Symbol {
+            name: String::from(name),
+            ns: String::from(ns),
+            meta: PersistentListMap::Empty,
         }
     }
     pub fn unqualified(&self) -> Symbol {
@@ -58,7 +125,7 @@ impl fmt::Display for Symbol {
 mod tests {
 
     mod symbol_tests {
-        use crate::symbol::Symbol;
+        use crate::symbol::{base_meta, Symbol};
         use std::collections::HashMap;
 
         #[test]
@@ -67,7 +134,8 @@ mod tests {
                 Symbol::intern("a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: base_meta("", "a")
                 }
             );
         }
@@ -78,42 +146,48 @@ mod tests {
                 Symbol::intern_with_ns("clojure.core", "a"),
                 Symbol {
                     ns: String::from("clojure.core"),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: base_meta("clojure.core", "a")
                 }
             );
             assert_eq!(
                 Symbol::intern_with_ns("", "a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: base_meta("", "a")
                 }
             );
             assert_eq!(
                 Symbol::intern("a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: base_meta("", "a")
                 }
             );
             assert_eq!(
                 Symbol::intern("clojure.core/a"),
                 Symbol {
                     ns: String::from("clojure.core"),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: base_meta("clojure.core", "a")
                 }
             );
             assert_eq!(
                 Symbol::intern("clojure/a"),
                 Symbol {
                     ns: String::from("clojure"),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: base_meta("clojure", "a")
                 }
             );
             assert_eq!(
                 Symbol::intern("/a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: base_meta("", "a")
                 }
             );
         }

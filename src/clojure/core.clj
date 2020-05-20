@@ -1,3 +1,5 @@
+(ns clojure.core)
+
 (def *flush-on-newline* true)
 (def *print-readably* true)
 
@@ -66,3 +68,6 @@
 
 (defn ffirst [x]
   (first (first x)))
+
+(defmacro doc [name]
+  (print-doc name))

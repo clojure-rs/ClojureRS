@@ -27,6 +27,9 @@ pub enum PersistentListMap {
     Map(Rc<PersistentListMap>, MapEntry),
     Empty,
 }
+
+impl Eq for PersistentListMap {}
+
 // Again, only using strange IBlah convention to reflect the Clojure base
 // @TODO really though .. just rethink this
 /// A PersistentListMap.
