@@ -32,6 +32,7 @@ pub enum Value {
     F64(f64),
     Boolean(bool),
     Symbol(Symbol),
+    Var(Symbol),
     Keyword(Keyword),
     IFn(Rc<dyn IFn>),
     //
@@ -75,6 +76,7 @@ impl PartialEq for Value {
             (F64(d), F64(d2)) => d == d2,
             (Boolean(b), Boolean(b2)) => b == b2,
             (Symbol(sym), Symbol(sym2)) => sym == sym2,
+            (Var(sym), Var(sym2)) => sym == sym2,
             (Keyword(kw), Keyword(kw2)) => kw == kw2,
             // Equality not defined on functions, similar to Clojure
             // Change this perhaps? Diverge?
@@ -118,6 +120,7 @@ impl Hash for Value {
             F64(d) => d.to_value().hash(state),
             Boolean(b) => b.hash(state),
             Symbol(sym) => sym.hash(state),
+            Var(sym) => sym.hash(state),
             Keyword(kw) => kw.hash(state),
             IFn(_) => {
                 let mut rng = rand::thread_rng();
@@ -158,6 +161,7 @@ impl fmt::Display for Value {
             F64(val) => val.to_string(),
             Boolean(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
+            Var(sym) => format!("#'{}/{}", sym.ns, sym.name),
             Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
             LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
@@ -202,6 +206,7 @@ impl Value {
             Value::F64(_) => TypeTag::F64,
             Value::Boolean(_) => TypeTag::Boolean,
             Value::Symbol(_) => TypeTag::Symbol,
+            Value::Var(_) => TypeTag::Var,
             Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
             Value::LexicalEvalFn => TypeTag::IFn,

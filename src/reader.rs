@@ -148,7 +148,7 @@ fn is_period_char(chr: char) -> bool {
 ///
 /// Clojure defines a whitespace as either a comma or an unicode whitespace.
 fn is_clojure_whitespace(c: char) -> bool {
-    c.is_whitespace() || c == ',' 
+    c.is_whitespace() || c == ','
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //     End predicates
@@ -169,16 +169,16 @@ fn consume_clojure_whitespaces_parser(input: &str) -> IResult<&str, ()> {
 
     named!(whitespace_parser<&str,()>,
            value!((),
-               many0!(alt!(comment_parser | 
+               many0!(alt!(comment_parser |
                            take_while1!(is_clojure_whitespace))))
     );
 
     named!(no_whitespace_parser<&str,()>, value!((),tag!("")));
 
-    // @TODO rename / check that all parsers are consistent? 
+    // @TODO rename / check that all parsers are consistent?
     named!(parser<&str,()>,
            // Because 'whitespace_parser' loops, we cannot include the case where there's no whitespace at all in
-           // its definition -- nom wouldn't allow it, as it would loop forever consuming no whitespace 
+           // its definition -- nom wouldn't allow it, as it would loop forever consuming no whitespace
            // So instead, we eat up all the whitespace first, and then use the no_whitespace_parser as our sort-of
            // base-case after
            alt!(whitespace_parser | no_whitespace_parser)
@@ -432,6 +432,18 @@ pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, regex))
 }
 
+pub fn try_read_var(input: &str) -> IResult<&str, Value> {
+    named!(var_parser<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#'")));
+
+    let (rest_input, _) = var_parser(input)?;
+    let (rest_input, sym) = symbol_parser(rest_input)?;
+
+    // todo check if exists from environment
+    println!("Warning: doesn't check for symbol existence");
+    // If an error is thrown,  this will be coerced into a condition
+    Ok((rest_input, Value::Var(sym)))
+}
+
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
 /// Tries to parse &str into Value::PersistentListMap, or some other Value::..Map
 /// Example Successes:
@@ -537,6 +549,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_list,
             try_read_vector,
             try_read_pattern,
+            try_read_var,
         )),
     )(input)
 }
@@ -560,12 +573,15 @@ pub fn read<R: BufRead>(reader: &mut R) -> Value {
     // loop over and ask for more lines, accumulating them in input_buffer until we can read
     loop {
         let maybe_line = reader.by_ref().lines().next();
-        
+
         match maybe_line {
             Some(Err(e)) => return Value::Condition(format!("Reader error: {}", e)),
             // `lines` does not include \n,  but \n is part of the whitespace given to the reader
-            // (and is important for reading comments) so we will push a newline as well 
-            Some(Ok(line)) => { input_buffer.push_str(&line); input_buffer.push_str("\n"); },
+            // (and is important for reading comments) so we will push a newline as well
+            Some(Ok(line)) => {
+                input_buffer.push_str(&line);
+                input_buffer.push_str("\n");
+            }
             None => {
                 return Value::Condition(String::from("Tried to read empty stream; unexpected EOF"))
             }

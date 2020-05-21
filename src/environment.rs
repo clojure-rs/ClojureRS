@@ -242,6 +242,7 @@ impl Environment {
         let meta_fn = rust_core::MetaFn::new(Rc::clone(&environment));
         let with_meta_fn = rust_core::WithMetaFn::new(Rc::clone(&environment));
         let print_doc_fn = rust_core::PrintDocFn::new(Rc::clone(&environment));
+        let var_fn = rust_core::VarFn::new(Rc::clone(&environment));
 
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
@@ -264,6 +265,7 @@ impl Environment {
         environment.insert(Symbol::intern("meta"), meta_fn.to_rc_value());
         environment.insert(Symbol::intern("with-meta"), with_meta_fn.to_rc_value());
         environment.insert(Symbol::intern("print-doc"), print_doc_fn.to_rc_value());
+        environment.insert(Symbol::intern("var-special-form"), var_fn.to_rc_value());
 
         // Thread namespace
         environment.insert_into_namespace(

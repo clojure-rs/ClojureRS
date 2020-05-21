@@ -71,3 +71,6 @@
 
 (defmacro doc [name]
   (print-doc name))
+
+(defmacro var [name]
+  (var-special-form name))

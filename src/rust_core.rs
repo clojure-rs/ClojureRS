@@ -11,6 +11,8 @@ pub(crate) mod with_meta;
 pub use self::with_meta::*;
 pub(crate) mod print_doc;
 pub use self::print_doc::*;
+pub(crate) mod var;
+pub use self::var::*;
 
 // macros
 pub(crate) mod do_macro;
