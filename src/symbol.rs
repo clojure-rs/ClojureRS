@@ -45,6 +45,9 @@ impl Symbol {
     pub fn has_ns(&self) -> bool {
         self.ns != ""
     }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

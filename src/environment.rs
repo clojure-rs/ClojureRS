@@ -1,6 +1,6 @@
 use crate::clojure_std;
 use crate::clojure_string;
-use crate::namespace::{Namespaces};
+use crate::namespace::Namespaces;
 use crate::repl::Repl;
 use crate::rust_core;
 use crate::symbol::Symbol;
@@ -23,24 +23,28 @@ pub struct EnvironmentVal {
     namespaces: Namespaces,
 }
 impl EnvironmentVal {
-    // @TODO is this wrapper really necessary, or is it just inviting an invariant break? 
+    // @TODO is this wrapper really necessary, or is it just inviting an invariant break?
     /// Note; do not use. Does not enforce the invariant that namespace exist
-    /// Use change_or_create_namespace instead 
+    /// Use change_or_create_namespace instead
     fn change_namespace(&self, name: Symbol) {
         self.curr_ns_sym.replace(name);
     }
-    fn change_or_create_namespace(&self, symbol: &Symbol)
-    {
-        if self.has_namespace(symbol) { 
+    fn change_or_create_namespace(&self, symbol: &Symbol) {
+        if self.has_namespace(symbol) {
             self.change_namespace(symbol.unqualified());
-        }
-        else {
+        } else {
             self.create_namespace(symbol);
             self.change_namespace(symbol.unqualified());
         }
     }
-    fn insert_into_namespace(&self, namespace: &Symbol, sym: Symbol, val: Rc<Value>) {
-        self.namespaces.insert_into_namespace(namespace, &sym, val);
+    fn add_referred_syms(&self,namespace_sym: &Symbol, syms: HashMap<Symbol,Vec<Symbol>>) {
+        self.namespaces.add_referred_syms(namespace_sym,syms);
+    }
+    fn add_referred_namespace(&self,namespace_sym: &Symbol, referred_namespace_sym: &Symbol) {
+        self.namespaces.add_referred_namespace(namespace_sym,referred_namespace_sym);
+    }
+    fn insert_into_namespace(&self, namespace_sym: &Symbol, sym: Symbol, val: Rc<Value>) {
+        self.namespaces.insert_into_namespace(namespace_sym, &sym, val);
     }
     fn insert_into_current_namespace(&self, sym: Symbol, val: Rc<Value>) {
         self.namespaces
@@ -56,7 +60,7 @@ impl EnvironmentVal {
         self.curr_ns_sym.borrow().clone()
     }
 
-    fn create_namespace(&self,symbol: &Symbol) {
+    fn create_namespace(&self, symbol: &Symbol) {
         self.namespaces.create_namespace(symbol);
     }
     // @TODO as mentioned, we've been working with a memory model where values exist
@@ -90,8 +94,41 @@ use Environment::*;
 impl Environment {
     pub fn has_namespace(&self, symbol: &Symbol) -> bool {
         match self.get_main_environment() {
-            MainEnvironment(env_val) => {                
-                env_val.has_namespace(symbol)
+            MainEnvironment(env_val) => env_val.has_namespace(symbol),
+            LocalEnvironment(..) => panic!(
+                "get_main_environment() returns LocalEnvironment,\
+		             but by definition should only return MainEnvironment"
+            ),
+        }
+    }
+    pub fn add_referred_syms(&self,namespace_sym: &Symbol, syms: HashMap<Symbol,Vec<Symbol>>) {
+        match self.get_main_environment() {
+            MainEnvironment(env_val) => {
+                env_val.add_referred_syms(namespace_sym,syms);
+            }
+            LocalEnvironment(..) => panic!(
+                "get_main_environment() returns LocalEnvironment,\
+		             but by definition should only return MainEnvironment"
+            ),
+        }
+    }
+    pub fn add_referred_syms_to_curr_namespace(&self,syms: HashMap<Symbol,Vec<Symbol>>) {
+        match self.get_main_environment() {
+            MainEnvironment(env_val) => {
+                let namespace_sym = self.get_current_namespace();
+                env_val.add_referred_syms(&namespace_sym,syms);
+            }
+            LocalEnvironment(..) => panic!(
+                "get_main_environment() returns LocalEnvironment,\
+		             but by definition should only return MainEnvironment"
+            ),
+        }
+    }
+    pub fn add_referred_namespace_to_curr_namespace(&self,referred_namespace_sym: &Symbol) {
+        match self.get_main_environment() {
+            MainEnvironment(env_val) => {
+                let namespace_sym = self.get_current_namespace();
+                env_val.add_referred_namespace(&namespace_sym,referred_namespace_sym);
             }
             LocalEnvironment(..) => panic!(
                 "get_main_environment() returns LocalEnvironment,\
@@ -100,7 +137,7 @@ impl Environment {
         }
     }
     /// Changes the current namespace, or creates one first if
-    /// namespace doesn't already exist 
+    /// namespace doesn't already exist
     pub fn change_or_create_namespace(&self, symbol: &Symbol) {
         match self.get_main_environment() {
             MainEnvironment(env_val) => {
@@ -190,10 +227,7 @@ impl Environment {
                     // Use that namespace
                     env_val.get_from_namespace(&Symbol::intern(&sym.ns), sym)
                 } else {
-                    env_val.get_from_namespace(
-                        &env_val.get_current_namespace(),
-                        &sym,
-                    )
+                    env_val.get_from_namespace(&env_val.get_current_namespace(), &sym)
                 }
             }
             LocalEnvironment(parent_env, mappings) => {
@@ -265,6 +299,7 @@ impl Environment {
         let eval_fn = rust_core::EvalFn::new(Rc::clone(&environment));
         let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
         let load_file_fn = rust_core::LoadFileFn::new(Rc::clone(&environment));
+        let refer_fn = rust_core::ReferFn::new(Rc::clone(&environment));
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
         //       I prefer explicity and the non-dependence-on-environmental-factors
@@ -285,23 +320,23 @@ impl Environment {
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
 
         // Thread namespace
-		environment.insert_into_namespace(
-			&Symbol::intern("Thread"),
-			Symbol::intern("sleep"),
-			thread_sleep_fn.to_rc_value()
-		);
+        environment.insert_into_namespace(
+            &Symbol::intern("Thread"),
+            Symbol::intern("sleep"),
+            thread_sleep_fn.to_rc_value(),
+        );
 
-		// System namespace
-		environment.insert_into_namespace(
-			&Symbol::intern("System"),
-			Symbol::intern("nanoTime"),
-			nanotime_fn.to_rc_value()
-		);
-		environment.insert_into_namespace(
-			&Symbol::intern("System"),
-			Symbol::intern("getenv"),
-			get_env_fn.to_rc_value()
-		);
+        // System namespace
+        environment.insert_into_namespace(
+            &Symbol::intern("System"),
+            Symbol::intern("nanoTime"),
+            nanotime_fn.to_rc_value(),
+        );
+        environment.insert_into_namespace(
+            &Symbol::intern("System"),
+            Symbol::intern("getenv"),
+            get_env_fn.to_rc_value(),
+        );
 
         // core.clj wraps calls to the rust implementations
         // @TODO add this to clojure.rs.core namespace as clojure.rs.core/slurp
@@ -418,6 +453,8 @@ impl Environment {
             print_string_fn.to_rc_value(),
         );
         environment.insert(Symbol::intern("read-line"), read_line_fn.to_rc_value());
+
+        environment.insert(Symbol::intern("refer"), refer_fn.to_rc_value());
 
         //
         // Read in clojure.core
