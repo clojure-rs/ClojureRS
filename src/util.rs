@@ -18,5 +18,3 @@ impl IsOdd for usize {
         *self % 2 == 1
     }
 }
-
-

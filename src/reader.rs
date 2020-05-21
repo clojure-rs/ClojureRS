@@ -364,8 +364,8 @@ pub fn try_read_symbol(input: &str) -> IResult<&str, Value> {
 /// Example Successes:
 ///    nil => Value::Nil
 pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
-    let (rest_input, _) = verify(identifier_parser,|ident: &str| ident == "nil")(input)?;
-    Ok((rest_input,Value::Nil))
+    let (rest_input, _) = verify(identifier_parser, |ident: &str| ident == "nil")(input)?;
+    Ok((rest_input, Value::Nil))
 }
 
 // @TODO allow escaped strings

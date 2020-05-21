@@ -37,14 +37,16 @@ impl EnvironmentVal {
             self.change_namespace(symbol.unqualified());
         }
     }
-    fn add_referred_syms(&self,namespace_sym: &Symbol, syms: HashMap<Symbol,Vec<Symbol>>) {
-        self.namespaces.add_referred_syms(namespace_sym,syms);
+    fn add_referred_syms(&self, namespace_sym: &Symbol, syms: HashMap<Symbol, Vec<Symbol>>) {
+        self.namespaces.add_referred_syms(namespace_sym, syms);
     }
-    fn add_referred_namespace(&self,namespace_sym: &Symbol, referred_namespace_sym: &Symbol) {
-        self.namespaces.add_referred_namespace(namespace_sym,referred_namespace_sym);
+    fn add_referred_namespace(&self, namespace_sym: &Symbol, referred_namespace_sym: &Symbol) {
+        self.namespaces
+            .add_referred_namespace(namespace_sym, referred_namespace_sym);
     }
     fn insert_into_namespace(&self, namespace_sym: &Symbol, sym: Symbol, val: Rc<Value>) {
-        self.namespaces.insert_into_namespace(namespace_sym, &sym, val);
+        self.namespaces
+            .insert_into_namespace(namespace_sym, &sym, val);
     }
     fn insert_into_current_namespace(&self, sym: Symbol, val: Rc<Value>) {
         self.namespaces
@@ -101,10 +103,10 @@ impl Environment {
             ),
         }
     }
-    pub fn add_referred_syms(&self,namespace_sym: &Symbol, syms: HashMap<Symbol,Vec<Symbol>>) {
+    pub fn add_referred_syms(&self, namespace_sym: &Symbol, syms: HashMap<Symbol, Vec<Symbol>>) {
         match self.get_main_environment() {
             MainEnvironment(env_val) => {
-                env_val.add_referred_syms(namespace_sym,syms);
+                env_val.add_referred_syms(namespace_sym, syms);
             }
             LocalEnvironment(..) => panic!(
                 "get_main_environment() returns LocalEnvironment,\
@@ -112,11 +114,11 @@ impl Environment {
             ),
         }
     }
-    pub fn add_referred_syms_to_curr_namespace(&self,syms: HashMap<Symbol,Vec<Symbol>>) {
+    pub fn add_referred_syms_to_curr_namespace(&self, syms: HashMap<Symbol, Vec<Symbol>>) {
         match self.get_main_environment() {
             MainEnvironment(env_val) => {
                 let namespace_sym = self.get_current_namespace();
-                env_val.add_referred_syms(&namespace_sym,syms);
+                env_val.add_referred_syms(&namespace_sym, syms);
             }
             LocalEnvironment(..) => panic!(
                 "get_main_environment() returns LocalEnvironment,\
@@ -124,11 +126,11 @@ impl Environment {
             ),
         }
     }
-    pub fn add_referred_namespace_to_curr_namespace(&self,referred_namespace_sym: &Symbol) {
+    pub fn add_referred_namespace_to_curr_namespace(&self, referred_namespace_sym: &Symbol) {
         match self.get_main_environment() {
             MainEnvironment(env_val) => {
                 let namespace_sym = self.get_current_namespace();
-                env_val.add_referred_namespace(&namespace_sym,referred_namespace_sym);
+                env_val.add_referred_namespace(&namespace_sym, referred_namespace_sym);
             }
             LocalEnvironment(..) => panic!(
                 "get_main_environment() returns LocalEnvironment,\

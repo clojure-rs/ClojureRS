@@ -61,10 +61,7 @@ impl Refers {
 
     // @TODO same thing; does this really need to be a vec?
     pub fn from_namespaces(namespaces: Vec<Symbol>) -> Refers {
-        Refers::new(
-            namespaces,
-            HashMap::new()
-        )
+        Refers::new(namespaces, HashMap::new())
     }
 
     // @TODO does this really need to be a vec ?
@@ -74,49 +71,50 @@ impl Refers {
                 .into_iter()
                 .map(Symbol::intern)
                 .collect::<Vec<Symbol>>(),
-            HashMap::new()
+            HashMap::new(),
         )
     }
 
     // @TODO does this really need to be a vec ?
     pub fn from_syms(syms: HashMap<Symbol, Vec<Symbol>>) -> Refers {
-        Refers::new(vec![],syms)
+        Refers::new(vec![], syms)
     }
 
-    //@TODO refactor the referred syms vector to use a set instead 
-    pub fn merge_referred_syms(ref_map: &HashMap<Symbol,Vec<Symbol>>,ref_map2: &HashMap<Symbol,Vec<Symbol>>) -> HashMap<Symbol,Vec<Symbol>> {
+    //@TODO refactor the referred syms vector to use a set instead
+    pub fn merge_referred_syms(
+        ref_map: &HashMap<Symbol, Vec<Symbol>>,
+        ref_map2: &HashMap<Symbol, Vec<Symbol>>,
+    ) -> HashMap<Symbol, Vec<Symbol>> {
         let mut new_ref_map = ref_map.clone();
         // ns: Symbol("clojure.something")
-        // ref_syms: vec![Symbol("a"), Symbol("b"), .. ] 
-        for (ns,ref_syms) in ref_map2.iter() {
+        // ref_syms: vec![Symbol("a"), Symbol("b"), .. ]
+        for (ns, ref_syms) in ref_map2.iter() {
             if !new_ref_map.contains_key(ns) {
-                new_ref_map.insert(ns.clone(),ref_syms.clone());
-            }
-            else {
-                new_ref_map.entry(ns.clone()).and_modify(|old_ref_syms| {
-                    old_ref_syms.extend_from_slice(ref_syms)
-                });
+                new_ref_map.insert(ns.clone(), ref_syms.clone());
+            } else {
+                new_ref_map
+                    .entry(ns.clone())
+                    .and_modify(|old_ref_syms| old_ref_syms.extend_from_slice(ref_syms));
             }
         }
         new_ref_map
     }
 
-    pub fn add_referred_syms(&self,syms: HashMap<Symbol,Vec<Symbol>>) -> Refers{
+    pub fn add_referred_syms(&self, syms: HashMap<Symbol, Vec<Symbol>>) -> Refers {
         Refers {
-            syms: Refers::merge_referred_syms(&self.syms,&syms),
-            namespaces: self.namespaces.clone()
+            syms: Refers::merge_referred_syms(&self.syms, &syms),
+            namespaces: self.namespaces.clone(),
         }
     }
 
-    pub fn add_referred_namespaces(&self, namespaces: Vec<Symbol>) -> Refers{
+    pub fn add_referred_namespaces(&self, namespaces: Vec<Symbol>) -> Refers {
         let mut new_namespaces = self.namespaces.clone();
         new_namespaces.extend_from_slice(&namespaces);
         Refers {
             namespaces: new_namespaces,
-            syms: self.syms.clone()
+            syms: self.syms.clone(),
         }
     }
-
 }
 
 impl Default for Refers {
@@ -148,11 +146,13 @@ impl Namespace {
         Namespace::new(name, HashMap::new(), refers)
     }
 
-    pub fn add_referred_syms(&self,syms: HashMap<Symbol,Vec<Symbol>>) {
-        self.refers.replace_with(|refers| refers.add_referred_syms(syms));
+    pub fn add_referred_syms(&self, syms: HashMap<Symbol, Vec<Symbol>>) {
+        self.refers
+            .replace_with(|refers| refers.add_referred_syms(syms));
     }
-    pub fn add_referred_namespaces(&self,namespaces: Vec<Symbol>) {
-        self.refers.replace_with(|refers| refers.add_referred_namespaces(namespaces));
+    pub fn add_referred_namespaces(&self, namespaces: Vec<Symbol>) {
+        self.refers
+            .replace_with(|refers| refers.add_referred_namespaces(namespaces));
     }
 
     pub fn insert(&self, sym: &Symbol, val: Rc<Value>) {
@@ -199,20 +199,28 @@ impl Namespaces {
         self.insert(Namespace::from_sym_with_refers(sym, refers));
     }
 
-    pub fn add_referred_syms(&self,namespace_sym: &Symbol,syms: HashMap<Symbol,Vec<Symbol>>) {
+    pub fn add_referred_syms(&self, namespace_sym: &Symbol, syms: HashMap<Symbol, Vec<Symbol>>) {
         if !self.has_namespace(namespace_sym) {
             self.create_namespace_with_refers(namespace_sym, Refers::from_syms(syms));
-        } else { 
-            self.0.borrow().get(namespace_sym).map(|ns| ns.add_referred_syms(syms));
+        } else {
+            self.0
+                .borrow()
+                .get(namespace_sym)
+                .map(|ns| ns.add_referred_syms(syms));
         }
     }
 
-    
-    pub fn add_referred_namespace(&self,namespace_sym: &Symbol,referred_namespace_sym: &Symbol) {
+    pub fn add_referred_namespace(&self, namespace_sym: &Symbol, referred_namespace_sym: &Symbol) {
         if !self.has_namespace(namespace_sym) {
-            self.create_namespace_with_refers(namespace_sym, Refers::from_namespaces(vec![referred_namespace_sym.unqualified()]));
-        } else { 
-            self.0.borrow().get(namespace_sym).map(|ns| ns.add_referred_namespaces(vec![referred_namespace_sym.unqualified()]));
+            self.create_namespace_with_refers(
+                namespace_sym,
+                Refers::from_namespaces(vec![referred_namespace_sym.unqualified()]),
+            );
+        } else {
+            self.0
+                .borrow()
+                .get(namespace_sym)
+                .map(|ns| ns.add_referred_namespaces(vec![referred_namespace_sym.unqualified()]));
         }
     }
     /// Insert a new namespace of name (sym)
@@ -426,64 +434,178 @@ mod tests {
         #[test]
         fn merge_referred_syms() {
             let mut syms = HashMap::new();
-            syms.insert(Symbol::intern("ns1"),vec![Symbol::intern("a"), Symbol::intern("b")]);
-            syms.insert(Symbol::intern("ns2"),vec![Symbol::intern("c"), Symbol::intern("d")]);
+            syms.insert(
+                Symbol::intern("ns1"),
+                vec![Symbol::intern("a"), Symbol::intern("b")],
+            );
+            syms.insert(
+                Symbol::intern("ns2"),
+                vec![Symbol::intern("c"), Symbol::intern("d")],
+            );
 
             let mut syms2 = HashMap::new();
-            syms2.insert(Symbol::intern("ns3"),vec![Symbol::intern("e"), Symbol::intern("f")]);
-            syms2.insert(Symbol::intern("ns2"),vec![Symbol::intern("g"), Symbol::intern("h")]);
+            syms2.insert(
+                Symbol::intern("ns3"),
+                vec![Symbol::intern("e"), Symbol::intern("f")],
+            );
+            syms2.insert(
+                Symbol::intern("ns2"),
+                vec![Symbol::intern("g"), Symbol::intern("h")],
+            );
             // Should get:  { 'ns1 [a b] 'ns2 [c d g h] 'ns3 [e f] }
-            let merged_syms = Refers::merge_referred_syms(&syms,&syms2);
+            let merged_syms = Refers::merge_referred_syms(&syms, &syms2);
             assert!(merged_syms.contains_key(&Symbol::intern("ns1")));
             assert!(merged_syms.contains_key(&Symbol::intern("ns2")));
             assert!(merged_syms.contains_key(&Symbol::intern("ns3")));
             // 'ns1 [a b]
-            assert!(merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("a")));
-            assert!(merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("b")));
-            assert!(!merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("c")));
-            assert!(!merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("d")));
-            assert!(!merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("e")));
-            assert!(!merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("f")));
-            assert!(!merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("g")));
-            assert!(!merged_syms.get(&Symbol::intern("ns1")).unwrap().contains(&Symbol::intern("h")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("a")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("b")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("c")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("d")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("e")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("f")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("g")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns1"))
+                .unwrap()
+                .contains(&Symbol::intern("h")));
             //'ns2 [c d g h]
-            assert!(!merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("a")));
-            assert!(!merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("b")));
-            assert!(merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("c")));
-            assert!(merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("d")));
-            assert!(!merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("e")));
-            assert!(!merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("f")));
-            assert!(merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("g")));
-            assert!(merged_syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("h")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("a")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("b")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("c")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("d")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("e")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("f")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("g")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("h")));
             //'ns3 [e f]
-            assert!(!merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("a")));
-            assert!(!merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("b")));
-            assert!(!merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("c")));
-            assert!(!merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("d")));
-            assert!(merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("e")));
-            assert!(merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("f")));
-            assert!(!merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("g")));
-            assert!(!merged_syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("h")));
-
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("a")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("b")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("c")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("d")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("e")));
+            assert!(merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("f")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("g")));
+            assert!(!merged_syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("h")));
         }
         #[test]
-        fn add_referred_syms(){
-            
+        fn add_referred_syms() {
             let refers = Refers::default();
             let mut new_syms = HashMap::new();
-            new_syms.insert(Symbol::intern("ns3"),vec![Symbol::intern("a"),Symbol::intern("b")]);
+            new_syms.insert(
+                Symbol::intern("ns3"),
+                vec![Symbol::intern("a"), Symbol::intern("b")],
+            );
             let mut new_syms2 = HashMap::new();
-            new_syms2.insert(Symbol::intern("ns3"),vec![Symbol::intern("a"),Symbol::intern("c")]);
-            new_syms2.insert(Symbol::intern("ns2"),vec![Symbol::intern("d")]);
-            let changed_refers = refers.add_referred_syms(new_syms).add_referred_syms(new_syms2);
+            new_syms2.insert(
+                Symbol::intern("ns3"),
+                vec![Symbol::intern("a"), Symbol::intern("c")],
+            );
+            new_syms2.insert(Symbol::intern("ns2"), vec![Symbol::intern("d")]);
+            let changed_refers = refers
+                .add_referred_syms(new_syms)
+                .add_referred_syms(new_syms2);
 
-            assert!(changed_refers.syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("a")));
-            assert!(changed_refers.syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("b")));
-            assert!(changed_refers.syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("c")));
-            assert!(!changed_refers.syms.get(&Symbol::intern("ns3")).unwrap().contains(&Symbol::intern("d")));
-            
-            assert!(!changed_refers.syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("a")));
-            assert!(changed_refers.syms.get(&Symbol::intern("ns2")).unwrap().contains(&Symbol::intern("d")));
+            assert!(changed_refers
+                .syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("a")));
+            assert!(changed_refers
+                .syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("b")));
+            assert!(changed_refers
+                .syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("c")));
+            assert!(!changed_refers
+                .syms
+                .get(&Symbol::intern("ns3"))
+                .unwrap()
+                .contains(&Symbol::intern("d")));
+
+            assert!(!changed_refers
+                .syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("a")));
+            assert!(changed_refers
+                .syms
+                .get(&Symbol::intern("ns2"))
+                .unwrap()
+                .contains(&Symbol::intern("d")));
         }
     }
     // 'Struct' here because its not immediately clear why, when testing this,
@@ -573,7 +695,7 @@ mod tests {
                 _ => {}
             }
         }
-        // @TODO 
+        // @TODO
         #[test]
         fn add_referred_syms() {
             // let namespace = Namespace::from_sym_with_refers(
@@ -731,30 +853,25 @@ mod tests {
             );
             namespaces.create_namespace(&Symbol::intern("ns1"));
             namespaces.create_namespace(&Symbol::intern("ns2"));
-            
+
             let mut ns1_syms = HashMap::new();
             ns1_syms.insert(
                 Symbol::intern("ns1"),
-                vec![Symbol::intern("a"),
-                     Symbol::intern("b")]
+                vec![Symbol::intern("a"), Symbol::intern("b")],
             );
 
             namespaces.add_referred_syms(&Symbol::intern("user"), ns1_syms);
-            
+
             let mut ns2_syms = HashMap::new();
             ns2_syms.insert(
                 Symbol::intern("ns2"),
-                vec![Symbol::intern("d"),
-                     Symbol::intern("e")]
+                vec![Symbol::intern("d"), Symbol::intern("e")],
             );
-            ns2_syms.insert(
-                Symbol::intern("ns1"),
-                vec![Symbol::intern("c")]
-            );
+            ns2_syms.insert(Symbol::intern("ns1"), vec![Symbol::intern("c")]);
 
             namespaces.add_referred_syms(&Symbol::intern("user"), ns2_syms);
-            // We should have then: ns1 => [a b c], ns2 => [d e] 
-            
+            // We should have then: ns1 => [a b c], ns2 => [d e]
+
             namespaces.insert_into_namespace(
                 &Symbol::intern("ns1"),
                 &Symbol::intern("a"),
@@ -805,7 +922,10 @@ mod tests {
                 *namespaces.get(&Symbol::intern("user"), &Symbol::intern("e"))
             );
 
-            assert_eq!(None, namespaces.try_get(&Symbol::intern("user"), &Symbol::intern("f")));
+            assert_eq!(
+                None,
+                namespaces.try_get(&Symbol::intern("user"), &Symbol::intern("f"))
+            );
         }
 
         #[test]
