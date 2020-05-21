@@ -33,6 +33,7 @@ pub enum Value {
     Boolean(bool),
     Symbol(Symbol),
     Var(Symbol),
+    Class(TypeTag),
     Keyword(Keyword),
     IFn(Rc<dyn IFn>),
     //
@@ -76,6 +77,7 @@ impl PartialEq for Value {
             (F64(d), F64(d2)) => d == d2,
             (Boolean(b), Boolean(b2)) => b == b2,
             (Symbol(sym), Symbol(sym2)) => sym == sym2,
+            (Class(t), Class(t2)) => t.to_string() == t2.to_string(),
             (Var(sym), Var(sym2)) => sym == sym2,
             (Keyword(kw), Keyword(kw2)) => kw == kw2,
             // Equality not defined on functions, similar to Clojure
@@ -120,6 +122,7 @@ impl Hash for Value {
             F64(d) => d.to_value().hash(state),
             Boolean(b) => b.hash(state),
             Symbol(sym) => sym.hash(state),
+            Class(t) => t.to_string().hash(state),
             Var(sym) => sym.hash(state),
             Keyword(kw) => kw.hash(state),
             IFn(_) => {
@@ -162,6 +165,7 @@ impl fmt::Display for Value {
             Boolean(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
             Var(sym) => format!("#'{}/{}", sym.ns, sym.name),
+            Class(t) => t.to_string(),
             Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
             LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
@@ -207,6 +211,7 @@ impl Value {
             Value::Boolean(_) => TypeTag::Boolean,
             Value::Symbol(_) => TypeTag::Symbol,
             Value::Var(_) => TypeTag::Var,
+            Value::Class(_) => TypeTag::Class,
             Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
             Value::LexicalEvalFn => TypeTag::IFn,

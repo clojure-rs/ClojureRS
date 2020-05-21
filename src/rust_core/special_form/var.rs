@@ -1,7 +1,6 @@
 use crate::environment::Environment;
 use crate::error_message;
 use crate::ifn::IFn;
-use crate::persistent_list_map::IPersistentMap;
 use crate::type_tag::TypeTag;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;

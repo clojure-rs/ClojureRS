@@ -11,7 +11,7 @@
 use nom::combinator::verify;
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
-    terminated, AsChar, Err::Incomplete, IResult,
+    Err::Incomplete, IResult,
 };
 
 use crate::keyword::Keyword;
@@ -23,8 +23,6 @@ use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
-use nom::Err::Error;
-use std::borrow::Borrow;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -790,8 +788,8 @@ mod tests {
         use crate::persistent_vector;
         use crate::reader::try_read;
         use crate::symbol::Symbol;
+        use crate::value::Value;
         use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
-        use crate::value::{ToValue, Value};
 
         #[test]
         fn try_read_empty_map_test() {

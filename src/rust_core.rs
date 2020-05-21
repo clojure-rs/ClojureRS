@@ -1,18 +1,21 @@
 // This module will hold core function and macro primitives that aren't special cases
 // (like the quote macro, or let), and can't be implemented in clojure itself
 
+pub(crate) mod special_form;
+pub use self::special_form::*;
+
 // language core functions
 pub(crate) mod eval;
 pub use self::eval::*;
 
+pub(crate) mod type_fn;
+pub use self::type_fn::*;
 pub(crate) mod meta;
 pub use self::meta::*;
 pub(crate) mod with_meta;
 pub use self::with_meta::*;
 pub(crate) mod print_doc;
 pub use self::print_doc::*;
-pub(crate) mod var;
-pub use self::var::*;
 
 // macros
 pub(crate) mod do_macro;
@@ -45,6 +48,8 @@ pub(crate) mod str;
 pub use self::str::*;
 
 // operations on collections
+pub(crate) mod cons;
+pub use self::cons::*;
 pub(crate) mod nth;
 pub use self::nth::*;
 pub(crate) mod concat;

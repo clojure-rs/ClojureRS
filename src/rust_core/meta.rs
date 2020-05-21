@@ -1,7 +1,6 @@
 use crate::environment::Environment;
 use crate::error_message;
 use crate::ifn::IFn;
-use crate::persistent_list_map::IPersistentMap;
 use crate::type_tag::TypeTag;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
@@ -38,9 +37,7 @@ impl IFn for MetaFn {
                 Value::Condition(error) => error_message::unknown_err(error),
                 _ => return Value::PersistentListMap(s.meta.clone()),
             },
-            _ => {
-                return error_message::type_mismatch(TypeTag::Var, args.get(0).unwrap());
-            }
+            _ => Value::Nil,
         }
     }
 }

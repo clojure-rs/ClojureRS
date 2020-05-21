@@ -3,8 +3,13 @@
 (def *flush-on-newline* true)
 (def *print-readably* true)
 
+"Temporary work around for exceptions, should be special form"
+(defmacro throw
+  [exception-form]
+  (println (str (first exception-form)) ": " (second exception-form)))
+
 (defmacro when [test & body]
-  (list 'if test (concat (list 'do) body)))
+  (list 'if test (cons 'do body)))
 
 (def list (fn [& ls] ls))
 
@@ -74,3 +79,14 @@
 
 (defmacro var [name]
   (var-special-form name))
+
+"proof of concept: cond as expressed (almost) in Clojure"
+(defmacro cond
+  [& clauses]
+  (when clauses
+    (list 'if (first clauses)
+          (if (next clauses)
+            (second clauses)
+            (throw (IllegalArgumentException
+                     "cond requires an even number of forms")))
+          (cons 'clojure.core/cond (next (next clauses))))))

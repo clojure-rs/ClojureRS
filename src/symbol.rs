@@ -1,7 +1,6 @@
 use crate::keyword::Keyword;
 use crate::maps::MapEntry;
 use crate::persistent_list_map::PersistentListMap;
-use crate::persistent_list_map::PersistentListMap::Empty;
 use crate::value::ToValue;
 use std::fmt;
 use std::hash::Hash;

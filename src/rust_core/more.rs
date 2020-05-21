@@ -2,7 +2,7 @@ use crate::error_message;
 use crate::ifn::IFn;
 use crate::iterable::Iterable;
 use crate::persistent_list::PersistentList;
-use crate::protocol::{Protocol, ProtocolCastable};
+use crate::protocol::ProtocolCastable;
 use crate::type_tag::TypeTag;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
@@ -39,7 +39,6 @@ mod tests {
     mod more_tests {
         use crate::ifn::IFn;
         use crate::persistent_list::PersistentList;
-        use crate::persistent_vector::PersistentVector;
         use crate::rust_core::more::MoreFn;
         use crate::value::Value;
         use std::rc::Rc;

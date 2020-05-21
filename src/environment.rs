@@ -197,6 +197,7 @@ impl Environment {
         let more_fn = rust_core::MoreFn {};
         let first_fn = rust_core::FirstFn {};
         let second_fn = rust_core::SecondFn {};
+        let cons_fn = rust_core::ConsFn {};
 
         // rust implementations of core functions
         let slurp_fn = rust_core::slurp::SlurpFn {};
@@ -242,7 +243,8 @@ impl Environment {
         let meta_fn = rust_core::MetaFn::new(Rc::clone(&environment));
         let with_meta_fn = rust_core::WithMetaFn::new(Rc::clone(&environment));
         let print_doc_fn = rust_core::PrintDocFn::new(Rc::clone(&environment));
-        let var_fn = rust_core::VarFn::new(Rc::clone(&environment));
+        let var_fn = rust_core::special_form::VarFn::new(Rc::clone(&environment));
+        let type_fn = rust_core::type_fn::TypeFn {};
 
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
@@ -266,6 +268,7 @@ impl Environment {
         environment.insert(Symbol::intern("with-meta"), with_meta_fn.to_rc_value());
         environment.insert(Symbol::intern("print-doc"), print_doc_fn.to_rc_value());
         environment.insert(Symbol::intern("var-special-form"), var_fn.to_rc_value());
+        environment.insert(Symbol::intern("type"), type_fn.to_rc_value());
 
         // Thread namespace
         environment.insert_into_namespace(
@@ -395,6 +398,7 @@ impl Environment {
         environment.insert(Symbol::intern("more"), more_fn.to_rc_value());
         environment.insert(Symbol::intern("first"), first_fn.to_rc_value());
         environment.insert(Symbol::intern("second"), second_fn.to_rc_value());
+        environment.insert(Symbol::intern("cons"), cons_fn.to_rc_value());
         // input and output
         environment.insert(
             Symbol::intern("system-newline"),
