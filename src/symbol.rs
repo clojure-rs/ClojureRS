@@ -5,50 +5,7 @@ use crate::value::ToValue;
 use std::fmt;
 use std::hash::Hash;
 
-/// Constructs base meta if none provided
-/// {:line 1
-///  :column 1
-///  :file "NO_SOURCE_PATH"
-///  :name <something>
-///  :ns <namespace>}
-///
-fn base_meta(ns: &str, name: &str) -> PersistentListMap {
-    let meta = vec![
-        MapEntry {
-            key: Keyword::intern("line").to_rc_value(),
-            val: 1_i32.to_rc_value(),
-        },
-        MapEntry {
-            key: Keyword::intern("column").to_rc_value(),
-            val: 1_i32.to_rc_value(),
-        },
-        MapEntry {
-            key: Keyword::intern("file").to_rc_value(),
-            val: "NO_SOURCE_PATH".to_rc_value(),
-        },
-        MapEntry {
-            key: Keyword::intern("ns").to_rc_value(),
-            val: Symbol::intern_with_ns_empty_meta("", ns).to_rc_value(),
-        },
-        MapEntry {
-            key: Keyword::intern("name").to_rc_value(),
-            val: Symbol::intern_with_ns_empty_meta("", name).to_rc_value(),
-        },
-        MapEntry {
-            key: Keyword::intern("doc").to_rc_value(),
-            val: "TODO\ndocumentation".to_rc_value(),
-        },
-    ]
-    .into_iter()
-    .collect::<PersistentListMap>();
-    // println!("base meta: {:#?}", meta);
-    return meta;
-}
-
-fn with_meta(meta: PersistentListMap) -> PersistentListMap {
-    println!("meta: {:#?}", meta);
-    return meta;
-}
+use crate::meta;
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Symbol {
@@ -87,14 +44,14 @@ impl Symbol {
         Symbol {
             name: String::from(name),
             ns: String::from(ns),
-            meta: base_meta(ns, name),
+            meta: meta::base_meta(ns, name),
         }
     }
     pub fn intern_with_ns_meta(ns: &str, name: &str, meta: PersistentListMap) -> Symbol {
         Symbol {
             name: String::from(name),
             ns: String::from(ns),
-            meta: with_meta(meta),
+            meta: meta::with_meta(ns, name, meta),
         }
     }
 
@@ -111,6 +68,14 @@ impl Symbol {
     pub fn has_ns(&self) -> bool {
         self.ns != ""
     }
+
+    pub fn with_meta(&self, meta: PersistentListMap) -> Symbol {
+        Symbol {
+            name: self.clone().name,
+            ns: self.clone().ns,
+            meta,
+        }
+    }
 }
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -124,7 +89,8 @@ impl fmt::Display for Symbol {
 mod tests {
 
     mod symbol_tests {
-        use crate::symbol::{base_meta, Symbol};
+        use crate::meta;
+        use crate::symbol::Symbol;
         use std::collections::HashMap;
 
         #[test]
@@ -134,7 +100,7 @@ mod tests {
                 Symbol {
                     ns: String::from(""),
                     name: String::from("a"),
-                    meta: base_meta("", "a")
+                    meta: meta::base_meta("", "a")
                 }
             );
         }
@@ -146,7 +112,7 @@ mod tests {
                 Symbol {
                     ns: String::from("clojure.core"),
                     name: String::from("a"),
-                    meta: base_meta("clojure.core", "a")
+                    meta: meta::base_meta("clojure.core", "a")
                 }
             );
             assert_eq!(
@@ -154,7 +120,7 @@ mod tests {
                 Symbol {
                     ns: String::from(""),
                     name: String::from("a"),
-                    meta: base_meta("", "a")
+                    meta: meta::base_meta("", "a")
                 }
             );
             assert_eq!(
@@ -162,7 +128,7 @@ mod tests {
                 Symbol {
                     ns: String::from(""),
                     name: String::from("a"),
-                    meta: base_meta("", "a")
+                    meta: meta::base_meta("", "a")
                 }
             );
             assert_eq!(
@@ -170,7 +136,7 @@ mod tests {
                 Symbol {
                     ns: String::from("clojure.core"),
                     name: String::from("a"),
-                    meta: base_meta("clojure.core", "a")
+                    meta: meta::base_meta("clojure.core", "a")
                 }
             );
             assert_eq!(
@@ -178,7 +144,7 @@ mod tests {
                 Symbol {
                     ns: String::from("clojure"),
                     name: String::from("a"),
-                    meta: base_meta("clojure", "a")
+                    meta: meta::base_meta("clojure", "a")
                 }
             );
             assert_eq!(
@@ -186,7 +152,7 @@ mod tests {
                 Symbol {
                     ns: String::from(""),
                     name: String::from("a"),
-                    meta: base_meta("", "a")
+                    meta: meta::base_meta("", "a")
                 }
             );
         }

@@ -3,6 +3,7 @@ use crate::ifn::IFn;
 use crate::keyword::Keyword;
 use crate::lambda;
 use crate::maps::MapEntry;
+use crate::meta;
 use crate::persistent_list::PersistentList::Cons;
 use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListIter};
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
@@ -320,30 +321,55 @@ impl Value {
             //   value type -- although we still need to hardcode its definition in Rust,
             //   as an implementation of the generic Value::Macro(Rc<IFn>)
             //
+            // (def symbol doc-string? init?)
             DefMacro => {
                 let arg_rc_values = PersistentList::iter(args)
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
 
-                if arg_rc_values.len() > 2 || arg_rc_values.is_empty() {
+                if arg_rc_values.len() > 3 || arg_rc_values.is_empty() {
                     return Some(Rc::new(Value::Condition(format!(
-                        "Wrong number of arguments (Given: {}, Expected: 1-2)",
+                        "Wrong number of arguments (Given: {}, Expected: 1-3)",
                         arg_rc_values.len()
                     ))));
                 }
+
                 let defname = arg_rc_values.get(0).unwrap();
+
                 let defval = arg_rc_values
-                    .get(1)
+                    .get(if arg_rc_values.len() == 2 { 1 } else { 2 })
+                    .or(Some(&Rc::new(Value::Nil)))
                     .unwrap()
                     .eval_to_rc(Rc::clone(&environment));
-                // Let's not do docstrings yet
-                // let docstring = ...
+
+                let doc_string = if arg_rc_values.len() == 3 {
+                    match arg_rc_values.get(1).unwrap().to_value() {
+                        Value::String(s) => Value::String(s.to_string()),
+                        _ => Value::Nil,
+                    }
+                } else {
+                    Value::Nil
+                };
+
                 match &**defname {
                     Value::Symbol(sym) => {
-                        environment.insert(sym.clone(), defval);
+                        // TODO: environment.insert with meta?
+                        let s = if doc_string != Value::Nil {
+                            let ss = sym
+                                .with_meta(merge!(
+                                    meta::base_meta("", &defname.to_value().to_string()),
+                                    map_entry!("doc", doc_string)
+                                ))
+                                .clone();
+                            println!("{:#?}", ss);
+                            ss
+                        } else {
+                            sym.clone()
+                        };
+                        environment.insert(s.to_owned(), defval);
                         // @TODO return var. For now, however, we only have symbols
                         // @TODO intern from environment, don't make new sym ?
-                        Some(sym.to_rc_value())
+                        Some(s.to_rc_value())
                     }
                     _ => Some(Rc::new(Value::Condition(std::string::String::from(
                         "First argument to def must be a symbol",

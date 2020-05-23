@@ -11,6 +11,8 @@ mod iterable;
 mod keyword;
 mod lambda;
 mod maps;
+#[macro_use]
+mod meta;
 mod namespace;
 mod persistent_list;
 mod persistent_list_map;
