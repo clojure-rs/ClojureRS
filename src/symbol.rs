@@ -62,6 +62,14 @@ impl Symbol {
             meta: PersistentListMap::Empty,
         }
     }
+
+    pub fn intern_with_empty_meta(name: &str) -> Symbol {
+        Symbol {
+            name: String::from(name),
+            ns: "".to_string(),
+            meta: PersistentListMap::Empty,
+        }
+    }
     pub fn unqualified(&self) -> Symbol {
         Symbol::intern(&self.name)
     }
@@ -105,8 +113,14 @@ impl fmt::Display for Symbol {
 mod tests {
 
     mod symbol_tests {
+        use crate::keyword::Keyword;
+        use crate::maps::MapEntry;
         use crate::meta;
+        use crate::persistent_list_map::ToPersistentListMapIter;
+        use crate::persistent_list_map::{PersistentListMap, PersistentListMapIter};
         use crate::symbol::Symbol;
+        use crate::value::ToValue;
+        use crate::value::Value;
         use std::collections::HashMap;
 
         #[test]
@@ -172,6 +186,40 @@ mod tests {
                 }
             );
         }
+        #[test]
+        fn test_with_meta() {
+            assert_eq!(
+                Symbol::intern_with_ns_meta(
+                    "namespace",
+                    "name",
+                    persistent_list_map!(map_entry!("key", "value"))
+                ),
+                Symbol {
+                    ns: String::from("namespace"),
+                    name: String::from("name"),
+                    meta: persistent_list_map!(map_entry!("key", "value"))
+                }
+            );
+            assert_eq!(
+                Symbol::intern_with_ns_meta(
+                    "namespace",
+                    "name",
+                    merge!(
+                        meta::base_meta("namespace", "name"),
+                        map_entry!("key", "value")
+                    )
+                ),
+                Symbol {
+                    ns: String::from("namespace"),
+                    name: String::from("name"),
+                    meta: merge!(
+                        meta::base_meta("namespace", "name"),
+                        map_entry!("key", "value")
+                    )
+                }
+            );
+        }
+
         #[test]
         fn test_work_with_hashmap() {
             let mut hashmap = HashMap::new();

@@ -130,19 +130,22 @@ mod tests {
 
         #[test]
         fn new() {
-            let namespace = Namespace::new(&Symbol::intern("a"), RefCell::new(HashMap::new()));
-            assert_eq!(namespace.name, Symbol::intern("a"));
+            let namespace = Namespace::new(
+                &Symbol::intern_with_empty_meta("a"),
+                RefCell::new(HashMap::new()),
+            );
+            assert_eq!(namespace.name, Symbol::intern_with_empty_meta("a"));
             assert!(namespace.mappings.borrow().is_empty());
         }
 
         #[test]
         fn new_removes_namespace_from_qualified_symbol() {
             let namespace = Namespace::new(
-                &Symbol::intern_with_ns("ns", "a"),
+                &Symbol::intern_with_ns_empty_meta("ns", "a"),
                 RefCell::new(HashMap::new()),
             );
-            assert_eq!(namespace.name, Symbol::intern("a"));
-            assert!(namespace.name != Symbol::intern_with_ns("ns", "a"));
+            assert_eq!(namespace.name, Symbol::intern_with_empty_meta("a"));
+            assert!(namespace.name != Symbol::intern_with_ns_empty_meta("ns", "a"));
             assert!(namespace.mappings.borrow().is_empty());
         }
         #[test]
@@ -158,22 +161,25 @@ mod tests {
 
         #[test]
         fn from_sym() {
-            let namespace = Namespace::from_sym(&Symbol::intern_with_ns("ns", "name"));
-            assert_eq!(namespace.name, Symbol::intern("name"));
-            assert!(namespace.name != Symbol::intern_with_ns("ns", "name"));
+            let namespace = Namespace::from_sym(&Symbol::intern_with_ns_empty_meta("ns", "name"));
+            assert_eq!(namespace.name, Symbol::intern_with_empty_meta("name"));
+            assert!(namespace.name != Symbol::intern_with_ns_empty_meta("ns", "name"));
             assert!(namespace.mappings.borrow().is_empty());
         }
         #[test]
         fn insert() {
-            let namespace = Namespace::from_sym(&Symbol::intern("name"));
-            namespace.insert(&Symbol::intern("a"), Rc::new(Value::Nil));
-            namespace.insert(&Symbol::intern_with_ns("ns", "b"), Rc::new(Value::Nil));
-            assert_eq!(namespace.name, Symbol::intern("name"));
-            assert!(namespace.name != Symbol::intern("ns"));
-            assert!(namespace.name != Symbol::intern_with_ns("ns", "name"));
+            let namespace = Namespace::from_sym(&Symbol::intern_with_empty_meta("name"));
+            namespace.insert(&Symbol::intern_with_empty_meta("a"), Rc::new(Value::Nil));
+            namespace.insert(
+                &Symbol::intern_with_ns_empty_meta("ns", "b"),
+                Rc::new(Value::Nil),
+            );
+            assert_eq!(namespace.name, Symbol::intern_with_empty_meta("name"));
+            assert!(namespace.name != Symbol::intern_with_empty_meta("ns"));
+            assert!(namespace.name != Symbol::intern_with_ns_empty_meta("ns", "name"));
 
-            namespace.insert(&Symbol::intern("c"), Rc::new(Value::Nil));
-            match &*namespace.get(&Symbol::intern("c")) {
+            namespace.insert(&Symbol::intern_with_empty_meta("c"), Rc::new(Value::Nil));
+            match &*namespace.get(&Symbol::intern_with_empty_meta("c")) {
                 Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
                 _ => {}
             }
