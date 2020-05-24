@@ -364,11 +364,17 @@ impl Value {
                                 ),
                             );
                             // TODO remove println
-                            println!("defined symbol with docstring meta: {:#?}", ss.name);
+                            println!(
+                                "defined symbol named {} with docstring : {}",
+                                ss.name, &doc_string
+                            );
                             ss.clone()
                         } else {
                             // TODO remove println
-                            println!("cloned symbol, no docstring given: {:#?}", sym.clone().name);
+                            println!(
+                                "cloned symbol name {}, no docstring given.",
+                                sym.clone().name
+                            );
                             sym.clone()
                         };
                         environment.insert(s.to_owned(), defval);
