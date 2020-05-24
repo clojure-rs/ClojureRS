@@ -111,8 +111,3 @@ pub fn base_meta(ns: &str, name: &str) -> PersistentListMap {
         map_entry!("name", Symbol::intern_with_ns_empty_meta("", name))
     )
 }
-
-/// replace all meta
-pub fn with_meta(ns: &str, name: &str, meta: PersistentListMap) -> PersistentListMap {
-    return meta;
-}

@@ -22,7 +22,7 @@ TODO: fn*
 TODO: recur
 TODO: set!
 TODO: .
-var
+* var
 TODO: quote
 TODO: catch
 TODO: throw

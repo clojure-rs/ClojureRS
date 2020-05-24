@@ -23,6 +23,8 @@ use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
+use crate::value::Value::Condition;
+use std::borrow::Borrow;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -243,6 +245,21 @@ pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     match ns {
         Some(ns) => Ok((rest_input, Symbol::intern_with_ns(&ns, &name))),
         None => Ok((rest_input, Symbol::intern(&name))),
+    }
+}
+
+pub fn symbol_ns_name_parser(input: &str) -> IResult<&str, (String, String)> {
+    named!(namespace_parser <&str,String>,
+	   do_parse!(
+	       ns: identifier_parser >>
+	       complete!(tag!("/")) >>
+	       (ns)));
+
+    let (rest_input, ns) = opt(namespace_parser)(input)?;
+    let (rest_input, name) = identifier_parser(rest_input)?;
+    match ns {
+        Some(ns) => Ok((rest_input, (ns, name))),
+        None => Ok((rest_input, ("".to_string(), name))),
     }
 }
 
@@ -467,6 +484,40 @@ pub fn try_read_map(input: &str) -> IResult<&str, Value> {
     }
 }
 
+/// Tries to parse symbol to symbol with meta TODO should be IObj
+/// Example Successes:
+///    ^{:a 1} symbol => (with-meta symbol {:a 1})
+pub fn try_read_with_meta_symbol_map(input: &str) -> IResult<&str, Value> {
+    named!(lbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("^{")));
+    named!(rbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("}")));
+    let (map_inner_input, _) = lbracep(input)?;
+    let mut map_as_vec: Vec<MapEntry> = Vec::new();
+    let mut rest_input = map_inner_input;
+    loop {
+        let right_brace = rbracep(rest_input);
+        if let Ok((after_map_input, _)) = right_brace {
+            // then parse symbol
+            let (after_sym_input, (ns, name)) =
+                symbol_ns_name_parser(after_map_input.trim_start())?;
+            return Ok((
+                after_sym_input,
+                Value::Symbol(Symbol::intern_with_ns_meta(
+                    &ns,
+                    &name,
+                    map_as_vec.into_list_map(),
+                )),
+            ));
+        };
+        let (_rest_input, next_key) = try_read(rest_input)?;
+        let (_rest_input, next_val) = try_read(_rest_input)?;
+        map_as_vec.push(MapEntry {
+            key: Rc::new(next_key),
+            val: Rc::new(next_val),
+        });
+        rest_input = _rest_input;
+    }
+}
+
 // @TODO use nom functions in place of macro
 /// Tries to parse &str into Value::PersistentVector
 /// Example Successes:
@@ -534,6 +585,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
     preceded(
         consume_clojure_whitespaces_parser,
         alt((
+            try_read_with_meta_symbol_map,
             try_read_quoted,
             try_read_nil,
             try_read_map,

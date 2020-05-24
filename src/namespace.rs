@@ -1,3 +1,4 @@
+use crate::persistent_list_map::PersistentListMap;
 use crate::symbol::Symbol;
 use crate::value::Value;
 use std::cell::RefCell;
@@ -12,7 +13,7 @@ pub struct Namespace {
 impl Namespace {
     pub fn new(name: &Symbol, mappings: RefCell<HashMap<Symbol, Rc<Value>>>) -> Namespace {
         Namespace {
-            name: name.unqualified(),
+            name: name.unqualified_empty_meta(), // todo namespace meta
             mappings,
         }
     }
@@ -20,10 +21,16 @@ impl Namespace {
         Namespace::new(name, RefCell::new(HashMap::new()))
     }
     pub fn insert(&self, sym: &Symbol, val: Rc<Value>) {
-        self.mappings.borrow_mut().insert(sym.unqualified(), val);
+        self.mappings
+            .borrow_mut()
+            .insert(sym.unqualified_empty_meta(), val);
     }
     pub fn get(&self, sym: &Symbol) -> Rc<Value> {
-        match self.mappings.borrow_mut().get(&sym.unqualified()) {
+        match self
+            .mappings
+            .borrow_mut()
+            .get(&sym.unqualified_empty_meta())
+        {
             Some(val) => Rc::clone(val),
             None => Rc::new(Value::Condition(format!("1 Undefined symbol {}", sym.name))),
         }
@@ -178,12 +185,12 @@ mod tests {
             namespace.insert(&Symbol::intern("a"), Rc::new(Value::Nil));
             namespace.insert(&Symbol::intern_with_ns("ns", "b"), Rc::new(Value::Nil));
             match &*namespace.get(&Symbol::intern("a")) {
-                Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
+                Value::Condition(_) => panic!("We are unable to get a symbol (a) we've put into our namespace created with from_sym()"),
                 _ => {}
             }
 
             match &*namespace.get(&Symbol::intern("b")) {
-                Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
+                Value::Condition(_) => panic!("We are unable to get a symbol (ns/b) we've put into our namespace created with from_sym()"),
                 _ => {}
             }
 

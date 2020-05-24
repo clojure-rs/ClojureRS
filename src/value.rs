@@ -355,15 +355,20 @@ impl Value {
                     Value::Symbol(sym) => {
                         // TODO: environment.insert with meta?
                         let s = if doc_string != Value::Nil {
-                            let ss = sym
-                                .with_meta(merge!(
-                                    meta::base_meta("", &defname.to_value().to_string()),
+                            let ss = Symbol::intern_with_ns_meta(
+                                &sym.ns,
+                                &sym.name,
+                                merge!(
+                                    meta::base_meta(&sym.ns, &sym.name),
                                     map_entry!("doc", doc_string)
-                                ))
-                                .clone();
-                            println!("{:#?}", ss);
-                            ss
+                                ),
+                            );
+                            // TODO remove println
+                            println!("defined symbol with docstring meta: {:#?}", ss.name);
+                            ss.clone()
                         } else {
+                            // TODO remove println
+                            println!("cloned symbol, no docstring given: {:#?}", sym.clone().name);
                             sym.clone()
                         };
                         environment.insert(s.to_owned(), defval);

@@ -51,7 +51,7 @@ impl Symbol {
         Symbol {
             name: String::from(name),
             ns: String::from(ns),
-            meta: meta::with_meta(ns, name, meta),
+            meta,
         }
     }
 
@@ -65,16 +65,32 @@ impl Symbol {
     pub fn unqualified(&self) -> Symbol {
         Symbol::intern(&self.name)
     }
+    pub fn unqualified_with_meta(&self) -> Symbol {
+        Symbol::intern_with_ns_meta("", &self.name, self.meta.clone())
+    }
+    pub fn unqualified_empty_meta(&self) -> Symbol {
+        Symbol::intern_with_ns_empty_meta("", &self.name)
+    }
     pub fn has_ns(&self) -> bool {
         self.ns != ""
     }
 
     pub fn with_meta(&self, meta: PersistentListMap) -> Symbol {
         Symbol {
-            name: self.clone().name,
-            ns: self.clone().ns,
+            name: String::from("hello"), // String::from(self.name.clone()),
+            ns: String::from(""),        // String::from(self.ns.clone()),
             meta,
         }
+        .clone()
+    }
+
+    pub fn with_empty_meta(&self) -> Symbol {
+        Symbol {
+            name: String::from("hello"), // String::from(self.name.clone()),
+            ns: String::from(""),        // String::from(self.ns.clone()),
+            meta: PersistentListMap::Empty,
+        }
+        .clone()
     }
 }
 impl fmt::Display for Symbol {
