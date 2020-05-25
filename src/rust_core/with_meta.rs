@@ -31,10 +31,18 @@ impl IFn for WithMetaFn {
         }
 
         match args.get(0).unwrap().to_value() {
-            Value::Symbol(s) => match self.enclosing_environment.get(&s).to_value() {
+            Value::Symbol(s) => match self.enclosing_environment.get_symbol(&s).to_value() {
                 Value::Condition(error) => error_message::unknown_err(error), // TODO should return given value with meta
                 // TODO should return value with metadata
-                val => val,
+                val => match args.get(1).unwrap().to_value() {
+                    Value::PersistentListMap(plistmap) => {
+                        Value::Symbol(s.with_meta(plistmap.clone()))
+                    }
+                    _ => error_message::type_mismatch(
+                        TypeTag::PersistentListMap,
+                        args.get(0).unwrap(),
+                    ),
+                },
             },
             _ => {
                 // TODO : symbol is not the typetag, should be IObj

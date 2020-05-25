@@ -33,9 +33,10 @@ impl IFn for MetaFn {
         }
 
         match args.get(0).unwrap().to_value() {
-            Value::Var(s) => match self.enclosing_environment.get(&s).to_value() {
+            Value::Var(s) => match self.enclosing_environment.get_symbol(&s).to_value() {
                 Value::Condition(error) => error_message::unknown_err(error),
-                _ => return Value::PersistentListMap(s.meta.clone()),
+                Value::Symbol(found) => Value::PersistentListMap(found.meta.clone()),
+                _s => error_message::unknown_err("target is not IMeta".to_string()),
             },
             _ => Value::Nil,
         }

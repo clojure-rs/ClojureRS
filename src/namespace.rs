@@ -1,6 +1,6 @@
 use crate::persistent_list_map::PersistentListMap;
 use crate::symbol::Symbol;
-use crate::value::Value;
+use crate::value::{ToValue, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -23,15 +23,30 @@ impl Namespace {
     pub fn insert(&self, sym: &Symbol, val: Rc<Value>) {
         self.mappings
             .borrow_mut()
-            .insert(sym.unqualified_empty_meta(), val);
+            .insert(sym.unqualified_with_meta(), val);
     }
+    // gets the value of symbol
     pub fn get(&self, sym: &Symbol) -> Rc<Value> {
+        let mappings = self.mappings.borrow_mut();
+
+        match mappings.keys().filter(|k| k.name == sym.name).nth(0) {
+            Some(s) => match mappings.get(s) {
+                Some(val) => val.to_rc_value(),
+                None => Rc::new(Value::Condition(format!("1 Undefined symbol {}", sym.name))),
+            },
+            _ => Rc::new(Value::Condition(format!("1 Undefined symbol {}", sym.name))),
+        }
+    }
+    /// finds the symbol by name
+    pub fn get_symbol(&self, sym: &Symbol) -> Rc<Value> {
         match self
             .mappings
             .borrow_mut()
-            .get(&sym.unqualified_empty_meta())
+            .keys()
+            .filter(|k| k.name == sym.name)
+            .nth(0)
         {
-            Some(val) => Rc::clone(val),
+            Some(val) => Rc::clone(&val.to_rc_value()),
             None => Rc::new(Value::Condition(format!("1 Undefined symbol {}", sym.name))),
         }
     }
@@ -109,6 +124,29 @@ impl Namespaces {
 
         match namespace {
             Some(namespace) => Rc::clone(&namespace.get(&sym)),
+            // @TODO should this be a condition or nil?
+            _ => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name))),
+        }
+    }
+
+    /// Get Symbol from namespace
+    pub fn get_symbol(&self, namespace_sym: &Symbol, sym: &Symbol) -> Rc<Value> {
+        // When storing / retrieving from namespaces, we want
+        // namespace_sym unqualified keys
+        let mut namespace_sym = namespace_sym.unqualified();
+
+        // @TODO just make it an Optional<String>
+        // If our sym is namespace qualified,  use that as our namespace
+        if sym.has_ns() {
+            namespace_sym = Symbol::intern(&sym.ns);
+        }
+
+        let sym = sym.unqualified();
+        let namespaces = self.0.borrow();
+        let namespace = namespaces.get(&namespace_sym);
+
+        match namespace {
+            Some(namespace) => Rc::clone(&namespace.get_symbol(&sym)),
             // @TODO should this be a condition or nil?
             _ => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name))),
         }

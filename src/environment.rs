@@ -36,6 +36,9 @@ impl EnvironmentVal {
     fn get_from_namespace(&self, namespace: &Symbol, sym: &Symbol) -> Rc<Value> {
         self.namespaces.get(namespace, sym)
     }
+    fn get_symbol_from_namespace(&self, namespace: &Symbol, sym: &Symbol) -> Rc<Value> {
+        self.namespaces.get_symbol(namespace, sym)
+    }
     fn get_current_namespace(&self) -> Symbol {
         self.curr_ns_sym.borrow().clone()
     }
@@ -172,6 +175,39 @@ impl Environment {
                 match mappings.borrow().get(sym) {
                     Some(val) => Rc::clone(val),
                     None => parent_env.get(sym),
+                }
+            }
+        }
+    }
+
+    /// TODO: repeated code from above, retrieves the symbol from namespace
+    pub fn get_symbol(&self, sym: &Symbol) -> Rc<Value> {
+        match self {
+            MainEnvironment(env_val) => {
+                // If we've recieved a qualified symbol like
+                // clojure.core/+
+                if sym.ns != "" {
+                    // Use that namespace
+                    env_val.get_symbol_from_namespace(&Symbol::intern(&sym.ns), sym)
+                } else {
+                    env_val.get_symbol_from_namespace(
+                        &env_val.get_current_namespace(),
+                        &Symbol::intern(&sym.name),
+                    )
+                }
+            }
+            LocalEnvironment(parent_env, mappings) => {
+                if sym.ns != "" {
+                    return self.get_main_environment().get_symbol(sym);
+                }
+                match mappings
+                    .borrow()
+                    .keys()
+                    .filter(|k| k.name == sym.name)
+                    .nth(0)
+                {
+                    Some(val) => Rc::clone(&val.to_rc_value()),
+                    None => parent_env.get_symbol(sym),
                 }
             }
         }
