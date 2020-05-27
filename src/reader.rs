@@ -8,7 +8,7 @@
 //! not;  since this is about being a 'free-er' Clojure, especially since it can't compete with it in raw
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
-use nom::combinator::verify;
+use nom::combinator::{rest, verify};
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
     Err::Incomplete, IResult,
@@ -17,14 +17,15 @@ use nom::{
 use crate::keyword::Keyword;
 use crate::maps::MapEntry;
 use crate::persistent_list::ToPersistentList;
-use crate::persistent_list_map::ToPersistentListMap;
+use crate::persistent_list_map::{ToPersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::ToPersistentVector;
 use crate::symbol::Symbol;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
+use crate::persistent_list_map::PersistentListMap::Map;
 use crate::value::Value::Condition;
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -518,6 +519,50 @@ pub fn try_read_with_meta_symbol_map(input: &str) -> IResult<&str, Value> {
     }
 }
 
+/// Tries to parse symbol to symbol with meta provided by keywords TODO should be IObj
+/// Example Successes:
+///    ^:static ^:private symbol => (with-meta symbol {:static true :private true})
+pub fn try_read_with_meta_symbol_keywords(input: &str) -> IResult<&str, Value> {
+    named!(meta_kw_start<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("^")));
+    let (after_caret, _) = meta_kw_start(input)?;
+
+    let mut rest_input = after_caret;
+    let mut meta_keywords = Vec::new();
+
+    loop {
+        let (_rest_input, val) = try_read(rest_input)?;
+        match val {
+            Value::Keyword(kw) => {
+                meta_keywords.push(MapEntry {
+                    key: kw.to_rc_value(),
+                    val: true.to_rc_value(),
+                });
+            }
+            Value::Symbol(s) => {
+                return Ok((
+                    _rest_input,
+                    Value::Symbol(Symbol::intern_with_ns_meta(
+                        &s.ns,
+                        &s.name,
+                        vec![
+                            s.meta
+                                .clone()
+                                .borrow_mut()
+                                .iter()
+                                .collect::<Vec<MapEntry>>(),
+                            meta_keywords,
+                        ]
+                        .concat()
+                        .into_list_map(),
+                    )),
+                ));
+            }
+            _a => (),
+        }
+        rest_input = _rest_input;
+    }
+}
+
 // @TODO use nom functions in place of macro
 /// Tries to parse &str into Value::PersistentVector
 /// Example Successes:
@@ -586,6 +631,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
         consume_clojure_whitespaces_parser,
         alt((
             try_read_with_meta_symbol_map,
+            try_read_with_meta_symbol_keywords,
             try_read_quoted,
             try_read_nil,
             try_read_map,
