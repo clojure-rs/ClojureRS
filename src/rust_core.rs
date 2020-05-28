@@ -1,6 +1,11 @@
 // This module will hold core function and macro primitives that aren't special cases
 // (like the quote macro, or let), and can't be implemented in clojure itself
 
+// rust core special functionality
+pub(crate) mod deftype_rs;
+pub use self::deftype_rs::*;
+
+// special forms
 pub(crate) mod special_form;
 pub use self::special_form::*;
 

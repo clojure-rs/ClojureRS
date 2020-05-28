@@ -11,7 +11,7 @@
 use nom::combinator::{rest, verify};
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
-    Err::Incomplete, IResult,
+    Err::Incomplete, IResult, InputTake,
 };
 
 use crate::keyword::Keyword;
@@ -24,7 +24,9 @@ use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
 use crate::persistent_list_map::PersistentListMap::Map;
+use crate::type_tag::type_tag_for_name;
 use crate::value::Value::Condition;
+use itertools::join;
 use std::borrow::{Borrow, BorrowMut};
 use std::io::BufRead;
 //
@@ -521,7 +523,8 @@ pub fn try_read_with_meta_symbol_map(input: &str) -> IResult<&str, Value> {
 
 /// Tries to parse symbol to symbol with meta provided by keywords TODO should be IObj
 /// Example Successes:
-///    ^:static ^:private symbol => (with-meta symbol {:static true :private true})
+///    ^:static ^:private symbol => (with-meta value {:static true :private true})
+///    ^String => (with-meta value {:tag String}
 pub fn try_read_with_meta_symbol_keywords(input: &str) -> IResult<&str, Value> {
     named!(meta_kw_start<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("^")));
     let (after_caret, _) = meta_kw_start(input)?;
@@ -539,23 +542,33 @@ pub fn try_read_with_meta_symbol_keywords(input: &str) -> IResult<&str, Value> {
                 });
             }
             Value::Symbol(s) => {
-                return Ok((
-                    _rest_input,
-                    Value::Symbol(Symbol::intern_with_ns_meta(
-                        &s.ns,
-                        &s.name,
-                        vec![
-                            s.meta
-                                .clone()
-                                .borrow_mut()
-                                .iter()
-                                .collect::<Vec<MapEntry>>(),
-                            meta_keywords,
-                        ]
-                        .concat()
-                        .into_list_map(),
-                    )),
-                ));
+                // handle the case that there was a separate symbol parsed -> attach metadata
+                if rest_input.chars().next().unwrap().is_whitespace() {
+                    return Ok((
+                        _rest_input,
+                        Value::Symbol(Symbol::intern_with_ns_meta(
+                            &s.ns,
+                            &s.name,
+                            vec![
+                                s.meta
+                                    .clone()
+                                    .borrow_mut()
+                                    .iter()
+                                    .collect::<Vec<MapEntry>>(),
+                                meta_keywords,
+                            ]
+                            .concat()
+                            .into_list_map(),
+                        )),
+                    ));
+                } else {
+                    // the symbol being read is a type that will be the :tag of the symbol / value
+                    // Todo : returns a symbol, not class... exploiting the fact that a symbol name get splitted by dots
+                    meta_keywords.push(MapEntry {
+                        key: Keyword::intern("tag").to_rc_value(),
+                        val: s.to_rc_value(),
+                    });
+                }
             }
             _a => (),
         }

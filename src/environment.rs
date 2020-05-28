@@ -281,6 +281,7 @@ impl Environment {
         let print_doc_fn = rust_core::PrintDocFn::new(Rc::clone(&environment));
         let var_fn = rust_core::special_form::VarFn::new(Rc::clone(&environment));
         let type_fn = rust_core::type_fn::TypeFn {};
+        let deftype_rs_fn = rust_core::deftype_rs::DeftypeRsFn {};
 
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
@@ -305,6 +306,7 @@ impl Environment {
         environment.insert(Symbol::intern("print-doc"), print_doc_fn.to_rc_value());
         environment.insert(Symbol::intern("var-special-form"), var_fn.to_rc_value());
         environment.insert(Symbol::intern("type"), type_fn.to_rc_value());
+        environment.insert(Symbol::intern("deftype-rs"), deftype_rs_fn.to_rc_value());
 
         // Thread namespace
         environment.insert_into_namespace(

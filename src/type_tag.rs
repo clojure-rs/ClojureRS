@@ -23,6 +23,30 @@ pub enum TypeTag {
     Pattern,
 }
 
+pub fn type_tag_for_name(type_tag_name: &str) -> TypeTag {
+    return match type_tag_name {
+        "rust.std.i32" => return TypeTag::I32,
+        "rust.std.bool" => TypeTag::Boolean,
+        "rust.std.f64" => TypeTag::F64,
+        "clojure.lang.Symbol" => TypeTag::Symbol,
+        "clojure.lang.Var" => TypeTag::Var,
+        "clojure.lang.Class" => TypeTag::Class,
+        "clojure.lang.Keyword" => TypeTag::Keyword,
+        "clojure.lang.Function" => TypeTag::IFn,
+        "clojure.lang.Condition" => TypeTag::Condition,
+        "clojure.lang.PersistentList" => TypeTag::PersistentList,
+        "clojure.lang.PersistentVector" => TypeTag::PersistentVector,
+        "clojure.lang.PersistentListMap" => TypeTag::PersistentListMap,
+        "clojure.lang.Macro" => TypeTag::Macro,
+        "rust.std.string.String" => TypeTag::String,
+        "clojure.lang.Integer" => TypeTag::Integer,
+        "clojure.lang.ISeq" => TypeTag::ISeq,
+        "clojure.lang.Nil" => TypeTag::Nil,
+        "rust.regex" => TypeTag::Pattern,
+        _ => TypeTag::Nil,
+    };
+}
+
 use TypeTag::*;
 impl fmt::Display for TypeTag {
     // This trait requires `fmt` with this exact signature.

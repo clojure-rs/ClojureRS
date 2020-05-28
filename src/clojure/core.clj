@@ -1,3 +1,6 @@
+;; the content here should include the minimum implementation for interpreting clojure.core library code
+;; currently, most things existing here is for testing the implementation
+
 (ns clojure.core)
 
 (def *flush-on-newline* true)
@@ -90,3 +93,23 @@
             (throw (IllegalArgumentException
                      "cond requires an even number of forms")))
           (cons 'clojure.core/cond (next (next clauses))))))
+
+;; Define 'Classes' with aliases so that we have types
+
+(def rust.std.i32 (deftype-rs "rust.std.i32"))
+(def java.lang.Long rust.std.i32)
+(def java.lang.Integer rust.std.i32)
+(def Integer rust.std.i32)
+(def Long rust.std.i32)
+
+(def rust.std.bool (deftype-rs "rust.std.bool"))
+(def java.lang.Boolean rust.std.bool)
+(def Boolean rust.std.bool)
+
+(def rust.std.f64 (deftype-rs "rust.std.f64"))
+(def java.lang.Double rust.std.f64)
+(def Double rust.std.f64)
+
+(def rust.std.string.String (deftype-rs "rust.std.string.String"))
+(def java.lang.String rust.std.string.String)
+(def String rust.std.string.String)
