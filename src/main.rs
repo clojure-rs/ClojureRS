@@ -43,7 +43,7 @@ fn main() {
         user_action::Action::Evaluate(expression) => {
             println!(
                 "{}",
-                repl::Repl::eval(&repl, &repl::Repl::read_string(&expression))
+                repl::Repl::eval(&repl, &repl::Repl::read_string(&repl, &expression))
             );
         }
 

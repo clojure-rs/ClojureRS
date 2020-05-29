@@ -5,7 +5,6 @@ use std::rc::Rc;
 use crate::error_message;
 use crate::iterable::Iterable;
 use crate::persistent_list::ToPersistentList;
-use crate::persistent_vector::ToPersistentVectorIter;
 use crate::protocol::ProtocolCastable;
 
 /// (cons x seq)

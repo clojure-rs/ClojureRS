@@ -20,11 +20,13 @@ use crate::persistent_list::ToPersistentList;
 use crate::persistent_list_map::{ToPersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::ToPersistentVector;
 use crate::symbol::Symbol;
-use crate::value::{ToValue, Value};
+use crate::value::{Evaluable, ToValue, Value};
 use std::rc::Rc;
 
+use crate::environment::Environment;
 use crate::persistent_list_map::PersistentListMap::Map;
 use crate::type_tag::type_tag_for_name;
+use crate::type_tag::TypeTag::PersistentListMap;
 use crate::value::Value::Condition;
 use itertools::join;
 use std::borrow::{Borrow, BorrowMut};
@@ -466,7 +468,7 @@ pub fn try_read_var(input: &str) -> IResult<&str, Value> {
 /// Tries to parse &str into Value::PersistentListMap, or some other Value::..Map
 /// Example Successes:
 ///    {:a 1} => Value::PersistentListMap {PersistentListMap { MapEntry { :a, 1} .. ]})
-pub fn try_read_map(input: &str) -> IResult<&str, Value> {
+pub fn try_read_map<'a>(input: &'a str, environment: &Rc<Environment>) -> IResult<&'a str, Value> {
     named!(lbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("{")));
     named!(rbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("}")));
     let (map_inner_input, _) = lbracep(input)?;
@@ -477,8 +479,8 @@ pub fn try_read_map(input: &str) -> IResult<&str, Value> {
         if let Ok((after_map_input, _)) = right_brace {
             return Ok((after_map_input, map_as_vec.into_list_map().to_value()));
         }
-        let (_rest_input, next_key) = try_read(rest_input)?;
-        let (_rest_input, next_val) = try_read(_rest_input)?;
+        let (_rest_input, next_key) = try_read(rest_input, &environment)?;
+        let (_rest_input, next_val) = try_read(_rest_input, &environment)?;
         map_as_vec.push(MapEntry {
             key: Rc::new(next_key),
             val: Rc::new(next_val),
@@ -488,9 +490,13 @@ pub fn try_read_map(input: &str) -> IResult<&str, Value> {
 }
 
 /// Tries to parse symbol to symbol with meta TODO should be IObj
+/// Evaluates meta map
 /// Example Successes:
 ///    ^{:a 1} symbol => (with-meta symbol {:a 1})
-pub fn try_read_with_meta_symbol_map(input: &str) -> IResult<&str, Value> {
+pub fn try_read_with_meta_symbol_map<'a>(
+    input: &'a str,
+    environment: &Rc<Environment>,
+) -> IResult<&'a str, Value> {
     named!(lbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("^{")));
     named!(rbracep<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("}")));
     let (map_inner_input, _) = lbracep(input)?;
@@ -502,17 +508,19 @@ pub fn try_read_with_meta_symbol_map(input: &str) -> IResult<&str, Value> {
             // then parse symbol
             let (after_sym_input, (ns, name)) =
                 symbol_ns_name_parser(after_map_input.trim_start())?;
+
+            let meta_map = match Value::PersistentListMap(map_as_vec.into_list_map()) {
+                Value::PersistentListMap(plm) => plm,
+                _ => vec![].into_list_map(),
+            };
+
             return Ok((
                 after_sym_input,
-                Value::Symbol(Symbol::intern_with_ns_meta(
-                    &ns,
-                    &name,
-                    map_as_vec.into_list_map(),
-                )),
+                Value::Symbol(Symbol::intern_with_ns_meta(&ns, &name, meta_map)),
             ));
         };
-        let (_rest_input, next_key) = try_read(rest_input)?;
-        let (_rest_input, next_val) = try_read(_rest_input)?;
+        let (_rest_input, next_key) = try_read(rest_input, &environment)?;
+        let (_rest_input, next_val) = try_read(_rest_input, &environment)?;
         map_as_vec.push(MapEntry {
             key: Rc::new(next_key),
             val: Rc::new(next_val),
@@ -522,18 +530,25 @@ pub fn try_read_with_meta_symbol_map(input: &str) -> IResult<&str, Value> {
 }
 
 /// Tries to parse symbol to symbol with meta provided by keywords TODO should be IObj
+/// Evaluates tags
 /// Example Successes:
 ///    ^:static ^:private symbol => (with-meta value {:static true :private true})
-///    ^String => (with-meta value {:tag String}
-pub fn try_read_with_meta_symbol_keywords(input: &str) -> IResult<&str, Value> {
-    named!(meta_kw_start<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("^")));
+///    ^String => (with-meta value {:tag rust.std.string.String}
+pub fn try_read_with_meta_symbol_keywords<'a>(
+    input: &'a str,
+    environment: &Rc<Environment>,
+) -> IResult<&'a str, Value> {
+    named!(
+        meta_kw_start<&str, &str>,
+        preceded!(consume_clojure_whitespaces_parser, tag!("^"))
+    );
     let (after_caret, _) = meta_kw_start(input)?;
 
     let mut rest_input = after_caret;
     let mut meta_keywords = Vec::new();
 
     loop {
-        let (_rest_input, val) = try_read(rest_input)?;
+        let (_rest_input, val) = try_read(rest_input, &environment)?;
         match val {
             Value::Keyword(kw) => {
                 meta_keywords.push(MapEntry {
@@ -563,10 +578,10 @@ pub fn try_read_with_meta_symbol_keywords(input: &str) -> IResult<&str, Value> {
                     ));
                 } else {
                     // the symbol being read is a type that will be the :tag of the symbol / value
-                    // Todo : returns a symbol, not class... exploiting the fact that a symbol name get splitted by dots
                     meta_keywords.push(MapEntry {
                         key: Keyword::intern("tag").to_rc_value(),
-                        val: s.to_rc_value(),
+                        // TODO: can't be read from map, something happens with the val
+                        val: s.to_value().eval_to_rc(environment.to_owned()),
                     });
                 }
             }
@@ -582,7 +597,10 @@ pub fn try_read_with_meta_symbol_keywords(input: &str) -> IResult<&str, Value> {
 ///    [1 2 3] => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) ... ]})
 ///    [1 2 [5 10 15] 3]
 ///      => Value::PersistentVector(PersistentVector { vals: [Rc(Value::I32(1) .. Rc(Value::PersistentVector..)]})
-pub fn try_read_vector(input: &str) -> IResult<&str, Value> {
+pub fn try_read_vector<'a>(
+    input: &'a str,
+    environment: &Rc<Environment>,
+) -> IResult<&'a str, Value> {
     named!(lbracketp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("[")));
     named!(rbracketp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("]")));
     let (vector_inner_input, _) = lbracketp(input)?;
@@ -597,13 +615,13 @@ pub fn try_read_vector(input: &str) -> IResult<&str, Value> {
         }
 
         // Otherwise, we need to keep reading until we get that closing bracket letting us know we're finished
-        let (_rest_input, form) = try_read(rest_input)?;
+        let (_rest_input, form) = try_read(rest_input, &environment)?;
         vector_as_vec.push(form.to_rc_value());
         rest_input = _rest_input;
     }
 }
 
-pub fn try_read_list(input: &str) -> IResult<&str, Value> {
+pub fn try_read_list<'a>(input: &'a str, environment: &Rc<Environment>) -> IResult<&'a str, Value> {
     named!(lparenp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("(")));
     named!(rparenp<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!(")")));
 
@@ -614,18 +632,21 @@ pub fn try_read_list(input: &str) -> IResult<&str, Value> {
         if let Ok((after_list_input, _)) = rparenp(rest_input) {
             return Ok((after_list_input, list_as_vec.into_list().to_value()));
         }
-        let (_rest_input, form) = try_read(rest_input)?;
+        let (_rest_input, form) = try_read(rest_input, &environment)?;
         list_as_vec.push(form.to_rc_value());
         rest_input = _rest_input;
     }
 }
 
-pub fn try_read_quoted(input: &str) -> IResult<&str, Value> {
+pub fn try_read_quoted<'a>(
+    input: &'a str,
+    environment: &Rc<Environment>,
+) -> IResult<&'a str, Value> {
     named!(quote<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("'")));
 
     let (form, _) = quote(input)?;
 
-    let (rest_input, quoted_form_value) = try_read(form)?;
+    let (rest_input, quoted_form_value) = try_read(form, &environment)?;
 
     // (quote value)
     Ok((
@@ -639,15 +660,17 @@ pub fn try_read_quoted(input: &str) -> IResult<&str, Value> {
     ))
 }
 
-pub fn try_read(input: &str) -> IResult<&str, Value> {
+pub fn try_read<'a>(input: &'a str, environment: &Rc<Environment>) -> IResult<&'a str, Value> {
+    // all try_readers calling try_read must also provide env, for example some reader macros
+    // require evaluation
     preceded(
         consume_clojure_whitespaces_parser,
         alt((
-            try_read_with_meta_symbol_map,
-            try_read_with_meta_symbol_keywords,
-            try_read_quoted,
+            |inp| try_read_with_meta_symbol_map(inp, environment),
+            |inp| try_read_with_meta_symbol_keywords(inp, environment),
+            |inp| try_read_quoted(inp, environment),
             try_read_nil,
-            try_read_map,
+            |inp| try_read_map(inp, environment),
             try_read_string,
             try_read_f64,
             try_read_i32,
@@ -655,8 +678,8 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_nil,
             try_read_symbol,
             try_read_keyword,
-            try_read_list,
-            try_read_vector,
+            |inp| try_read_list(inp, environment),
+            |inp| try_read_vector(inp, environment),
             try_read_pattern,
             try_read_var,
         )),
@@ -673,7 +696,8 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // This is the high level read function that Clojure RS wraps
-pub fn read<R: BufRead>(reader: &mut R) -> Value {
+// Environment is provided for certain readers to evaluate expressions upon reading
+pub fn read<R: BufRead>(reader: &mut R, environment: &Rc<Environment>) -> Value {
     // This is a buffer that will accumulate if a read requires more
     // text to make sense, such as trying to read (+ 1
     let mut input_buffer = String::new();
@@ -696,7 +720,7 @@ pub fn read<R: BufRead>(reader: &mut R) -> Value {
             }
         }
 
-        let line_read = try_read(&input_buffer);
+        let line_read = try_read(&input_buffer, &environment);
         match line_read {
             Ok((_, value)) => return value,
             // Continue accumulating more input
@@ -894,6 +918,7 @@ mod tests {
     }
 
     mod try_read_tests {
+        use crate::environment::Environment;
         use crate::persistent_list;
         use crate::persistent_list_map;
         use crate::persistent_vector;
@@ -901,154 +926,192 @@ mod tests {
         use crate::symbol::Symbol;
         use crate::value::Value;
         use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
+        use std::rc::Rc;
 
         #[test]
         fn try_read_empty_map_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 PersistentListMap(persistent_list_map::PersistentListMap::Empty),
-                try_read("{} ").ok().unwrap().1
+                try_read("{} ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_string_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::String(String::from("a string")),
-                try_read("\"a string\" ").ok().unwrap().1
+                try_read("\"a string\" ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_string_empty() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::String(String::from("")),
-                try_read("\"\"").ok().unwrap().1
+                try_read("\"\"", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_string_escaped_quotes() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::String(String::from("\" \" c c caf \" fadsg")),
-                try_read(r#""\" \" c c caf \" fadsg""#).ok().unwrap().1
+                try_read(r#""\" \" c c caf \" fadsg""#, &env)
+                    .ok()
+                    .unwrap()
+                    .1
             );
         }
 
         #[test]
         fn try_read_string_newlines() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::String(String::from("\n fadsg \n")),
-                try_read(r#""\n fadsg \n""#).ok().unwrap().1
+                try_read(r#""\n fadsg \n""#, &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_int_test() {
-            assert_eq!(Value::I32(1), try_read("1 ").ok().unwrap().1);
+            let env = Rc::new(Environment::new_main_environment());
+            assert_eq!(Value::I32(1), try_read("1 ", &env).ok().unwrap().1);
         }
 
         #[test]
         fn try_read_negative_int_test() {
-            assert_eq!(Value::I32(-1), try_read("-1 ").ok().unwrap().1);
+            let env = Rc::new(Environment::new_main_environment());
+            assert_eq!(Value::I32(-1), try_read("-1 ", &env).ok().unwrap().1);
         }
 
         #[test]
         fn try_read_negative_int_with_second_dash_test() {
-            assert_eq!(Value::I32(-1), try_read("-1-2 ").ok().unwrap().1);
+            let env = Rc::new(Environment::new_main_environment());
+            assert_eq!(Value::I32(-1), try_read("-1-2 ", &env).ok().unwrap().1);
         }
 
         #[test]
         fn try_read_valid_symbol_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Symbol(Symbol::intern("my-symbol")),
-                try_read("my-symbol ").ok().unwrap().1
+                try_read("my-symbol ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_minus_as_valid_symbol_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Symbol(Symbol::intern("-")),
-                try_read("- ").ok().unwrap().1
+                try_read("- ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_minus_prefixed_as_valid_symbol_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Symbol(Symbol::intern("-prefixed")),
-                try_read("-prefixed ").ok().unwrap().1
+                try_read("-prefixed ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_empty_list_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 PersistentList(persistent_list::PersistentList::Empty),
-                try_read("() ").ok().unwrap().1
+                try_read("() ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_empty_vector_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 PersistentVector(persistent_vector::PersistentVector { vals: [].to_vec() }),
-                try_read("[] ").ok().unwrap().1
+                try_read("[] ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_bool_true_test() {
-            assert_eq!(Value::Boolean(true), try_read("true ").ok().unwrap().1)
+            let env = Rc::new(Environment::new_main_environment());
+            assert_eq!(
+                Value::Boolean(true),
+                try_read("true ", &env).ok().unwrap().1
+            )
         }
 
         #[test]
         fn try_read_bool_false_test() {
-            assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
+            let env = Rc::new(Environment::new_main_environment());
+            assert_eq!(
+                Value::Boolean(false),
+                try_read("false ", &env).ok().unwrap().1
+            )
         }
     }
 
     mod regex_tests {
+        use crate::environment::Environment;
         use crate::reader::try_read;
         use crate::value::Value;
+        use std::rc::Rc;
 
         #[test]
         fn try_read_simple_regex_pattern_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Pattern(regex::Regex::new("a").unwrap()),
-                try_read(r###"#"a" "###).ok().unwrap().1
+                try_read(r###"#"a" "###, &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_regex_pattern_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Pattern(regex::Regex::new("hello").unwrap()),
-                try_read("#\"hello\" ").ok().unwrap().1
+                try_read("#\"hello\" ", &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_regex_pattern_escaped_quote_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Pattern(regex::Regex::new("h\"e\"l\"l\"o\"").unwrap()),
-                try_read(r#"#"h\"e\"l\"l\"o\"" something"#).ok().unwrap().1
+                try_read(r#"#"h\"e\"l\"l\"o\"" something"#, &env)
+                    .ok()
+                    .unwrap()
+                    .1
             );
         }
 
         #[test]
         fn try_read_regex_pattern_escaped_quote_prefixed_by_whitespace_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Pattern(regex::Regex::new("h\"e\"l\"l \"o").unwrap()),
-                try_read(r#"#"h\"e\"l\"l \"o""#).ok().unwrap().1
+                try_read(r#"#"h\"e\"l\"l \"o""#, &env).ok().unwrap().1
             );
         }
 
         #[test]
         fn try_read_regex_pattern_escaped_quote_suffixed_by_whitespace_test() {
+            let env = Rc::new(Environment::new_main_environment());
             assert_eq!(
                 Value::Pattern(regex::Regex::new("h\"e\"l\" l \"o").unwrap()),
-                try_read(r#"#"h\"e\"l\" l \"o" something"#).ok().unwrap().1
+                try_read(r#"#"h\"e\"l\" l \"o" something"#, &env)
+                    .ok()
+                    .unwrap()
+                    .1
             );
         }
     }

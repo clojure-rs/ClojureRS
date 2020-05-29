@@ -25,12 +25,12 @@ impl Repl {
     }
 
     // Just wraps reader's read
-    pub fn read<R: BufRead>(reader: &mut R) -> Value {
-        reader::read(reader)
+    pub fn read<R: BufRead>(&self, reader: &mut R) -> Value {
+        reader::read(reader, &Rc::clone(&self.environment))
     }
     // @TODO add to reader.rs and wrap here
-    pub fn read_string(string: &str) -> Value {
-        Repl::read(&mut string.as_bytes())
+    pub fn read_string(&self, string: &str) -> Value {
+        Repl::read(&self, &mut string.as_bytes())
     }
     pub fn run(&self) {
         let stdin = io::stdin();
@@ -42,7 +42,7 @@ impl Repl {
             let next = {
                 let mut stdin_reader = stdin.lock();
                 // Read
-                Repl::read(&mut stdin_reader)
+                Repl::read(&self, &mut stdin_reader)
                 // Release stdin.lock
             };
 
@@ -61,7 +61,7 @@ impl Repl {
         let core = File::open(filepath)?;
         let mut reader = BufReader::new(core);
 
-        let mut last_val = Repl::read(&mut reader);
+        let mut last_val = Repl::read(&self, &mut reader);
         loop {
             // @TODO this is hardcoded until we refactor Conditions to have keys, so that
             //       we can properly identify them
@@ -80,7 +80,7 @@ impl Repl {
                 println!("{}", cond);
             }
 
-            last_val = Repl::read(&mut reader);
+            last_val = Repl::read(&self, &mut reader);
         }
     }
     pub fn eval_file(&self, filepath: &str) -> Value {
@@ -98,29 +98,33 @@ impl Default for Repl {
 
 #[cfg(test)]
 mod tests {
+    use crate::environment::Environment;
     use crate::repl::Repl;
     use crate::value::Value;
+    use std::rc::Rc;
+
     //@TODO separate into individual tests
     #[test]
     fn read_string() {
-        let num = Repl::read_string("1");
+        let repl = Rc::new(Repl::new(Rc::new(Environment::new_main_environment())));
+        let num = Repl::read_string(&repl, "1");
         match num {
             Value::I32(_) => {}
             _ => panic!("Reading of integer should have returned Value::I32"),
         }
-        let list = Repl::read_string("(+ 1 2)");
+        let list = Repl::read_string(&repl, "(+ 1 2)");
         match list {
             Value::PersistentList(_) => {}
             _ => panic!("Reading of integer should have returned Value::PersistentList"),
         }
 
-        let vector = Repl::read_string("[1 2 a]");
+        let vector = Repl::read_string(&repl, "[1 2 a]");
         match vector {
             Value::PersistentVector(_) => {}
             _ => panic!("Reading of integer should have returned Value::PersistentVector"),
         }
 
-        let symbol = Repl::read_string("abc");
+        let symbol = Repl::read_string(&repl, "abc");
         match symbol {
             Value::Symbol(_) => {}
             _ => panic!("Reading of integer should have returned Value::Symbol"),
