@@ -9,3 +9,12 @@ impl IsEven for usize {
         *self % 2 == 0
     }
 }
+
+pub trait IsOdd {
+    fn is_odd(&self) -> bool;
+}
+impl IsOdd for usize {
+    fn is_odd(&self) -> bool {
+        *self % 2 == 1
+    }
+}

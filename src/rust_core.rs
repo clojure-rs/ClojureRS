@@ -9,8 +9,12 @@ pub use self::eval::*;
 pub(crate) mod do_macro;
 pub use self::do_macro::*;
 
+// namespacing
 pub(crate) mod ns;
 pub use self::ns::*;
+
+pub(crate) mod refer;
+pub use self::refer::*;
 
 // arithmetics
 pub(crate) mod _plus_;

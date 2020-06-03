@@ -8,6 +8,9 @@ pub struct Keyword {
     pub sym: Symbol,
 }
 impl Keyword {
+    pub fn name(&self) -> &str {
+        self.sym.name()
+    }
     pub fn intern(name: &str) -> Keyword {
         Keyword {
             sym: Symbol::intern(name),
