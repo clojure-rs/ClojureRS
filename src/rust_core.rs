@@ -1,9 +1,11 @@
 // This module will hold core function and macro primitives that aren't special cases
 // (like the quote macro, or let), and can't be implemented in clojure itself
 
-// rust core special functionality
+// rust core special functionality, for java interop
 pub(crate) mod deftype_rs;
 pub use self::deftype_rs::*;
+pub(crate) mod symbol;
+pub use self::symbol::*;
 
 // special forms
 pub(crate) mod special_form;
@@ -48,6 +50,12 @@ pub use self::rand::*;
 pub(crate) mod rand_int;
 pub use self::rand_int::*;
 
+pub(crate) mod lt;
+pub use self::lt::*;
+
+pub(crate) mod gt;
+pub use self::gt::*;
+
 // string
 pub(crate) mod str;
 pub use self::str::*;
@@ -55,6 +63,8 @@ pub use self::str::*;
 // operations on collections
 pub(crate) mod cons;
 pub use self::cons::*;
+pub(crate) mod count;
+pub use self::count::*;
 pub(crate) mod nth;
 pub use self::nth::*;
 pub(crate) mod concat;

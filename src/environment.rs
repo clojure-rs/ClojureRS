@@ -282,6 +282,10 @@ impl Environment {
         let var_fn = rust_core::special_form::VarFn::new(Rc::clone(&environment));
         let type_fn = rust_core::type_fn::TypeFn {};
         let deftype_rs_fn = rust_core::deftype_rs::DeftypeRsFn {};
+        let symbol_fn = rust_core::symbol::SymbolFn::new(Rc::clone(&environment));
+        let count_fn = rust_core::count::CountFn {};
+        let lt_fn = rust_core::lt::LtFn {};
+        let gt_fn = rust_core::gt::GtFn {};
 
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
@@ -298,6 +302,7 @@ impl Environment {
         environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
         environment.insert(Symbol::intern("def"), def_macro.to_rc_value());
+        environment.insert(Symbol::intern("fn*"), def_macro.to_rc_value()); // TODO refactor to special form
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
@@ -306,7 +311,6 @@ impl Environment {
         environment.insert(Symbol::intern("print-doc"), print_doc_fn.to_rc_value());
         environment.insert(Symbol::intern("var-special-form"), var_fn.to_rc_value());
         environment.insert(Symbol::intern("type"), type_fn.to_rc_value());
-        environment.insert(Symbol::intern("deftype-rs"), deftype_rs_fn.to_rc_value());
 
         // Thread namespace
         environment.insert_into_namespace(
@@ -453,6 +457,38 @@ impl Environment {
         environment.insert(Symbol::intern("read-line"), read_line_fn.to_rc_value());
 
         environment.insert(Symbol::intern("="), equals_fn.to_rc_value());
+
+        // Interop to read real clojure.core
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("deftype-rs"),
+            deftype_rs_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("symbol"),
+            symbol_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("count"),
+            count_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("lt"),
+            lt_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("gt"),
+            gt_fn.to_rc_value(),
+        );
+
         //
         // Read in clojure.core
         //
@@ -460,6 +496,9 @@ impl Environment {
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
         // TODO: should read into namespace if (ns ..) is given in source file
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/string.clj");
+        // TODO: should read into namespace if (ns ..) is given in source file
+        let _ =
+            Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/clojure_interop.clj");
 
         // We can add this back once we have requires
         // environment.change_namespace(Symbol::intern("user"));
