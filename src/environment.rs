@@ -265,6 +265,9 @@ impl Environment {
         let first_fn = rust_core::FirstFn {};
         let second_fn = rust_core::SecondFn {};
 
+        let type_fn = rust_core::type_fn::TypeFn {};
+        let deftype_rs_fn = rust_core::deftype_rs::DeftypeRsFn {};
+
         // rust implementations of core functions
         let slurp_fn = rust_core::slurp::SlurpFn {};
 
@@ -325,6 +328,15 @@ impl Environment {
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
+
+        environment.insert(Symbol::intern("type"), type_fn.to_rc_value());
+
+        // Interop to read real clojure.core
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("deftype-rs"),
+            deftype_rs_fn.to_rc_value(),
+        );
 
         // Thread namespace
         environment.insert_into_namespace(
@@ -475,13 +487,19 @@ impl Environment {
         //
         // Read in clojure.core
         //
+
+        // First, we read in interop layer
+        let _ =
+            Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/clojure_interop.clj");
+
         // @TODO its time for a RT (runtime), which environment seems to be becoming
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/core.clj");
         // TODO: should read into namespace if (ns ..) is given in source file
         let _ = Repl::new(Rc::clone(&environment)).try_eval_file("./src/clojure/string.clj");
+        // TODO: should read into namespace if (ns ..) is given in source file
 
-        // We can add this back once we have requires
-        // environment.change_or_create_namespace(Symbol::intern("user"));
+        // We create a user namespace for the user
+        environment.change_or_create_namespace(&Symbol::intern("user"));
 
         environment
     }

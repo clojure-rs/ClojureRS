@@ -33,7 +33,6 @@ impl IFn for BlankFn {
                         );
                     }
                 }
-                Value::String(s) => Value::String(s.chars().rev().collect()),
                 _a => error_message::type_mismatch(TypeTag::String, &_a.to_value()),
             }
         }

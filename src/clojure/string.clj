@@ -1,7 +1,7 @@
-"clojure.string"
+(ns clojure.string)
 
 "TODO : some special syntax required because of missing require"
 
-(def clojure.string/split-lines
+(def split-lines
   (fn [s]
-    (clojure.string/split s #"\r?\n")))
+    (split s #"\r?\n")))

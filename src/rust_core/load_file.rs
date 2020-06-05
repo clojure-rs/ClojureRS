@@ -30,7 +30,7 @@ impl IFn for LoadFileFn {
             ))
         } else if let Value::String(file) = &**args.get(0).unwrap() {
             // @TODO clean this
-            Repl::new(Rc::clone(&self.enclosing_environment)).try_eval_file(file);
+            let _ = Repl::new(Rc::clone(&self.enclosing_environment)).try_eval_file(file);
             //@TODO remove this placeholder value, return last value evaluated in try_eval_file
             Value::Nil
         } else {

@@ -1,7 +1,6 @@
 use crate::type_tag::TypeTag;
 use crate::value::Value;
 use std::error::Error;
-use std::fmt;
 
 pub fn type_mismatch(expected: TypeTag, got: &Value) -> Value {
     Value::Condition(format!(

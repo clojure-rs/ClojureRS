@@ -1,3 +1,6 @@
+(ns clojure.core)
+(refer 'clojure.interop)
+
 (def *flush-on-newline* true)
 (def *print-readably* true)
 

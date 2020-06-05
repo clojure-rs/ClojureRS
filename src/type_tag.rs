@@ -6,6 +6,7 @@ pub enum TypeTag {
     F64,
     Boolean,
     Symbol,
+    Class,
     Keyword,
     IFn,
     Condition,
@@ -30,8 +31,9 @@ impl fmt::Display for TypeTag {
             Boolean => std::string::String::from("rust.std.bool"),
             F64 => std::string::String::from("rust.std.f64"),
             Symbol => std::string::String::from("clojure.lang.Symbol"),
+            Class => std::string::String::from("clojure.lang.Class"),
             Keyword => std::string::String::from("clojure.lang.Keyword"),
-            IFn => std::string::String::from("clojure.lang.Function"),
+            IFn => std::string::String::from("clojure.lang.IFn"),
             Condition => std::string::String::from("clojure.lang.Condition"),
             PersistentList => std::string::String::from("clojure.lang.PersistentList"),
             PersistentVector => std::string::String::from("clojure.lang.PersistentVector"),
@@ -45,4 +47,27 @@ impl fmt::Display for TypeTag {
         };
         write!(f, "{}", str)
     }
+}
+
+pub fn type_tag_for_name(type_tag_name: &str) -> TypeTag {
+    return match type_tag_name {
+        "rust.std.i32" => return TypeTag::I32,
+        "rust.std.bool" => TypeTag::Boolean,
+        "rust.std.f64" => TypeTag::F64,
+        "clojure.lang.Symbol" => TypeTag::Symbol,
+        "clojure.lang.Class" => TypeTag::Class,
+        "clojure.lang.Keyword" => TypeTag::Keyword,
+        "clojure.lang.Function" => TypeTag::IFn,
+        "clojure.lang.Condition" => TypeTag::Condition,
+        "clojure.lang.PersistentList" => TypeTag::PersistentList,
+        "clojure.lang.PersistentVector" => TypeTag::PersistentVector,
+        "clojure.lang.PersistentListMap" => TypeTag::PersistentListMap,
+        "clojure.lang.Macro" => TypeTag::Macro,
+        "rust.std.string.String" => TypeTag::String,
+        "clojure.lang.Integer" => TypeTag::Integer,
+        "clojure.lang.ISeq" => TypeTag::ISeq,
+        "clojure.lang.Nil" => TypeTag::Nil,
+        "rust.regex" => TypeTag::Pattern,
+        _ => TypeTag::Nil,
+    };
 }
