@@ -50,6 +50,8 @@ pub(crate) mod get;
 pub use self::get::*;
 pub(crate) mod map;
 pub use self::map::*;
+pub(crate) mod cons;
+pub use self::cons::*;
 
 pub(crate) mod more;
 pub use self::more::*;
