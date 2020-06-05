@@ -2,7 +2,7 @@ use crate::environment::Environment;
 use crate::error_message;
 use crate::ifn::IFn;
 use crate::keyword::Keyword;
-use crate::persistent_vector::{ToPersistentVectorIter};
+use crate::persistent_vector::ToPersistentVectorIter;
 use crate::symbol::Symbol;
 use crate::type_tag::TypeTag;
 use crate::util::IsOdd;

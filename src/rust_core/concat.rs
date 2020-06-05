@@ -33,3 +33,52 @@ impl IFn for ConcatFn {
         Value::PersistentList(concatted_vec.into_iter().collect::<PersistentList>())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    mod concat_tests {
+        use crate::ifn::IFn;
+        use crate::persistent_list::PersistentList;
+        use crate::persistent_vector::PersistentVector;
+        use crate::rust_core::ConcatFn;
+        use crate::value::Value;
+        use std::rc::Rc;
+
+        #[test]
+        fn concat_test() {
+            let concat = ConcatFn {};
+            let s = "insert as first";
+            let args = vec![
+                Rc::new(Value::PersistentVector(
+                    vec![
+                        Rc::new(Value::String(String::from("1.1"))),
+                        Rc::new(Value::String(String::from("1.2"))),
+                    ]
+                    .into_iter()
+                    .collect::<PersistentVector>(),
+                )),
+                Rc::new(Value::PersistentVector(
+                    vec![
+                        Rc::new(Value::String(String::from("2.1"))),
+                        Rc::new(Value::String(String::from("2.2"))),
+                    ]
+                    .into_iter()
+                    .collect::<PersistentVector>(),
+                )),
+            ];
+            assert_eq!(
+                Value::PersistentList(
+                    vec![
+                        Rc::new(Value::String(String::from("1.1"))),
+                        Rc::new(Value::String(String::from("1.2"))),
+                        Rc::new(Value::String(String::from("2.1"))),
+                        Rc::new(Value::String(String::from("2.2")))
+                    ]
+                    .into_iter()
+                    .collect::<PersistentList>()
+                ),
+                concat.invoke(args)
+            );
+        }
+    }
+}

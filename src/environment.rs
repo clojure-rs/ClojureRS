@@ -307,6 +307,7 @@ impl Environment {
         let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
         let load_file_fn = rust_core::LoadFileFn::new(Rc::clone(&environment));
         let refer_fn = rust_core::ReferFn::new(Rc::clone(&environment));
+        let cons_fn = rust_core::ConsFn {};
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
         //       I prefer explicity and the non-dependence-on-environmental-factors
@@ -454,6 +455,7 @@ impl Environment {
         environment.insert(Symbol::intern("more"), more_fn.to_rc_value());
         environment.insert(Symbol::intern("first"), first_fn.to_rc_value());
         environment.insert(Symbol::intern("second"), second_fn.to_rc_value());
+        environment.insert(Symbol::intern("cons"), cons_fn.to_rc_value());
         // input and output
         environment.insert(
             Symbol::intern("system-newline"),
