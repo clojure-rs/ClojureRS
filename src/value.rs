@@ -56,6 +56,7 @@ pub enum Value {
     DefmacroMacro,
     DefMacro,
     FnMacro,
+    FnStarSpecialForm,
     LetMacro,
     IfMacro,
 
@@ -63,6 +64,7 @@ pub enum Value {
     Nil,
     Pattern(regex::Regex),
 }
+use crate::rust_core::FnStar;
 use crate::value::Value::*;
 
 impl PartialEq for Value {
@@ -106,6 +108,7 @@ enum ValueHash {
     DefmacroMacro,
     DefMacro,
     FnMacro,
+    FnStarSpecialForm,
     IfMacro,
     LetMacro,
     Nil,
@@ -140,6 +143,7 @@ impl Hash for Value {
             DefmacroMacro => ValueHash::DefmacroMacro.hash(state),
             DefMacro => ValueHash::DefMacro.hash(state),
             FnMacro => ValueHash::FnMacro.hash(state),
+            FnStarSpecialForm => ValueHash::FnStarSpecialForm.hash(state),
             LetMacro => ValueHash::LetMacro.hash(state),
             IfMacro => ValueHash::IfMacro.hash(state),
 
@@ -170,6 +174,7 @@ impl fmt::Display for Value {
             DefMacro => std::string::String::from("#macro[def*]"),
             DefmacroMacro => std::string::String::from("#macro[defmacro*]"),
             FnMacro => std::string::String::from("#macro[fn*]"),
+            FnStarSpecialForm => std::string::String::from("#specialform[fn*]"),
             IfMacro => std::string::String::from("#macro[if*]"),
             LetMacro => std::string::String::from("#macro[let*]"),
             Value::String(string) => string.clone(),
@@ -217,6 +222,7 @@ impl Value {
             Value::DefmacroMacro => TypeTag::Macro,
             Value::LetMacro => TypeTag::Macro,
             Value::FnMacro => TypeTag::Macro,
+            Value::FnStarSpecialForm => TypeTag::Macro,
             Value::IfMacro => TypeTag::Macro,
             Value::String(_) => TypeTag::String,
             Value::Nil => TypeTag::Nil,
@@ -529,6 +535,7 @@ impl Value {
                     )
                 }
             }
+            Value::FnStarSpecialForm => FnStar(environment, args),
             //
             // If we're not a valid IFn
             //
