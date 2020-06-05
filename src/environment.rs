@@ -307,6 +307,10 @@ impl Environment {
         let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
         let load_file_fn = rust_core::LoadFileFn::new(Rc::clone(&environment));
         let refer_fn = rust_core::ReferFn::new(Rc::clone(&environment));
+        let lt_fn = rust_core::lt::LtFn {};
+        let gt_fn = rust_core::gt::GtFn {};
+        let lte_fn = rust_core::lte::LteFn {};
+        let gte_fn = rust_core::gte::GteFn {};
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
         //       I prefer explicity and the non-dependence-on-environmental-factors
@@ -325,6 +329,30 @@ impl Environment {
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
+
+        // Interop to read real clojure.core
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("lt"),
+            lt_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("gt"),
+            gt_fn.to_rc_value(),
+        );
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("lte"),
+            lte_fn.to_rc_value(),
+        );
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.interop"),
+            Symbol::intern("gte"),
+            gte_fn.to_rc_value(),
+        );
 
         // Thread namespace
         environment.insert_into_namespace(
