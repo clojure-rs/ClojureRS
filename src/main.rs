@@ -15,6 +15,7 @@ mod namespace;
 mod persistent_list;
 mod persistent_list_map;
 mod persistent_vector;
+#[macro_use]
 mod protocol;
 mod reader;
 mod repl;
@@ -25,6 +26,7 @@ mod user_action;
 mod util;
 mod value;
 
+mod protocols;
 fn main() {
     let cli_args: user_action::Action = user_action::parse_args(std::env::args().collect());
 
