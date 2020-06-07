@@ -8,23 +8,25 @@
 //! not;  since this is about being a 'free-er' Clojure, especially since it can't compete with it in raw
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
-use nom::combinator::verify;
+use nom::combinator::{verify};
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
-    terminated, AsChar, Err::Incomplete, IResult,
+    Err::Incomplete, IResult
 };
 
 use crate::keyword::Keyword;
 use crate::maps::MapEntry;
 use crate::persistent_list::ToPersistentList;
-use crate::persistent_list_map::ToPersistentListMap;
+use crate::persistent_list_map::{PersistentListMap,ToPersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::ToPersistentVector;
+use crate::protocol::ProtocolCastable;
+use crate::protocol::Protocol;
 use crate::symbol::Symbol;
+use crate::error_message;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
-
-use nom::Err::Error;
-use std::borrow::Borrow;
+use crate::protocols;
+use crate::traits::IObj;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -148,7 +150,7 @@ fn is_period_char(chr: char) -> bool {
 ///
 /// Clojure defines a whitespace as either a comma or an unicode whitespace.
 fn is_clojure_whitespace(c: char) -> bool {
-    c.is_whitespace() || c == ',' 
+    c.is_whitespace() || c == ','
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //     End predicates
@@ -169,16 +171,16 @@ fn consume_clojure_whitespaces_parser(input: &str) -> IResult<&str, ()> {
 
     named!(whitespace_parser<&str,()>,
            value!((),
-               many0!(alt!(comment_parser | 
+               many0!(alt!(comment_parser |
                            take_while1!(is_clojure_whitespace))))
     );
 
     named!(no_whitespace_parser<&str,()>, value!((),tag!("")));
 
-    // @TODO rename / check that all parsers are consistent? 
+    // @TODO rename / check that all parsers are consistent?
     named!(parser<&str,()>,
            // Because 'whitespace_parser' loops, we cannot include the case where there's no whitespace at all in
-           // its definition -- nom wouldn't allow it, as it would loop forever consuming no whitespace 
+           // its definition -- nom wouldn't allow it, as it would loop forever consuming no whitespace
            // So instead, we eat up all the whitespace first, and then use the no_whitespace_parser as our sort-of
            // base-case after
            alt!(whitespace_parser | no_whitespace_parser)
@@ -457,6 +459,60 @@ pub fn try_read_map(input: &str) -> IResult<&str, Value> {
     }
 }
 
+pub fn try_read_meta(input: &str) -> IResult<&str, Value> {
+    named!(meta_start<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("^")));
+    let (rest_input, _) = meta_start(input)?;
+
+    let (rest_input,meta_value) = try_read(rest_input)?;
+    let mut meta = PersistentListMap::Empty;
+    match &meta_value {
+        Value::Symbol(symbol) => {
+            // @TODO Note; do NOT hardcode this, make some global for TAG_KEY, like Clojure does
+            meta = persistent_list_map!{"tag" => symbol};
+        },
+        Value::Keyword(keyword) => {
+            meta = persistent_list_map!(
+                MapEntry {
+                    key: meta_value.to_rc_value(),
+                    val: true.to_rc_value()
+                }
+            );
+        },
+        Value::String(string) => {
+            // @TODO Note; do NOT hardcode this, make some global for TAG_KEY, like Clojure does
+            meta = persistent_list_map!{"tag" => string};
+        },
+        Value::PersistentListMap(plist_map) => {
+            meta = plist_map.clone();
+         // Then we're already set
+        }
+        _ => {
+            // @TODO check instanceof IPersistentMap here instead
+            // @TODO Clojure has basically this one off error here, but another thing we wish to do
+            //       is write clear errors 
+            return Ok((rest_input,error_message::custom("When trying to read meta: metadata must be Symbol, Keyword, String, or Map")))
+        }
+    }
+    let (rest_input,iobj_value) = try_read(rest_input)?;
+
+    // Extra clone, implement these functions for plain Values 
+    if let Some(iobj_value) =  iobj_value.to_rc_value().try_as_protocol::<protocols::IObj>() {
+        // @TODO get actual line and column info
+        let line = 1;
+        let column = 1;
+        // @TODO merge the meta iobj_value *already* has
+        // @TODO define some better macros and / or functions for map handling 
+        meta = merge!(
+            meta,
+            map_entry!("line",line),
+            map_entry!("column",column)
+        );
+        Ok((rest_input,iobj_value.with_meta(meta).unwrap().to_value()))
+    }
+    else {
+        Ok((rest_input,error_message::custom("In meta reader: metadata can only be applied to types who are an instance of IMeta")))
+    }
+}
 // @TODO use nom functions in place of macro
 /// Tries to parse &str into Value::PersistentVector
 /// Example Successes:
@@ -553,12 +609,15 @@ pub fn read<R: BufRead>(reader: &mut R) -> Value {
     // loop over and ask for more lines, accumulating them in input_buffer until we can read
     loop {
         let maybe_line = reader.by_ref().lines().next();
-        
+
         match maybe_line {
             Some(Err(e)) => return Value::Condition(format!("Reader error: {}", e)),
             // `lines` does not include \n,  but \n is part of the whitespace given to the reader
-            // (and is important for reading comments) so we will push a newline as well 
-            Some(Ok(line)) => { input_buffer.push_str(&line); input_buffer.push_str("\n"); },
+            // (and is important for reading comments) so we will push a newline as well
+            Some(Ok(line)) => {
+                input_buffer.push_str(&line);
+                input_buffer.push_str("\n");
+            }
             None => {
                 return Value::Condition(String::from("Tried to read empty stream; unexpected EOF"))
             }
@@ -764,11 +823,13 @@ mod tests {
     mod try_read_tests {
         use crate::persistent_list;
         use crate::persistent_list_map;
+        use crate::persistent_list_map::IPersistentMap;
+        use crate::keyword::Keyword;
         use crate::persistent_vector;
         use crate::reader::try_read;
         use crate::symbol::Symbol;
+        use crate::value::{ToValue,Value};
         use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
-        use crate::value::{ToValue, Value};
 
         #[test]
         fn try_read_empty_map_test() {
@@ -873,6 +934,59 @@ mod tests {
         #[test]
         fn try_read_bool_false_test() {
             assert_eq!(Value::Boolean(false), try_read("false ").ok().unwrap().1)
+        }
+        #[test]
+        fn try_read_meta_symbol() {
+           let with_meta = "^cat a";
+            match try_read(with_meta).ok().unwrap().1 {
+                Value::Symbol(symbol) => {
+                    assert!(symbol.meta().contains_key(&Keyword::intern("tag").to_rc_value()));
+                    assert_eq!(
+                        Symbol::intern("cat").to_value(),
+                        *symbol.meta().get(&Keyword::intern("tag").to_rc_value())
+                    );
+                },
+                _ => panic!("try_read_meta \"^cat a\" should return a symbol")
+            }
+        }
+        #[test]
+        fn try_read_meta_string() {
+            let with_meta = "^\"cat\" a";
+            match try_read(with_meta).ok().unwrap().1 {
+                Value::Symbol(symbol) => {
+                    assert_eq!(String::from("a"),symbol.name);
+                    assert!(symbol.meta().contains_key(&Keyword::intern("tag").to_rc_value()));
+                    assert_eq!(
+                        "cat".to_value(),
+                        *symbol.meta().get(&Keyword::intern("tag").to_rc_value())
+                    );
+                },
+                _ => panic!("try_read_meta '^\"cat\" a' should return a symbol")
+            }
+        }
+        #[test]
+        fn try_read_meta_persistent_list_map() {
+            let with_meta = "^{:cat 1 :dog 2} a";
+            match try_read(with_meta).ok().unwrap().1 {
+                Value::Symbol(symbol) => {
+                    assert!(symbol.meta().contains_key(&Keyword::intern("cat").to_rc_value()));
+                    assert_eq!(Value::I32(1),*symbol.meta().get(&Keyword::intern("cat").to_rc_value()));
+                    assert!(symbol.meta().contains_key(&Keyword::intern("dog").to_rc_value()));
+                    assert_eq!(Value::I32(2),*symbol.meta().get(&Keyword::intern("dog").to_rc_value()));
+                    assert!(!symbol.meta().contains_key(&Keyword::intern("chicken").to_rc_value()));
+                },
+                _ => panic!("try_read_meta \"^{:cat 1 :dog 2} a\" should return a symbol")
+            }
+        }
+        #[test]
+        fn try_read_meta_keyword() {
+            let with_meta = "^:cat a";
+            match try_read(with_meta).ok().unwrap().1 {
+                Value::Symbol(symbol) => {
+                   assert!(symbol.meta().contains_key(&Keyword::intern("cat").to_rc_value()));
+                },
+                _ => panic!("try_read_meta \"^:cat a\" should return a symbol")
+            }
         }
     }
 
