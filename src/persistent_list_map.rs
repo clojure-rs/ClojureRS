@@ -15,6 +15,7 @@
 
 use crate::maps::MapEntry;
 use crate::value::Value;
+use crate::traits;
 
 use std::collections::HashMap;
 use std::convert::From;
@@ -27,12 +28,76 @@ pub enum PersistentListMap {
     Map(Rc<PersistentListMap>, MapEntry),
     Empty,
 }
-// Again, only using strange IBlah convention to reflect the Clojure base
-// @TODO really though .. just rethink this
+impl Eq for PersistentListMap {}
+
+/// map_entry!("doc", "this is a docstring");
+#[macro_export]
+macro_rules! map_entry {
+    ($key:expr, $value:expr) => {{
+        MapEntry {
+            key: Keyword::intern($key).to_rc_value(),
+            val: $value.to_rc_value(),
+        }
+    }};
+}
+
+/// persistent_list_map!(map_entry!("key1", "value1"), map_entry!("key2", "value2"));
+#[macro_export]
+macro_rules! persistent_list_map {
+    ($($kv:expr),*) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($kv);
+            )*
+                temp_vec.into_iter().collect::<PersistentListMap>()
+        }
+    };
+    {$($key:expr => $val:expr),*} => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push(map_entry!($key,$val));
+            )*
+                temp_vec.into_iter().collect::<PersistentListMap>()
+        }
+    };
+}
+
+/// merge!(base_meta(name, ns), map_entry!("key1", "value1"), map_entry!("key2", "value2"));
+#[macro_export]
+macro_rules! merge {
+    ( $plistmap:expr, $($kv:expr), *) => {
+        {
+            let mut temp_plistmap_as_vec = $plistmap.clone().iter().collect::<Vec<MapEntry>>();
+            $(
+                temp_plistmap_as_vec.push($kv);
+            )*
+            temp_plistmap_as_vec.into_iter().collect::<PersistentListMap>()
+        }
+    };
+}
+
+/// merge!(base_meta(name, ns), map_entry!("key1", "value1"), map_entry!("key2", "value2"));
+#[macro_export]
+macro_rules! merge_maps {
+    ( $plistmap:expr, $($kv:expr), *) => {
+        {
+            let mut temp_plistmap_as_vec = $plistmap.clone().iter().collect::<Vec<MapEntry>>();
+            $(
+                temp_plistmap_as_vec.push($kv);
+            )*
+            temp_plistmap_as_vec.into_iter().collect::<PersistentListMap>()
+        }
+    };
+}
+
+// @TODO put note on IBlah traits in doc
 /// A PersistentListMap.
 pub trait IPersistentMap {
     fn get(&self, key: &Rc<Value>) -> Rc<Value>;
     fn assoc(&self, key: Rc<Value>, value: Rc<Value>) -> Self;
+    fn contains_key(&self,key: &Rc<Value>) -> bool;
 }
 impl IPersistentMap for PersistentListMap {
     // @TODO make fn of ILookup
@@ -49,6 +114,17 @@ impl IPersistentMap for PersistentListMap {
     }
     fn assoc(&self, key: Rc<Value>, val: Rc<Value>) -> PersistentListMap {
         PersistentListMap::Map(Rc::new(self.clone()), MapEntry { key, val })
+    }
+    fn contains_key(&self,key: &Rc<Value>) -> bool {
+        match self {
+            PersistentListMap::Map(parent, entry) => {
+                if entry.key == *key {
+                    return true;
+                }
+                parent.contains_key(key)
+            },
+            PersistentListMap::Empty => false
+        }
     }
 }
 
@@ -70,6 +146,17 @@ impl IPersistentMap for Rc<PersistentListMap> {
             Rc::clone(self),
             MapEntry { key, val },
         ))
+    }
+    fn contains_key(&self,key: &Rc<Value>) -> bool {
+        match &**self {
+            PersistentListMap::Map(parent, entry) => {
+                if entry.key == *key {
+                    return true;
+                }
+                parent.contains_key(key)
+            },
+            PersistentListMap::Empty => false
+        }
     }
 }
 
@@ -146,7 +233,18 @@ impl FromIterator<MapEntry> for PersistentListMap {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // End Iteration
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
+impl traits::IMeta for PersistentListMap {
+    fn meta(&self) -> PersistentListMap {
+        // @TODO implement
+        PersistentListMap::Empty
+    }
+}
+impl traits::IObj for PersistentListMap {
+    fn with_meta(&self,meta: PersistentListMap) -> PersistentListMap {
+        // @TODO implement
+        self.clone()
+    }
+}
 impl fmt::Display for PersistentListMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut as_str = String::from("{");
@@ -172,10 +270,11 @@ impl fmt::Display for PersistentListMap {
 mod tests {
     use crate::persistent_list_map::*;
     use crate::symbol::Symbol;
+    use crate::keyword::Keyword;
     use crate::value::ToValue;
 
     #[test]
-    fn test_persistent_list_map() {
+    fn persistent_list_map() {
         let map1 = vec![
             MapEntry {
                 key: Symbol::intern("a").to_rc_value(),
@@ -201,5 +300,12 @@ mod tests {
         println!("{}", map2);
         println!("{}", map3);
         println!("{}", map4);
+    }
+    #[test]
+    fn contains_key() {
+        let map1 = persistent_list_map!{ "a" => 12, "b" => 13 };
+        assert!(map1.contains_key(&Keyword::intern("a").to_rc_value()));
+        assert!(map1.contains_key(&Keyword::intern("b").to_rc_value()));
+        assert!(!map1.contains_key(&Keyword::intern("c").to_rc_value()));
     }
 }
