@@ -4,6 +4,8 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use crate::value::{ToValue, Value};
+use crate::persistent_list_map::PersistentListMap;
+use crate::traits;
 use std::hash::Hash;
 
 #[derive(Debug, Clone, PartialEq, Hash)]
@@ -64,6 +66,18 @@ impl ToPersistentList for Vec<&Value> {
 impl ToPersistentList for Vec<Rc<Value>> {
     fn into_list(self) -> PersistentList {
         self.into_iter().collect::<PersistentList>()
+    }
+}
+impl traits::IMeta for PersistentList {
+    fn meta(&self) -> PersistentListMap {
+        // @TODO implement
+        PersistentListMap::Empty
+    }
+}
+impl traits::IObj for PersistentList {
+    fn with_meta(&self,meta: PersistentListMap) -> PersistentList {
+        // @TODO implement
+        self.clone()
     }
 }
 impl fmt::Display for PersistentList {
