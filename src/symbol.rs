@@ -1,5 +1,9 @@
+use crate::persistent_list_map::PersistentListMap;
+use crate::traits;
 use std::fmt;
 use std::hash::Hash;
+
+use crate::meta;
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Symbol {
@@ -11,6 +15,12 @@ pub struct Symbol {
     //       route, the sort of invariants ADTs are good at.
     //       Most likely, we will reimplement this as Option<String>
     pub ns: String,
+    pub meta: PersistentListMap,
+}
+macro_rules! sym {
+    ($x:expr) => {
+        Symbol::intern($x)
+    }
 }
 impl Symbol {
     pub fn intern(name: &str) -> Symbol {
@@ -37,6 +47,7 @@ impl Symbol {
         Symbol {
             name: String::from(name),
             ns: String::from(ns),
+            meta: PersistentListMap::Empty,
         }
     }
     pub fn unqualified(&self) -> Symbol {
@@ -47,6 +58,26 @@ impl Symbol {
     }
     pub fn name(&self) -> &str {
         &self.name
+    // @TODO use IPersistentMap instead perhaps 
+    pub fn meta(&self) -> PersistentListMap {
+        self.meta.clone()
+    }
+    pub fn with_meta(&self, meta: PersistentListMap) -> Symbol {
+        Symbol {
+            name: self.name.clone(), // String::from(self.name.clone()),
+            ns: self.ns.clone(),        // String::from(self.ns.clone()),
+            meta,
+        }
+    }
+}
+impl traits::IMeta for Symbol {
+    fn meta(&self) -> PersistentListMap {
+        self.meta()
+    }
+}
+impl traits::IObj for Symbol {
+    fn with_meta(&self,meta: PersistentListMap) -> Symbol {
+        self.with_meta(meta)
     }
 }
 impl fmt::Display for Symbol {
@@ -61,7 +92,14 @@ impl fmt::Display for Symbol {
 mod tests {
 
     mod symbol_tests {
+        use crate::keyword::Keyword;
+        use crate::maps::MapEntry;
+        use crate::meta;
+        use crate::persistent_list_map::ToPersistentListMapIter;
+        use crate::persistent_list_map::{PersistentListMap, PersistentListMapIter};
         use crate::symbol::Symbol;
+        use crate::value::ToValue;
+        use crate::value::Value;
         use std::collections::HashMap;
 
         #[test]
@@ -70,7 +108,8 @@ mod tests {
                 Symbol::intern("a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: PersistentListMap::Empty,
                 }
             );
         }
@@ -81,45 +120,87 @@ mod tests {
                 Symbol::intern_with_ns("clojure.core", "a"),
                 Symbol {
                     ns: String::from("clojure.core"),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: PersistentListMap::Empty
                 }
             );
             assert_eq!(
                 Symbol::intern_with_ns("", "a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: PersistentListMap::Empty
                 }
             );
             assert_eq!(
                 Symbol::intern("a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: PersistentListMap::Empty
                 }
             );
             assert_eq!(
                 Symbol::intern("clojure.core/a"),
                 Symbol {
                     ns: String::from("clojure.core"),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: PersistentListMap::Empty
                 }
             );
             assert_eq!(
                 Symbol::intern("clojure/a"),
                 Symbol {
                     ns: String::from("clojure"),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: PersistentListMap::Empty,
                 }
             );
             assert_eq!(
                 Symbol::intern("/a"),
                 Symbol {
                     ns: String::from(""),
-                    name: String::from("a")
+                    name: String::from("a"),
+                    meta: PersistentListMap::Empty,
                 }
             );
         }
+        #[test]
+        fn test_with_meta() {
+            assert_eq!(
+                Symbol::intern_with_ns(
+                    "namespace",
+                    "name"
+                ).with_meta(
+                    persistent_list_map!(map_entry!("key", "value"))
+                ),
+                Symbol {
+                    ns: String::from("namespace"),
+                    name: String::from("name"),
+                    meta: persistent_list_map!(map_entry!("key", "value"))
+                }
+            );
+            assert_eq!(
+                Symbol::intern_with_ns(
+                    "namespace",
+                    "name"
+                ).with_meta(
+                    merge!(
+                        PersistentListMap::Empty,
+                        map_entry!("key", "value")
+                    )
+                ),
+                Symbol {
+                    ns: String::from("namespace"),
+                    name: String::from("name"),
+                    meta: merge!(
+                        PersistentListMap::Empty,
+                        map_entry!("key", "value")
+                    )
+                }
+            );
+        }
+
         #[test]
         fn test_work_with_hashmap() {
             let mut hashmap = HashMap::new();
