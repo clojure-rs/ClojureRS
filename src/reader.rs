@@ -433,6 +433,16 @@ pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
     let regex = regex::Regex::new(regex_string.as_str()).to_value();
     Ok((rest_input, regex))
 }
+// Reads the #
+pub fn try_read_var(input: &str) -> IResult<&str, Value> {
+    named!(var_parser<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("#'")));
+
+    let (rest_input, _) = var_parser(input)?;
+    let (rest_input, val) = try_read(rest_input)?;
+    // #'x just expands to (var x), just like 'x is just a shorthand for (quote x)
+    // So here we return (var val)
+    Ok((rest_input,list_val!(sym!("var") val)))
+}
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
 /// Tries to parse &str into Value::PersistentListMap, or some other Value::..Map
@@ -586,6 +596,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_list,
             try_read_vector,
             try_read_pattern,
+            try_read_var,
         )),
     )(input)
 }
