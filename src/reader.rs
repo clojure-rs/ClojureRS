@@ -509,21 +509,14 @@ pub fn try_read_quoted(input: &str) -> IResult<&str, Value> {
     let (rest_input, quoted_form_value) = try_read(form)?;
 
     // (quote value)
-    Ok((
-        rest_input,
-        vec![
-            Symbol::intern("quote").to_rc_value(),
-            quoted_form_value.to_rc_value(),
-        ]
-        .into_list()
-        .to_value(),
-    ))
+    Ok((rest_input, list_val!(sym!("quote") quoted_form_value)))
 }
 
 pub fn try_read(input: &str) -> IResult<&str, Value> {
     preceded(
         consume_clojure_whitespaces_parser,
         alt((
+            try_read_meta,
             try_read_quoted,
             try_read_nil,
             try_read_map,
