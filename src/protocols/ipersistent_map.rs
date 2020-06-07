@@ -22,4 +22,12 @@ impl persistent_list_map::IPersistentMap for IPersistentMap {
             _ => panic!("Called Iterable iter on non-iterable"),
         }
     }
+    fn contains_key(&self,key: &Rc<Value>) -> bool {
+        match &*self.value {
+            Value::PersistentListMap(plist_map) => {
+                plist_map.contains_key(key)
+            },
+            _ => panic!("Called Iterable iter on non-iterable"),
+        }
+    }
 }
