@@ -6,10 +6,23 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use crate::value::{ToValue, Value};
-
+use crate::persistent_list_map::PersistentListMap;
+use crate::traits;
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct PersistentVector {
     pub vals: Vec<Rc<Value>>,
+}
+impl traits::IMeta for PersistentVector {
+    fn meta(&self) -> PersistentListMap {
+        // @TODO implement
+        PersistentListMap::Empty
+    }
+}
+impl traits::IObj for PersistentVector {
+    fn with_meta(&self,meta: PersistentListMap) -> PersistentVector {
+        // @TODO implement
+        self.clone()
+    }
 }
 impl fmt::Display for PersistentVector {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
