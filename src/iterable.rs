@@ -5,42 +5,15 @@ use crate::persistent_list_map::ToPersistentListMapIter;
 use crate::persistent_vector::PersistentVectorIter;
 use crate::persistent_vector::ToPersistentVector;
 use crate::persistent_vector::ToPersistentVectorIter;
+use crate::define_protocol;
 use crate::protocol::Protocol;
 use crate::value::ToValue;
 use crate::value::Value;
 use std::rc::Rc;
+// @TODO move to protocols::iterable
 
-//
-// This Protocol lives inside of Clojure RS
-//
-#[derive(Debug, Clone)]
-pub struct Iterable {
-    value: Rc<Value>,
-}
-impl Protocol for Iterable {
-    fn try_as_protocol(val: &Rc<Value>) -> Option<Self> {
-        match &**val {
-            Value::PersistentList(_) => Some(Iterable {
-                value: Rc::clone(val),
-            }),
-            Value::PersistentVector(_) => Some(Iterable {
-                value: Rc::clone(val),
-            }),
-            Value::PersistentListMap(_) => Some(Iterable {
-                value: Rc::clone(val),
-            }),
-            _ => None,
-        }
-    }
-    fn try_unwrap(&self) -> Option<Rc<Value>> {
-        match &*self.value {
-            Value::PersistentList(_) => Some(Rc::clone(&self.value)),
-            Value::PersistentVector(_) => Some(Rc::clone(&self.value)),
-            Value::PersistentListMap(_) => Some(Rc::clone(&self.value)),
-            _ => None,
-        }
-    }
-}
+define_protocol!(Iterable,PersistentList,PersistentListMap,PersistentVector);
+
 pub enum IterableIter {
     PersistentList(PersistentListIter),
     PersistentVector(PersistentVectorIter),
