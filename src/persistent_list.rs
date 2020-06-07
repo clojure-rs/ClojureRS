@@ -14,6 +14,36 @@ pub enum PersistentList {
     Cons(Rc<Value>, Rc<PersistentList>, i32),
     Empty,
 }
+// Experimental
+/// list!(sym!("+") 1 2);
+/// Meant to look closer to Clojure's native list syntax, to give us some Clojuresque sugar 
+#[macro_export]
+macro_rules! list {
+    ( $($val:expr) *) => {
+        {
+            let mut temp_list_as_vec = vec![];
+            $(
+                temp_list_as_vec.push($val.to_rc_value());
+            )*
+            temp_list_as_vec.into_iter().collect::<crate::persistent_list::PersistentList>()
+        }
+    };
+}
+/// list_val!(sym!("+") 1 2);
+/// Meant to look closer to Clojure's native list syntax, to give us some Clojuresque sugar
+/// Returns a Value instead of a PersistentList
+#[macro_export]
+macro_rules! list_val {
+    ( $($val:expr) *) => {
+        {
+            let mut temp_list_as_vec = vec![];
+            $(
+                temp_list_as_vec.push($val.to_rc_value());
+            )*
+            temp_list_as_vec.into_iter().collect::<crate::persistent_list::PersistentList>().to_value()
+        }
+    };
+}
 // @TODO definitely don't do this
 #[derive(Debug, Clone, Hash)]
 struct EmptyHash {}
