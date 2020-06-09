@@ -65,6 +65,8 @@ pub(crate) mod first;
 pub use self::first::*;
 pub(crate) mod second;
 pub use self::second::*;
+pub(crate) mod count;
+pub use self::count::*;
 
 // input and output
 pub(crate) mod system_newline;

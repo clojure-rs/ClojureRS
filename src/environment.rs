@@ -245,7 +245,7 @@ impl Environment {
             }
         }
     }
-    // @TODO refactor to use ^ 
+    // @TODO refactor to use ^
     // @TODO figure out convention for 'ns' vs 'namespace'
     /// Get closest value "around" us;  try our local environment, then
     /// try our main environment (unless its namespace qualified)
@@ -339,6 +339,7 @@ impl Environment {
         let meta_fn = rust_core::MetaFn::new(Rc::clone(&environment));
         let with_meta_fn = rust_core::WithMetaFn::new(Rc::clone(&environment));
         let var_fn = rust_core::special_form::VarFn::new(Rc::clone(&environment));
+        let count_fn = rust_core::count::CountFn {};
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
         //       I prefer explicity and the non-dependence-on-environmental-factors
@@ -360,6 +361,12 @@ impl Environment {
         environment.insert(Symbol::intern("meta"), meta_fn.to_rc_value());
         environment.insert(Symbol::intern("with-meta"), with_meta_fn.to_rc_value());
         environment.insert(Symbol::intern("var-fn*"), var_fn.to_rc_value());
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.core"),
+            Symbol::intern("count"),
+            count_fn.to_rc_value(),
+        );
 
         // Thread namespace
         environment.insert_into_namespace(
@@ -462,7 +469,6 @@ impl Environment {
             Symbol::intern("split"),
             split_fn.to_rc_value(),
         );
-
 
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
         environment.insert(Symbol::intern("do-fn*"), do_fn.to_rc_value());
