@@ -163,7 +163,6 @@ impl Namespace {
             .replace_with(|refers| refers.add_referred_namespaces(namespaces));
     }
 
-    //
     fn contains_key(&self,sym: &Symbol) -> bool {
         self.mappings.borrow_mut().contains_key(sym)
     }
@@ -295,6 +294,7 @@ impl Namespaces {
             }
         }
     }
+
     // TODO write this similar to try_get, and rewrite try_get in terms of this 
     pub fn get_var(&self, namespace_sym: &Symbol, sym: &Symbol) -> Rc<Value> {
         // When storing / retrieving from namespaces, we want

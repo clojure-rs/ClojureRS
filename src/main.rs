@@ -21,7 +21,6 @@ mod iterable;
 mod keyword;
 mod lambda;
 mod maps;
-mod meta;
 mod namespace;
 mod persistent_vector;
 mod reader;

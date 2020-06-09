@@ -2,7 +2,6 @@ use crate::persistent_list_map::PersistentListMap;
 use crate::traits;
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use crate::meta;
 
 #[derive(Eq, Clone, Debug)]
 pub struct Symbol {
@@ -108,7 +107,6 @@ mod tests {
     mod symbol_tests {
         use crate::keyword::Keyword;
         use crate::maps::MapEntry;
-        use crate::meta;
         use crate::persistent_list_map::ToPersistentListMapIter;
         use crate::persistent_list_map::{PersistentListMap, PersistentListMapIter};
         use crate::symbol::Symbol;
