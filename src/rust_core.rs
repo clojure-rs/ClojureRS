@@ -9,6 +9,10 @@ pub use self::special_form::*;
 pub(crate) mod eval;
 pub use self::eval::*;
 
+pub(crate) mod meta;
+pub use self::meta::*;
+pub(crate) mod with_meta;
+pub use self::with_meta::*;
 // macros
 pub(crate) mod do_macro;
 pub use self::do_macro::*;
