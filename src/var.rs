@@ -1,17 +1,18 @@
-//use crate::namespace::Namespace;
 use crate::symbol::Symbol;
 use crate::persistent_list_map::PersistentListMap;
 use crate::value::{Value,ToValue};
+use crate::traits;
 use crate::ifn::IFn;
-//use crate::ifn::IFn;
+use std::fmt;
+use std::hash::{Hash,Hasher};
 use crate::protocols;
-// @TODO change to protocols::iterable; 
 use crate::iterable::Iterable;
 use std::rc::Rc;
 use std::cell::RefCell;
 use crate::protocol::Protocol;
 use crate::protocol::ProtocolCastable;
 
+#[derive(Clone, Debug)]
 pub struct Var {
     // Normally in Clojure, this references an actual Namespace. However, hard
     // references are more expensive, logically, in Rust, not to mention it
@@ -43,6 +44,7 @@ macro_rules! var{
     }
 }
 impl Var {
+
     // Note; not quite the same as Clojure's intern, because this does not directly reference the living
     // Its possible we should call this create or something instead, and basically not use intern at all
     pub fn intern(ns: Symbol,sym: Symbol) -> Var {
@@ -55,11 +57,17 @@ impl Var {
             root: RefCell::new(Value::Nil.to_rc_value())
         }
     }
+
     pub fn deref(&self) -> Rc<Value> {
         self.root.borrow().clone() 
     }
+
     pub fn bind_root(&self,root: Rc<Value>){
         self.root.replace(root);
+    }
+
+    pub fn set_meta(&self,meta: PersistentListMap) {
+        self.meta.replace_with(|_| meta.to_rc_value().as_protocol::<protocols::IPersistentMap>() );
     }
     // @TODO swap out Iterable for ISeq
     // Also, this cannot return a Condition until we decide how we want to represent Conditions
@@ -78,6 +86,42 @@ impl Var {
                 meta.clone()
             }
         })
+    }
+
+}
+impl PartialEq for Var {
+    // Remember; meta doesn't factor into equality
+    fn eq(&self,other: &Self) -> bool {
+        self.ns == other.ns && self.sym == other.sym
+    }
+}
+impl Hash for Var {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (&self.ns,&self.sym).hash(state);
+    }
+}
+impl traits::IMeta for Var {
+    fn meta(&self) -> PersistentListMap {
+        let plist_map_value = self.meta.borrow().unwrap();
+        match &*plist_map_value {
+            Value::PersistentListMap(plist_map) => {
+                plist_map.clone()
+            }
+            _ => panic!("In var.rs, meta(); IPersistentListMap failed to unwrap to PersistentListMap")
+
+        }
+    }
+}
+
+// impl traits::IObj for Var {
+//     fn with_meta(&self,meta: PersistentListMap) -> Symbol {
+//         self.with_meta(meta)
+//     }
+// }
+
+impl fmt::Display for Var {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,"#'{}",self.sym)
     }
 }
 

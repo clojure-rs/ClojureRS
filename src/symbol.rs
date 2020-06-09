@@ -1,11 +1,10 @@
 use crate::persistent_list_map::PersistentListMap;
 use crate::traits;
 use std::fmt;
-use std::hash::Hash;
-
+use std::hash::{Hash, Hasher};
 use crate::meta;
 
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+#[derive(Eq, Clone, Debug)]
 pub struct Symbol {
     pub name: String,
     // @TODO Should this be an optional string?
@@ -20,6 +19,11 @@ pub struct Symbol {
 macro_rules! sym {
     ($x:expr) => {
         Symbol::intern($x)
+    }
+}
+impl Hash for Symbol {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (&self.name,&self.ns).hash(state);
     }
 }
 impl Symbol {
@@ -51,13 +55,17 @@ impl Symbol {
         }
     }
     pub fn unqualified(&self) -> Symbol {
-        Symbol::intern(&self.name)
+        // So we can keep the same meta 
+        let mut retval = self.clone();
+        retval.ns = String::from("");
+        retval
     }
     pub fn has_ns(&self) -> bool {
         self.ns != ""
     }
     pub fn name(&self) -> &str {
         &self.name
+    }
     // @TODO use IPersistentMap instead perhaps 
     pub fn meta(&self) -> PersistentListMap {
         self.meta.clone()
@@ -68,6 +76,12 @@ impl Symbol {
             ns: self.ns.clone(),        // String::from(self.ns.clone()),
             meta,
         }
+    }
+}
+impl PartialEq for Symbol {
+    // Remember; meta doesn't factor into equality
+    fn eq(&self,other: &Self) -> bool {
+        self.name == other.name && self.ns == other.ns 
     }
 }
 impl traits::IMeta for Symbol {

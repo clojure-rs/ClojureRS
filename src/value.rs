@@ -8,6 +8,7 @@ use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListI
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
+use crate::var::Var;
 use crate::type_tag::TypeTag;
 use core::fmt::Display;
 
@@ -32,6 +33,7 @@ pub enum Value {
     F64(f64),
     Boolean(bool),
     Symbol(Symbol),
+    Var(Var),
     Keyword(Keyword),
     IFn(Rc<dyn IFn>),
     //
@@ -75,6 +77,7 @@ impl PartialEq for Value {
             (F64(d), F64(d2)) => d == d2,
             (Boolean(b), Boolean(b2)) => b == b2,
             (Symbol(sym), Symbol(sym2)) => sym == sym2,
+            (Var(var), Var(var2)) => var == var2,
             (Keyword(kw), Keyword(kw2)) => kw == kw2,
             // Equality not defined on functions, similar to Clojure
             // Change this perhaps? Diverge?
@@ -118,6 +121,7 @@ impl Hash for Value {
             F64(d) => d.to_value().hash(state),
             Boolean(b) => b.hash(state),
             Symbol(sym) => sym.hash(state),
+            Var(var) => var.hash(state),
             Keyword(kw) => kw.hash(state),
             IFn(_) => {
                 let mut rng = rand::thread_rng();
@@ -158,6 +162,7 @@ impl fmt::Display for Value {
             F64(val) => val.to_string(),
             Boolean(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
+            Var(var) => var.to_string(),
             Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
             LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
@@ -202,6 +207,7 @@ impl Value {
             Value::F64(_) => TypeTag::F64,
             Value::Boolean(_) => TypeTag::Boolean,
             Value::Symbol(_) => TypeTag::Symbol,
+            Value::Var(_) => TypeTag::Var,
             Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
             Value::LexicalEvalFn => TypeTag::IFn,
@@ -310,30 +316,57 @@ impl Value {
             //   value type -- although we still need to hardcode its definition in Rust,
             //   as an implementation of the generic Value::Macro(Rc<IFn>)
             //
+            // (def symbol doc-string? init?)
             DefMacro => {
                 let arg_rc_values = PersistentList::iter(args)
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
 
-                if arg_rc_values.len() > 2 || arg_rc_values.is_empty() {
+                if arg_rc_values.len() > 3 || arg_rc_values.is_empty() {
                     return Some(Rc::new(Value::Condition(format!(
-                        "Wrong number of arguments (Given: {}, Expected: 1-2)",
+                        "Wrong number of arguments (Given: {}, Expected: 1-3)",
                         arg_rc_values.len()
                     ))));
                 }
+
                 let defname = arg_rc_values.get(0).unwrap();
+
                 let defval = arg_rc_values
-                    .get(1)
+                    .get(if arg_rc_values.len() == 2 { 1 } else { 2 })
+                    .or(Some(&Rc::new(Value::Nil)))
                     .unwrap()
                     .eval_to_rc(Rc::clone(&environment));
-                // Let's not do docstrings yet
-                // let docstring = ...
+
+                let doc_string = if arg_rc_values.len() == 3 {
+                    match arg_rc_values.get(1).unwrap().to_value() {
+                        Value::String(s) => Value::String(s.to_string()),
+                        _ => Value::Nil,
+                    }
+                } else {
+                    Value::Nil
+                };
+
                 match &**defname {
                     Value::Symbol(sym) => {
-                        environment.insert(sym.clone(), defval);
+                        println!("Def: meta on sym is {}",sym.meta());
+                        // TODO: environment.insert with meta?
+                        let s = if doc_string != Value::Nil {
+                            let ss = Symbol::intern_with_ns(
+                                &sym.ns,
+                                &sym.name
+                                // merge!(
+                                //     meta::base_meta(&sym.ns, &sym.name),
+                                //     map_entry!("doc", doc_string)
+                                // ),
+                            );
+                            ss.clone()
+                        } else {
+                            sym.clone()
+                        };
+                        environment.insert(s.to_owned(), defval);
                         // @TODO return var. For now, however, we only have symbols
                         // @TODO intern from environment, don't make new sym ?
-                        Some(sym.to_rc_value())
+                        Some(s.to_rc_value())
                     }
                     _ => Some(Rc::new(Value::Condition(std::string::String::from(
                         "First argument to def must be a symbol",

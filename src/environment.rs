@@ -55,6 +55,9 @@ impl EnvironmentVal {
     fn has_namespace(&self, namespace: &Symbol) -> bool {
         self.namespaces.has_namespace(namespace)
     }
+    fn get_var_from_namespace(&self, namespace: &Symbol, sym: &Symbol) -> Rc<Value> {
+        self.namespaces.get_var(namespace, sym)
+    }
     fn get_from_namespace(&self, namespace: &Symbol, sym: &Symbol) -> Rc<Value> {
         self.namespaces.get(namespace, sym)
     }
@@ -216,7 +219,33 @@ impl Environment {
             LocalEnvironment(parent_env, ..) => parent_env.get_main_environment(),
         }
     }
-
+    pub fn get_var(&self, sym: &Symbol) -> Rc<Value> {
+        match self {
+            MainEnvironment(env_val) => {
+                // If we've recieved a qualified symbol like
+                // clojure.core/+
+                if sym.has_ns() {
+                    // Use that namespace
+                    env_val.get_var_from_namespace(&Symbol::intern(&sym.ns), sym)
+                } else {
+                    env_val.get_var_from_namespace(
+                        &env_val.get_current_namespace(),
+                        &Symbol::intern(&sym.name),
+                    )
+                }
+            }
+            LocalEnvironment(parent_env, mappings) => {
+                if sym.ns != "" {
+                    return self.get_main_environment().get(sym);
+                }
+                match mappings.borrow().get(sym) {
+                    Some(val) => Rc::clone(val),
+                    None => parent_env.get(sym),
+                }
+            }
+        }
+    }
+    // @TODO refactor to use ^ 
     // @TODO figure out convention for 'ns' vs 'namespace'
     /// Get closest value "around" us;  try our local environment, then
     /// try our main environment (unless its namespace qualified)
@@ -307,6 +336,8 @@ impl Environment {
         let ns_macro = rust_core::NsMacro::new(Rc::clone(&environment));
         let load_file_fn = rust_core::LoadFileFn::new(Rc::clone(&environment));
         let refer_fn = rust_core::ReferFn::new(Rc::clone(&environment));
+        //let meta_fn = rust_core::MetaFn::new(Rc::clone(&environment));
+        let var_fn = rust_core::special_form::VarFn::new(Rc::clone(&environment));
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
         //       I prefer explicity and the non-dependence-on-environmental-factors
@@ -325,6 +356,7 @@ impl Environment {
         environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
         environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
+        environment.insert(Symbol::intern("var-fn*"), var_fn.to_rc_value());
 
         // Thread namespace
         environment.insert_into_namespace(
@@ -428,20 +460,13 @@ impl Environment {
             split_fn.to_rc_value(),
         );
 
-        environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
-        environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
-        environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
-        environment.insert(Symbol::intern("map"), map_fn.to_rc_value());
 
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
         environment.insert(Symbol::intern("do-fn*"), do_fn.to_rc_value());
         environment.insert(Symbol::intern("do"), do_macro.to_rc_value());
         environment.insert(Symbol::intern("def"), def_macro.to_rc_value());
-        environment.insert(Symbol::intern("fn"), fn_macro.to_rc_value());
         environment.insert(Symbol::intern("if"), if_macro.to_rc_value());
-        environment.insert(Symbol::intern("defmacro"), defmacro_macro.to_rc_value());
         environment.insert(Symbol::intern("ns"), ns_macro.to_rc_value());
-        environment.insert(Symbol::intern("eval"), eval_fn.to_rc_value());
         environment.insert(
             Symbol::intern("lexical-eval"),
             lexical_eval_fn.to_rc_value(),

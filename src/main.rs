@@ -10,6 +10,8 @@ mod persistent_list;
 mod protocol;
 #[macro_use]
 mod symbol;
+#[macro_use]
+mod var;
 mod clojure_std;
 mod clojure_string;
 mod environment;
@@ -19,6 +21,7 @@ mod iterable;
 mod keyword;
 mod lambda;
 mod maps;
+mod meta;
 mod namespace;
 mod persistent_vector;
 mod reader;
@@ -28,7 +31,6 @@ mod type_tag;
 mod user_action;
 mod util;
 mod value;
-
 mod protocols;
 mod traits;
 fn main() {

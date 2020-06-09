@@ -78,7 +78,7 @@ impl ProtocolCastable for Rc<Value> {
 macro_rules! define_protocol {
     // define_protocol!(Protocol = A | B)
     ($protocol:ident = $($variant:ident) |*) => {
-        #[derive(Debug, Clone)]
+        #[derive(Hash,PartialEq,Eq,Debug, Clone)]
         pub struct $protocol {
             value: Rc<Value>
         }

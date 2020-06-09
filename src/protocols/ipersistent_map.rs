@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::persistent_list_map;
 use crate::protocol::ProtocolCastable;
 
-define_protocol!(IPersistentMap,PersistentListMap);
+define_protocol!(IPersistentMap = PersistentListMap);
 
 impl persistent_list_map::IPersistentMap for IPersistentMap {
     fn get(&self, key: &Rc<Value>) -> Rc<Value> {

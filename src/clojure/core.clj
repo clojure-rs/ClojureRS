@@ -66,3 +66,5 @@
 
 (defn ffirst [x]
   (first (first x)))
+(defmacro var [name]
+  (var-fn* name))

@@ -1,5 +1,7 @@
+use crate::persistent_list_map::PersistentListMap;
 use crate::symbol::Symbol;
-use crate::value::Value;
+use crate::var::Var;
+use crate::value::{ToValue, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -126,12 +128,18 @@ impl Default for Refers {
 #[derive(Debug, Clone)]
 pub struct Namespace {
     pub name: Symbol,
-    mappings: RefCell<HashMap<Symbol, Rc<Value>>>,
     pub refers: RefCell<Refers>,
+    // @TODO decide to make Var a Rc<Var> ?
+    // On one hand,  its internals (except its ns and name) are Rcs, so cloning is still
+    // cloning a reference
+    //
+    // On the other hand,  the Var itself, regardless, lives in one spot and is referenced by many
+    // This explicitly shows its a reference
+    mappings: RefCell<HashMap<Symbol, Var>>,
 }
 
 impl Namespace {
-    fn new(name: &Symbol, mappings: HashMap<Symbol, Rc<Value>>, refers: Refers) -> Namespace {
+    fn new(name: &Symbol, mappings: HashMap<Symbol, Var>, refers: Refers) -> Namespace {
         Namespace {
             name: name.unqualified(),
             mappings: RefCell::new(mappings),
@@ -155,20 +163,47 @@ impl Namespace {
             .replace_with(|refers| refers.add_referred_namespaces(namespaces));
     }
 
+    //
+    fn contains_key(&self,sym: &Symbol) -> bool {
+        self.mappings.borrow_mut().contains_key(sym)
+    }
     pub fn insert(&self, sym: &Symbol, val: Rc<Value>) {
-        self.mappings.borrow_mut().insert(sym.unqualified(), val);
+        if !self.contains_key(sym) {
+            let var = var!(&self.name.name,&sym.name);
+            var.bind_root(val);
+            var.set_meta(sym.meta());
+            self.mappings
+                .borrow_mut()
+                .insert(sym.unqualified(), var);
+        } else {
+            let mappings = self.mappings.borrow_mut();
+            let var = mappings
+                .get(&sym.unqualified())
+                .unwrap();
+
+            var.bind_root(val);
+            var.set_meta(sym.meta());
+        }
+    }
+
+    pub fn get_var(&self, sym: &Symbol) -> Rc<Value> {
+        match self.mappings.borrow_mut().get(&sym.unqualified()).map(|var| var.clone()) {
+            Some(var) => Rc::new(Value::Var(var)),
+            None => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name))),
+        }
     }
 
     pub fn try_get(&self, sym: &Symbol) -> Option<Rc<Value>> {
         match self.mappings.borrow_mut().get(&sym.unqualified()) {
-            Some(val) => Some(Rc::clone(val)),
+            Some(var) => Some(var.deref()),
             None => None,
         }
     }
+
     pub fn get(&self, sym: &Symbol) -> Rc<Value> {
         match self.try_get(sym) {
             Some(val) => val,
-            None => Rc::new(Value::Condition(format!("1 Undefined symbol {}", sym.name))),
+            None => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name))),
         }
     }
 }
@@ -260,7 +295,28 @@ impl Namespaces {
             }
         }
     }
+    // TODO write this similar to try_get, and rewrite try_get in terms of this 
+    pub fn get_var(&self, namespace_sym: &Symbol, sym: &Symbol) -> Rc<Value> {
+        // When storing / retrieving from namespaces, we want
+        // namespace_sym unqualified keys
+        let mut namespace_sym = namespace_sym.unqualified();
 
+        // @TODO just make it an Optional<String>
+        // If our sym is namespace qualified,  use that as our namespace
+        if sym.has_ns() {
+            namespace_sym = Symbol::intern(&sym.ns);
+        }
+
+        let sym = sym.unqualified();
+        let namespaces = self.0.borrow();
+        let namespace = namespaces.get(&namespace_sym);
+
+        match namespace {
+            Some(namespace) => namespace.get_var(&sym),
+            // @TODO should this be a condition or nil?
+            _ => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name))),
+        }
+    }
     /// Like get, but slightly lower level; returns a None on failure rather than a
     /// Value::Condition. See docs for get
     pub fn try_get(&self, namespace_sym: &Symbol, sym: &Symbol) -> Option<Rc<Value>> {
@@ -313,11 +369,11 @@ impl Namespaces {
                 //  { 'clojure.core ['a 'b 'c] ,
                 //    'clojure.string ['x 'y 'z]}
                 //  referred_namespace_sym: Symbol::intern("clojure.core"),
-                //  referred_syms:          vec![Symbol::intern("x"), .. Symbol::intern("z")]
+                //  referred_syms:          vec![Symbol::intern("a"), .. Symbol::intern("c")]
                 for (referred_namespace_sym, referred_syms) in referred_syms_map.iter() {
                     // Ex: (if we're trying to get, say,  '+)
                     //     Do we even refer a '+ from this namespace?
-                    //     'clojure.string ['x 'y 'z] <-- no
+                    //     'clojure.core ['a 'b 'c] <-- no
                     //     Continue then
                     if !referred_syms.contains(&sym) {
                         continue;
@@ -710,12 +766,12 @@ mod tests {
             namespace.insert(&Symbol::intern("a"), Rc::new(Value::Nil));
             namespace.insert(&Symbol::intern_with_ns("ns", "b"), Rc::new(Value::Nil));
             match &*namespace.get(&Symbol::intern("a")) {
-                Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
+                Value::Condition(_) => panic!("We are unable to get a symbol (a) we've put into our namespace created with from_sym()"),
                 _ => {}
             }
 
             match &*namespace.get(&Symbol::intern("b")) {
-                Value::Condition(_) => panic!("We are unable to get a symbol we've put into our namespace created with from_sym()"),
+                Value::Condition(_) => panic!("We are unable to get a symbol (ns/b) we've put into our namespace created with from_sym()"),
                 _ => {}
             }
 

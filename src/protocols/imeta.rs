@@ -9,7 +9,8 @@ use crate::value::Value;
 use std::rc::Rc;
 
 define_protocol!(
-    IMeta = PersistentList     |
+    IMeta = Var                | // <-- where all the magic happens
+            PersistentList     |
             PersistentVector   |
             PersistentListMap  |
             Symbol //             |
@@ -29,6 +30,9 @@ impl traits::IMeta for IMeta {
             }
             Value::Symbol(val) => {
                 val.meta()
+            }
+            Value::Var(var) => {
+                var.meta()
             }
             _ => panic!("protocols::IMeta was wrapping an invalid type {} when calling meta()",self.value.type_tag())
             // Value::IFn(val) => {
