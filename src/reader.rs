@@ -35,6 +35,7 @@ use std::io::BufRead;
 //   integer_parser
 // And our 'try readers'
 //   try_read_i32
+//   try_read_char
 //   try_read_string
 //   try_read_map
 //   try_read_list
@@ -210,7 +211,7 @@ fn identifier_tail(input: &str) -> IResult<&str, &str> {
 
 /// Parses valid Clojure identifiers
 /// Example Successes: ab,  cat,  -12+3, |blah|, <well>
-/// Example Failures:  'a,  12b,   ,cat  
+/// Example Failures:  'a,  12b,   ,cat
 pub fn identifier_parser(input: &str) -> IResult<&str, String> {
     named!(identifier_head<&str, char>,
        map!(
@@ -237,10 +238,10 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
 ///                    namespace.subnamespace/a    cat/b   a.b.c/|ab123|
 pub fn symbol_parser(input: &str) -> IResult<&str, Symbol> {
     named!(namespace_parser <&str,String>,
-	   do_parse!(
-	       ns: identifier_parser >>
-	       complete!(tag!("/")) >>
-	       (ns)));
+           do_parse!(
+               ns: identifier_parser >>
+               complete!(tag!("/")) >>
+               (ns)));
 
     let (rest_input, ns) = opt(namespace_parser)(input)?;
     let (rest_input, name) = identifier_parser(rest_input)?;
@@ -415,6 +416,97 @@ pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, Value::Nil))
 }
 
+mod try_read_char_tests {
+    use crate::reader::try_read_char;
+    use crate::value::Value;
+
+    //    #[test]
+    //    fn try_read_char_test() {
+    //        assert_eq!(Value::Char("\\f"), try_read_char("\\formfeed"))
+    //    }
+
+    #[test]
+    fn try_read_char_space() {
+        assert_eq!(Value::Char(' '), try_read_char("\\space").ok().unwrap().1);
+    }
+
+    #[test]
+    fn try_read_char_return() {
+        assert_eq!(Value::Char('\r'), try_read_char("\\return").ok().unwrap().1);
+    }
+
+    #[test]
+    fn try_read_char_hashtag() {
+        assert_eq!(Value::Char('#'), try_read_char("\\#").ok().unwrap().1);
+    }
+    #[test]
+    fn try_read_char_n() {
+        assert_eq!(Value::Char('n'), try_read_char("\\n").ok().unwrap().1);
+    }
+    #[test]
+    fn try_read_char_f() {
+        assert_eq!(Value::Char('r'), try_read_char("\\r").ok().unwrap().1);
+    }
+    #[test]
+    fn try_read_unicode() {
+        assert_eq!(Value::Char('Ω'), try_read_char("\\u03A9").ok().unwrap().1);
+    }
+    #[test]
+    fn try_read_unicode2() {
+        assert_eq!(Value::Char('张'), try_read_char("\\u5920").ok().unwrap().1);
+    }
+    #[test]
+    fn try_read_char_fail() {
+        assert!(try_read_char("d").is_err());
+    }
+}
+
+/// Tries to parse &str into Value::Char
+/// Example Successes:
+///    "\newline" => Value::Char("\n")
+/// Example Failures:
+///
+pub fn try_read_char(input: &str) -> IResult<&str, Value> {
+    named!(backslash<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("\\")));
+
+    fn str_to_unicode(s: &str) -> char {
+        u32::from_str_radix(s, 16)
+            .ok()
+            .and_then(std::char::from_u32)
+            .unwrap()
+    }
+
+    named!(unicode < &str, char>,  alt!(
+        preceded!(
+            tag!("u"),
+            alt!(
+                map!(take_while_m_n!(4,4, |c :char| c.is_digit(16)), str_to_unicode)
+            )
+        )
+    ));
+
+    named!(special_escapes < &str, char>,  alt!(
+        tag!("newline")   => { |_|  '\n'} |
+        tag!("space")     => { |_|  ' ' } |
+        tag!("tab")       => { |_|  '\t'} |
+        //tag!("formfeed")  => { |_|  '\f'} |
+        //tag!("backspace") => { |_|  '\b'} |
+        tag!("return")    => { |_|  '\r' } ));
+
+    named!(normal_char < &str, char>,
+           // accept anything after \
+           map!(take_while_m_n!(1,1,|_| true), first_char));
+
+    named!(char_parser<&str,char>,
+           alt!(unicode | special_escapes | normal_char));
+
+    let (rest_input, _) = backslash(input)?;
+
+    let (rest_input, char_value) = char_parser(rest_input)?;
+
+    Ok((rest_input, Value::Char(char_value)))
+}
+
 // @TODO allow escaped strings
 /// Tries to parse &str into Value::String
 /// Example Successes:
@@ -586,6 +678,7 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_quoted,
             try_read_nil,
             try_read_map,
+            try_read_char,
             try_read_string,
             try_read_f64,
             try_read_i32,
@@ -830,6 +923,21 @@ mod tests {
             );
         }
     }
+
+    //    mod try_read_char_tests {
+    //        use crate::reader::try_read_char;
+    //        use crate::value::Value;
+    //
+    //        #[test]
+    //        fn try_read_char_test() {
+    //            assert_eq!(Value::Char('f'), try_read_character("\\f"))
+    //        }
+    //
+    //        #[test]
+    //        fn try_read_newline_test() {
+    //            assert_eq!(Value::Char('\n'), try_read_character("\newline"))
+    //        }
+    //    }
 
     mod try_read_tests {
         use crate::persistent_list;

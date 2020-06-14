@@ -8,8 +8,8 @@ use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListI
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
-use crate::var::Var;
 use crate::type_tag::TypeTag;
+use crate::var::Var;
 use core::fmt::Display;
 
 extern crate rand;
@@ -34,6 +34,7 @@ pub enum Value {
     Boolean(bool),
     Symbol(Symbol),
     Var(Var),
+    Char(char),
     Keyword(Keyword),
     IFn(Rc<dyn IFn>),
     //
@@ -78,6 +79,7 @@ impl PartialEq for Value {
             (Boolean(b), Boolean(b2)) => b == b2,
             (Symbol(sym), Symbol(sym2)) => sym == sym2,
             (Var(var), Var(var2)) => var == var2,
+            (Char(c), Char(c2)) => c == c2,
             (Keyword(kw), Keyword(kw2)) => kw == kw2,
             // Equality not defined on functions, similar to Clojure
             // Change this perhaps? Diverge?
@@ -122,6 +124,7 @@ impl Hash for Value {
             Boolean(b) => b.hash(state),
             Symbol(sym) => sym.hash(state),
             Var(var) => var.hash(state),
+            Char(c) => c.hash(state),
             Keyword(kw) => kw.hash(state),
             IFn(_) => {
                 let mut rng = rand::thread_rng();
@@ -163,6 +166,7 @@ impl fmt::Display for Value {
             Boolean(val) => val.to_string(),
             Symbol(sym) => sym.to_string(),
             Var(var) => var.to_string(),
+            Char(c) => c.to_string(),
             Keyword(kw) => kw.to_string(),
             IFn(_) => std::string::String::from("#function[]"),
             LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
@@ -208,6 +212,7 @@ impl Value {
             Value::Boolean(_) => TypeTag::Boolean,
             Value::Symbol(_) => TypeTag::Symbol,
             Value::Var(_) => TypeTag::Var,
+            Value::Char(_) => TypeTag::Char,
             Value::Keyword(_) => TypeTag::Keyword,
             Value::IFn(_) => TypeTag::IFn,
             Value::LexicalEvalFn => TypeTag::IFn,
@@ -348,7 +353,6 @@ impl Value {
 
                 match &**defname {
                     Value::Symbol(sym) => {
-                        println!("Def: meta on sym is {}",sym.meta());
                         // TODO: environment.insert with meta?
                         let s = if doc_string != Value::Nil {
                             let ss = Symbol::intern_with_ns(
@@ -400,9 +404,9 @@ impl Value {
                     .into_list()
                     .eval(Rc::clone(&environment));
                 let macro_value = match &macro_invokable_body {
-		    Value::IFn(ifn) => Rc::new(Value::Macro(Rc::clone(&ifn))),
-		    _ => Rc::new(Value::Condition(std::string::String::from("Compiler Error: your macro_value somehow compiled into something else entirely.  I don't even know how that happened,  this behavior is hardcoded, that's impressive")))
-		};
+                    Value::IFn(ifn) => Rc::new(Value::Macro(Rc::clone(&ifn))),
+                    _ => Rc::new(Value::Condition(std::string::String::from("Compiler Error: your macro_value somehow compiled into something else entirely.  I don't even know how that happened,  this behavior is hardcoded, that's impressive")))
+                };
                 Some(
                     vec![
                         Symbol::intern("def").to_rc_value(),
@@ -446,23 +450,23 @@ impl Value {
                         }
 
                         let fn_body =
-			// (fn [x y] ) -> nil 
-			    if arg_rc_values.len() <= 1 {
-				Rc::new(Value::Nil)
-				// (fn [x y] expr) -> expr 
-			    } else if arg_rc_values.len() == 2 {
-				Rc::clone(arg_rc_values.get(1).unwrap())
-				// (fn [x y] expr1 expr2 expr3) -> (do expr1 expr2 expr3) 
-			    } else {
-				// (&[expr1 expr2 expr3] 
-				let body_exprs = arg_rc_values.get(1..).unwrap();
-				// vec![do]
-				let mut do_body = vec![Symbol::intern("do").to_rc_value()];
-				// vec![do expr1 expr2 expr3]
-				do_body.extend_from_slice(body_exprs);
-				// (do expr1 expr2 expr3) 
-				do_body.into_list().to_rc_value()
-			    };
+                        // (fn [x y] ) -> nil
+                            if arg_rc_values.len() <= 1 {
+                                Rc::new(Value::Nil)
+                                // (fn [x y] expr) -> expr
+                            } else if arg_rc_values.len() == 2 {
+                                Rc::clone(arg_rc_values.get(1).unwrap())
+                                // (fn [x y] expr1 expr2 expr3) -> (do expr1 expr2 expr3)
+                            } else {
+                                // (&[expr1 expr2 expr3]
+                                let body_exprs = arg_rc_values.get(1..).unwrap();
+                                // vec![do]
+                                let mut do_body = vec![Symbol::intern("do").to_rc_value()];
+                                // vec![do expr1 expr2 expr3]
+                                do_body.extend_from_slice(body_exprs);
+                                // (do expr1 expr2 expr3)
+                                do_body.into_list().to_rc_value()
+                            };
 
                         Some(Rc::new(
                             lambda::Fn {

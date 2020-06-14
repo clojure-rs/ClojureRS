@@ -7,6 +7,7 @@ pub enum TypeTag {
     Boolean,
     Symbol,
     Var,
+    Char,
     Keyword,
     IFn,
     Condition,
@@ -28,10 +29,11 @@ impl fmt::Display for TypeTag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let str = match self {
             I32 => std::string::String::from("rust.std.i32"),
-            Boolean => std::string::String::from("rust.std.bool"),
             F64 => std::string::String::from("rust.std.f64"),
+            Boolean => std::string::String::from("rust.std.bool"),
             Symbol => std::string::String::from("clojure.lang.Symbol"),
             Var => std::string::String::from("clojure.lang.Var"),
+            Char => std::string::String::from("clojure.lang.Char"),
             Keyword => std::string::String::from("clojure.lang.Keyword"),
             IFn => std::string::String::from("clojure.lang.Function"),
             Condition => std::string::String::from("clojure.lang.Condition"),
