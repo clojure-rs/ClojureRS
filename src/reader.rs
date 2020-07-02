@@ -416,51 +416,6 @@ pub fn try_read_nil(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, Value::Nil))
 }
 
-mod try_read_char_tests {
-    use crate::reader::try_read_char;
-    use crate::value::Value;
-
-    //    #[test]
-    //    fn try_read_char_test() {
-    //        assert_eq!(Value::Char("\\f"), try_read_char("\\formfeed"))
-    //    }
-
-    #[test]
-    fn try_read_char_space() {
-        assert_eq!(Value::Char(' '), try_read_char("\\space").ok().unwrap().1);
-    }
-
-    #[test]
-    fn try_read_char_return() {
-        assert_eq!(Value::Char('\r'), try_read_char("\\return").ok().unwrap().1);
-    }
-
-    #[test]
-    fn try_read_char_hashtag() {
-        assert_eq!(Value::Char('#'), try_read_char("\\#").ok().unwrap().1);
-    }
-    #[test]
-    fn try_read_char_n() {
-        assert_eq!(Value::Char('n'), try_read_char("\\n").ok().unwrap().1);
-    }
-    #[test]
-    fn try_read_char_f() {
-        assert_eq!(Value::Char('r'), try_read_char("\\r").ok().unwrap().1);
-    }
-    #[test]
-    fn try_read_unicode() {
-        assert_eq!(Value::Char('Ω'), try_read_char("\\u03A9").ok().unwrap().1);
-    }
-    #[test]
-    fn try_read_unicode2() {
-        assert_eq!(Value::Char('张'), try_read_char("\\u5920").ok().unwrap().1);
-    }
-    #[test]
-    fn try_read_char_fail() {
-        assert!(try_read_char("d").is_err());
-    }
-}
-
 /// Tries to parse &str into Value::Char
 /// Example Successes:
 ///    "\newline" => Value::Char("\n")
@@ -908,6 +863,47 @@ mod tests {
         #[test]
         fn try_read_nil_test() {
             assert_eq!(Value::Nil, try_read_nil("nil ").ok().unwrap().1);
+        }
+    }
+
+    mod try_read_char_tests {
+        use crate::reader::try_read_char;
+        use crate::value::Value;
+
+        //    #[test]
+        //    fn try_read_char_test() {
+        //        assert_eq!(Value::Char("\\f"), try_read_char("\\formfeed"))
+        //    }
+
+        #[test]
+        fn try_read_char_space() {
+            assert_eq!(Value::Char(' '), try_read_char("\\space").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_char_return() {
+            assert_eq!(Value::Char('\r'), try_read_char("\\return").ok().unwrap().1);
+        }
+
+        #[test]
+        fn try_read_char_hashtag() {
+            assert_eq!(Value::Char('#'), try_read_char("\\#").ok().unwrap().1);
+        }
+        #[test]
+        fn try_read_char_n() {
+            assert_eq!(Value::Char('n'), try_read_char("\\n").ok().unwrap().1);
+        }
+        #[test]
+        fn try_read_char_f() {
+            assert_eq!(Value::Char('r'), try_read_char("\\r").ok().unwrap().1);
+        }
+        #[test]
+        fn try_read_unicode() {
+            assert_eq!(Value::Char('张'), try_read_char("\\u5F20").ok().unwrap().1);
+        }
+        #[test]
+        fn try_read_char_fail() {
+            assert!(try_read_char("d").is_err());
         }
     }
 
