@@ -79,14 +79,18 @@ macro_rules! conj {
     };
 }
 
-/// merge!(base_meta(name, ns), map_entry!("key1", "value1"), map_entry!("key2", "value2"));
+/// merge!(persistent_list_map!{"a" => 1 "b" => 2}
+///        persistent_list_map!{"b" => 3}
+///        persistent_list_map!{"d" => 5 "e" => 7}
+/// ), ;
 #[macro_export]
-macro_rules! merge_maps {
-    ( $plistmap:expr, $($kv:expr), *) => {
+macro_rules! merge {
+    ( $plistmap:expr, $($map:expr), *) => {
         {
             let mut temp_plistmap_as_vec = $plistmap.clone().iter().collect::<Vec<MapEntry>>();
             $(
-                temp_plistmap_as_vec.push($kv);
+                let next_map_as_vec = $map.clone().iter().collect::<Vec<MapEntry>>();
+                temp_plistmap_as_vec.extend_from_slice(&next_map_as_vec);
             )*
             temp_plistmap_as_vec.into_iter().collect::<PersistentListMap>()
         }
