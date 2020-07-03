@@ -27,6 +27,7 @@ use crate::value::{ToValue, Value};
 use std::rc::Rc;
 use crate::protocols;
 use crate::traits::IObj;
+use crate::traits::IMeta;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -517,6 +518,7 @@ pub fn try_read_meta(input: &str) -> IResult<&str, Value> {
             map_entry!("line",line),
             map_entry!("column",column)
         );
+        meta = merge!(meta,iobj_value.meta());
         Ok((rest_input,iobj_value.with_meta(meta).unwrap().to_value()))
     }
     else {
