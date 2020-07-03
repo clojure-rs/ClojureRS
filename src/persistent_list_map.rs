@@ -63,10 +63,11 @@ macro_rules! persistent_list_map {
         }
     };
 }
-
-/// merge!(base_meta(name, ns), map_entry!("key1", "value1"), map_entry!("key2", "value2"));
+/// Just like conj in Clojure, conj allows you to conjoin a new mapentry onto a map
+/// although currently, that is all it allows
+/// conj!(base_meta(name, ns), map_entry!("key1", "value1"), map_entry!("key2", "value2"));
 #[macro_export]
-macro_rules! merge {
+macro_rules! conj {
     ( $plistmap:expr, $($kv:expr), *) => {
         {
             let mut temp_plistmap_as_vec = $plistmap.clone().iter().collect::<Vec<MapEntry>>();

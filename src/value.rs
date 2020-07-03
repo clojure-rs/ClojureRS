@@ -354,7 +354,7 @@ impl Value {
                             let ss = Symbol::intern_with_ns(
                                 &sym.ns,
                                 &sym.name
-                                // merge!(
+                                // conj!(
                                 //     meta::base_meta(&sym.ns, &sym.name),
                                 //     map_entry!("doc", doc_string)
                                 // ),
