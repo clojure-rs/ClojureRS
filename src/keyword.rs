@@ -21,7 +21,7 @@ impl Keyword {
     // Clojure proper has
     pub fn intern_with_ns(ns: &str, name: &str) -> Keyword {
         Keyword {
-            sym: Symbol::intern_with_ns(name, ns),
+            sym: Symbol::intern_with_ns(ns, name),
         }
     }
 }
