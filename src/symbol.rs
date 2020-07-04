@@ -197,7 +197,7 @@ mod tests {
                     "namespace",
                     "name"
                 ).with_meta(
-                    merge!(
+                    conj!(
                         PersistentListMap::Empty,
                         map_entry!("key", "value")
                     )
@@ -205,7 +205,7 @@ mod tests {
                 Symbol {
                     ns: String::from("namespace"),
                     name: String::from("name"),
-                    meta: merge!(
+                    meta: conj!(
                         PersistentListMap::Empty,
                         map_entry!("key", "value")
                     )

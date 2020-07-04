@@ -27,6 +27,7 @@ use crate::value::{ToValue, Value};
 use std::rc::Rc;
 use crate::protocols;
 use crate::traits::IObj;
+use crate::traits::IMeta;
 use std::io::BufRead;
 //
 // Note; the difference between ours 'parsers'
@@ -512,11 +513,12 @@ pub fn try_read_meta(input: &str) -> IResult<&str, Value> {
         let column = 1;
         // @TODO merge the meta iobj_value *already* has
         // @TODO define some better macros and / or functions for map handling 
-        meta = merge!(
+        meta = conj!(
             meta,
             map_entry!("line",line),
             map_entry!("column",column)
         );
+        meta = merge!(meta,iobj_value.meta());
         Ok((rest_input,iobj_value.with_meta(meta).unwrap().to_value()))
     }
     else {
@@ -987,6 +989,17 @@ mod tests {
                     assert!(!symbol.meta().contains_key(&Keyword::intern("chicken").to_rc_value()));
                 },
                 _ => panic!("try_read_meta \"^{:cat 1 :dog 2} a\" should return a symbol")
+            }
+        }
+        #[test]
+        fn try_read_multiple_meta_keyword() {
+            let with_meta = "^:cat ^:dog a";
+            match try_read(with_meta).ok().unwrap().1 {
+                Value::Symbol(symbol) => {
+                    assert!(symbol.meta().contains_key(&Keyword::intern("cat").to_rc_value()));
+                    assert!(symbol.meta().contains_key(&Keyword::intern("dog").to_rc_value()));
+                },
+                _ => panic!("try_read_meta \"^:cat a\" should return a symbol")
             }
         }
         #[test]
