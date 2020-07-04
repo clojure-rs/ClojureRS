@@ -43,6 +43,18 @@ pub use self::rand::*;
 pub(crate) mod rand_int;
 pub use self::rand_int::*;
 
+pub(crate) mod lt;
+pub use self::lt::*;
+
+pub(crate) mod lte;
+pub use self::lte::*;
+
+pub(crate) mod gt;
+pub use self::gt::*;
+
+pub(crate) mod gte;
+pub use self::gte::*;
+
 // string
 pub(crate) mod str;
 pub use self::str::*;
