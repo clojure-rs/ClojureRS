@@ -41,8 +41,12 @@ impl Symbol {
             //       we need to make sure each 'character' in this case
             //       is 1 byte, and not some other grapheme abstraction
             //       else,these are two different indexes
-            ns = &name[..ind];
-            name = &name[ind + 1..];
+
+            // support interning of the symbol '/' for division
+            if ind > 0 || name.len() > 1 {
+                ns = &name[..ind];
+                name = &name[ind + 1..];
+            }
         }
         Symbol::intern_with_ns(ns, name)
     }
