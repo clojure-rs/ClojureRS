@@ -104,14 +104,16 @@ fn cons_str(head: char, tail: &str) -> String {
 ///   - `$`,
 ///   - `*`,
 ///   - `!`,
-fn is_identifier_char(chr: char) -> bool {
-    chr.is_alphanumeric() || "|?<>+-_=^%&$*!.".contains(chr)
+fn is_identifier_char(ch: char) -> bool {
+    ch.is_alphanumeric() || "|?<>+-_=^%&$*!.".contains(ch)
 }
 
-/// Returns whether if a character can be in the head of an identifier.
+/// Returns true if a character is an acceptable (non numeric) identifier char
 ///
-/// An identifier is composed of a head (its first char) and a tail (the other
-/// chars).
+/// An identifier is either a non numeric identifier char, followed by any number
+/// of identifier chars,  or is a '/' and nothing else.
+///
+/// A separate function will be used to detect if an identifier is possibly just '/'
 ///
 /// A character is an identifier char if it is alphabetic or if it is one of:
 ///   - `|`,
@@ -128,20 +130,55 @@ fn is_identifier_char(chr: char) -> bool {
 ///   - `$`,
 ///   - `*`,
 ///   - `!`,
-fn is_non_numeric_identifier_char(chr: char) -> bool {
-    chr.is_alphabetic() || "|?<>+-_=^%&$*!.".contains(chr)
+fn is_non_numeric_identifier_char(ch: char) -> bool {
+    ch.is_alphabetic() || "|?<>+-_=^%&$*!.".contains(ch)
+}
+
+/// Returns true if a character is an acceptable (non numeric) identifier char, or '/'
+///
+/// An identifier is either a non numeric identifier char, followed by any number
+/// of identifier chars,  or is a '/' and nothing else.
+///
+/// The reason we check if this is *either* a non numeric identifier char, or a '/',
+/// is because we will want to use it to parse either
+///    1.a normal identifier
+///    2.'/',
+///    3. something like '/blah'
+/// And then, if we have '/blah', we will proactively make the read fail
+///
+/// We need to explicitly look for this '/blah' case is otherwise, if we just check for 1 and 2,
+/// then in the case where someone types in '/blah' it will count as two valid separate reads --
+/// first the symbol '/' and then the symbol 'blah'.
+///
+/// This function passes if the char is alphabetic, a '/', or one of:
+///   - `|`,
+///   - `?`,
+///   - `<`,
+///   - `>`,
+///   - `+`,
+///   - `-`,
+///   - `_`,
+///   - `=`,
+///   - `^`,
+///   - `%`,
+///   - `&`,
+///   - `$`,
+///   - `*`,
+///   - `!`,
+fn is_non_numeric_identifier_char_or_slash(ch: char) -> bool {
+    ch == '/' || is_non_numeric_identifier_char(ch)
 }
 
 /// Returns true if given character is a minus character
 ///   - `-`,
-fn is_minus_char(chr: char) -> bool {
-    chr == '-'
+fn is_minus_char(ch: char) -> bool {
+    ch == '-'
 }
 
 /// Returns true if given character is a period character
 ///   - `-`,
-fn is_period_char(chr: char) -> bool {
-    chr == '.'
+fn is_period_char(ch: char) -> bool {
+    ch == '.'
 }
 
 /// Returns whether if a given character is a whitespace.
@@ -207,27 +244,40 @@ fn identifier_tail(input: &str) -> IResult<&str, &str> {
 }
 
 /// Parses valid Clojure identifiers
-/// Example Successes: ab,  cat,  -12+3, |blah|, <well>
-/// Example Failures:  'a,  12b,   ,cat  
+/// Example Successes: ab,  cat,  -12+3, |blah|, <well>, / (edge case)
+/// Example Failures:  'a,  12b,   ,cat  , /ab
 pub fn identifier_parser(input: &str) -> IResult<&str, String> {
-    named!(identifier_head<&str, char>,
+    // We will try to parse either a valid identifier, *or* the invalid identifier
+    // '/slashwithmorecharacters'
+    // Because if we do get the '/blah', we want to know and actively fail, otherwise '/blah'
+    // will just count as two valid reads; one for '/' and one for 'blah'
+    // So, we call these parsers 'maybe_valid_identifier_..',  as they are also trying to catch
+    // this one invalid case 
+    named!(maybe_invalid_identifier_head_parser<&str, char>,
        map!(
-           take_while_m_n!(1, 1, is_non_numeric_identifier_char),
+           take_while_m_n!(1, 1, is_non_numeric_identifier_char_or_slash),
            first_char
        )
     );
 
-    // identifier_tail<&str,&str> defined above to have magic 'complete' powers
+    // identifier_tail<&str,&str> defined above so it can be a 'completion' parser instead of a
+    // 'streaming' parser -- look into nom's documentation for more info 
 
-    named!(identifier <&str, String>,
+    named!(maybe_invalid_identifier_parser <&str, String>,
          do_parse!(
-             head: identifier_head >>
+             head: maybe_invalid_identifier_head_parser >>
              rest_input: identifier_tail >>
              (cons_str(head, &rest_input))
          )
     );
 
-    identifier(input)
+    named!(valid_identifier_parser <&str,String>,
+           verify!(maybe_invalid_identifier_parser,|identifier| {
+               first_char(&identifier) != '/' ||
+               identifier == "/"
+           }));
+
+    valid_identifier_parser(input)
 }
 
 /// Parses valid Clojure symbol
@@ -432,16 +482,6 @@ pub fn try_read_pattern(input: &str) -> IResult<&str, Value> {
     Ok((rest_input, regex))
 }
 
-/// This reader is needed for parsing the division sign /
-pub fn try_read_division_forward_slash(input: &str) -> IResult<&str, Value> {
-    named!(slash_parser<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("/")));
-
-    let (rest_input, slash) = slash_parser(input)?;
-
-    // If an error is thrown,  this will be coerced into a condition
-    Ok((rest_input, Value::Symbol(Symbol::intern(slash))))
-}
-
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
 /// Tries to parse &str into Value::PersistentListMap, or some other Value::..Map
 /// Example Successes:
@@ -543,7 +583,6 @@ pub fn try_read(input: &str) -> IResult<&str, Value> {
             try_read_bool,
             try_read_nil,
             try_read_symbol,
-            try_read_division_forward_slash,
             try_read_keyword,
             try_read_list,
             try_read_vector,
@@ -788,6 +827,7 @@ mod tests {
         use crate::persistent_vector;
         use crate::reader::try_read;
         use crate::symbol::Symbol;
+        use crate::keyword::Keyword;
         use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
         use crate::value::{ToValue, Value};
 
@@ -902,6 +942,36 @@ mod tests {
                 Value::Symbol(Symbol::intern(&"/")),
                 try_read("/ ").ok().unwrap().1
             );
+        }
+        #[test]
+        fn try_read_forward_slash_with_letters_and_fails_test() {
+            assert!(try_read("/ab ").ok().is_none());
+        }
+
+        #[test]
+        fn try_read_forward_slash_keyword_test() {
+            assert_eq!(
+                Value::Keyword(Keyword::intern(&"/")),
+                try_read(":/ ").ok().unwrap().1
+            );
+        }
+        
+        #[test]
+        fn try_read_forward_slash_keyword_with_letters_and_fails_test() {
+            assert!(try_read(":/ab ").ok().is_none());
+        }
+
+        #[test]
+        fn try_read_forward_slash_keyword_with_ns_test() {
+            assert_eq!(
+                Value::Keyword(Keyword::intern_with_ns("core", "/")),
+                try_read(":core// ").ok().unwrap().1
+            );
+        }
+        
+        #[test]
+        fn try_read_forward_slash_keyword_with_ns_with_letters_and_fails_test() {
+            assert!(try_read(":core//ab ").ok().is_none());
         }
     }
 
