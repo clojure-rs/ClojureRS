@@ -245,7 +245,7 @@ impl Environment {
             }
         }
     }
-    // @TODO refactor to use ^ 
+    // @TODO refactor to use ^
     // @TODO figure out convention for 'ns' vs 'namespace'
     /// Get closest value "around" us;  try our local environment, then
     /// try our main environment (unless its namespace qualified)
@@ -278,6 +278,7 @@ impl Environment {
         let subtract_fn = rust_core::SubtractFn {};
         let multiply_fn = rust_core::MultiplyFn {};
         let divide_fn = rust_core::DivideFn {};
+        let rem_fn = rust_core::RemFn {};
         let rand_fn = rust_core::RandFn {};
         let rand_int_fn = rust_core::RandIntFn {};
         let str_fn = rust_core::StrFn {};
@@ -339,6 +340,11 @@ impl Environment {
         let meta_fn = rust_core::MetaFn::new(Rc::clone(&environment));
         let with_meta_fn = rust_core::WithMetaFn::new(Rc::clone(&environment));
         let var_fn = rust_core::special_form::VarFn::new(Rc::clone(&environment));
+        let count_fn = rust_core::count::CountFn {};
+        let lt_fn = rust_core::lt::LtFn {};
+        let gt_fn = rust_core::gt::GtFn {};
+        let lte_fn = rust_core::lte::LteFn {};
+        let gte_fn = rust_core::gte::GteFn {};
         // @TODO after we merge this with all the other commits we have,
         //       just change all the `insert`s here to use insert_in_namespace
         //       I prefer explicity and the non-dependence-on-environmental-factors
@@ -347,7 +353,8 @@ impl Environment {
         environment.insert(Symbol::intern("+"), add_fn.to_rc_value());
         environment.insert(Symbol::intern("-"), subtract_fn.to_rc_value());
         environment.insert(Symbol::intern("*"), multiply_fn.to_rc_value());
-        environment.insert(Symbol::intern("_slash_"), divide_fn.to_rc_value());
+        environment.insert(Symbol::intern("/"), divide_fn.to_rc_value());
+        environment.insert(Symbol::intern("rem"), rem_fn.to_rc_value());
         environment.insert(Symbol::intern("rand"), rand_fn.to_rc_value());
         environment.insert(Symbol::intern("rand-int"), rand_int_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
@@ -360,6 +367,20 @@ impl Environment {
         environment.insert(Symbol::intern("meta"), meta_fn.to_rc_value());
         environment.insert(Symbol::intern("with-meta"), with_meta_fn.to_rc_value());
         environment.insert(Symbol::intern("var-fn*"), var_fn.to_rc_value());
+
+        environment.insert_into_namespace(
+            &Symbol::intern("clojure.core"),
+            Symbol::intern("count"),
+            count_fn.to_rc_value(),
+        );
+
+        // Interop to read real clojure.core
+        environment.insert(Symbol::intern("lt"),lt_fn.to_rc_value());
+
+        environment.insert(Symbol::intern("gt"),gt_fn.to_rc_value());
+        environment.insert(Symbol::intern("lte"),lte_fn.to_rc_value());
+
+        environment.insert(Symbol::intern("gte"),gte_fn.to_rc_value());
 
         // Thread namespace
         environment.insert_into_namespace(
@@ -462,7 +483,6 @@ impl Environment {
             Symbol::intern("split"),
             split_fn.to_rc_value(),
         );
-
 
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
         environment.insert(Symbol::intern("do-fn*"), do_fn.to_rc_value());

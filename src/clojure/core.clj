@@ -47,7 +47,7 @@
 (defmacro time [expr]
   (list (quote let) [(quote start) (quote (System/nanoTime)) (quote ret) expr]
         (quote (do
-        (println (str "Elapsed time: " (_slash_ (- (System/nanoTime) start) 1000000.0) " msecs"))
+        (println (str "Elapsed time: " (/ (- (System/nanoTime) start) 1000000.0) " msecs"))
         ret))))
 
 (defn slurp [f & opts]

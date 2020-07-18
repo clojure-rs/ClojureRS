@@ -353,24 +353,18 @@ impl Value {
 
                 match &**defname {
                     Value::Symbol(sym) => {
-                        // TODO: environment.insert with meta?
-                        let s = if doc_string != Value::Nil {
-                            let ss = Symbol::intern_with_ns(
-                                &sym.ns,
-                                &sym.name
-                                // merge!(
-                                //     meta::base_meta(&sym.ns, &sym.name),
-                                //     map_entry!("doc", doc_string)
-                                // ),
-                            );
-                            ss.clone()
-                        } else {
-                            sym.clone()
-                        };
-                        environment.insert(s.to_owned(), defval);
-                        // @TODO return var. For now, however, we only have symbols
-                        // @TODO intern from environment, don't make new sym ?
-                        Some(s.to_rc_value())
+                        println!("Def: meta on sym is {}",sym.meta());
+
+                        let mut meta = sym.meta();
+
+                        if doc_string != Value::Nil {
+                            meta = conj!(meta,map_entry!("doc",doc_string));
+                        }
+
+                        let sym = sym.with_meta(meta);
+                        environment.insert(sym.clone(), defval);
+                        // @TODO return var
+                        Some(sym.to_rc_value())
                     }
                     _ => Some(Rc::new(Value::Condition(std::string::String::from(
                         "First argument to def must be a symbol",
@@ -781,4 +775,44 @@ impl Evaluable for Value {
     fn eval_to_rc(&self, environment: Rc<Environment>) -> Rc<Value> {
         self.to_rc_value().eval_to_rc(environment)
     }
+}
+mod tests {
+    use crate::keyword::Keyword;
+    use crate::symbol::Symbol;
+    use crate::protocols;
+    use crate::value::Value;
+    use crate::value::ToValue;
+    use crate::traits::IMeta;
+    use std::rc::Rc;
+    use crate::environment::Environment;
+    use crate::persistent_list_map::PersistentListMap;
+    use crate::persistent_list_map::IPersistentMap;
+    use crate::maps::MapEntry;
+    use crate::protocol::ProtocolCastable;
+    // (def ^{:cat 1 :dog 2} a "Docstring" 1)
+    // ==>
+    // a with meta of {:cat 1 :dog 2 :doc "Docstring"} ?
+    #[test]
+    fn def_with_docstring() {
+        let sym_meta = persistent_list_map!{
+            "cat" => 1,
+            "dog" => 2
+        };
+        let a = sym!("a").with_meta(sym_meta);
+        let result = Value::DefMacro.apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(list!(a "Docstring" 1))
+        );
+
+        let final_sym_meta =
+            result
+            .unwrap()
+            .as_protocol::<protocols::IMeta>()
+            .meta();
+
+        assert_eq!(Value::I32(1),*final_sym_meta.get(&Keyword::intern("cat").to_rc_value()));
+        assert_eq!(Value::I32(2),*final_sym_meta.get(&Keyword::intern("dog").to_rc_value()));
+        assert_eq!(Value::String("Docstring".to_string()),*final_sym_meta.get(&Keyword::intern("doc").to_rc_value()));
+
+    }  
 }

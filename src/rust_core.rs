@@ -37,11 +37,26 @@ pub use self::_divide_::*;
 pub(crate) mod _multiply_;
 pub use self::_multiply_::*;
 
+pub(crate) mod rem;
+pub use self::rem::*;
+
 pub(crate) mod rand;
 pub use self::rand::*;
 
 pub(crate) mod rand_int;
 pub use self::rand_int::*;
+
+pub(crate) mod lt;
+pub use self::lt::*;
+
+pub(crate) mod lte;
+pub use self::lte::*;
+
+pub(crate) mod gt;
+pub use self::gt::*;
+
+pub(crate) mod gte;
+pub use self::gte::*;
 
 // string
 pub(crate) mod str;
@@ -65,6 +80,8 @@ pub(crate) mod first;
 pub use self::first::*;
 pub(crate) mod second;
 pub use self::second::*;
+pub(crate) mod count;
+pub use self::count::*;
 
 // input and output
 pub(crate) mod system_newline;
