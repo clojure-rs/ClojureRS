@@ -348,8 +348,6 @@ impl Value {
 
                 match &**defname {
                     Value::Symbol(sym) => {
-                        println!("Def: meta on sym is {}",sym.meta());
-
                         let mut meta = sym.meta();
 
                         if doc_string != Value::Nil {
