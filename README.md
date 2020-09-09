@@ -14,9 +14,9 @@ Put simply, Clojure implemented atop Rust! For now, a Clojure interpreter implem
 ## Project Goals:
 1. To create a version of Clojure that gets to exist independent of a particular platform
 2. To explore a Clojure that, being more independent, has
-   a. Proper tail call elimination
-   b. Conditions / Restarts
-   c. Any other feature it might not normally be able to indulge
+   1. Proper tail call elimination
+   2. Conditions / Restarts
+   3. Any other feature it might not normally be able to indulge
 3. To, should the project progress, begin looking more serious into advanced compilation techniques, to create a serious Clojure implementation 
 
 Check [clojureRS.org](./clojureRS.org) (the file, not website) for more notes about the design of the language, which should grow as the program grows.
