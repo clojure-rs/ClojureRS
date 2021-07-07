@@ -1,11 +1,11 @@
 use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::keyword::Keyword;
-use crate::lambda;
+use crate::{error_message, lambda};
 use crate::maps::MapEntry;
 use crate::persistent_list::PersistentList::Cons;
 use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListIter};
-use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
+use crate::persistent_list_map::{IPersistentMap, PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
 use crate::var::Var;
@@ -282,6 +282,21 @@ impl Value {
 
                 Some(evaled_arg.eval_to_rc(Rc::clone(environment)))
             }
+            Value::PersistentListMap(map) => {
+                if args.len() != 1 && args.len() != 2 {
+                    return error_message::wrong_varg_count(
+                        &[1, 2],
+                        args.len() as usize,
+                    ).to_rc_value().into();
+                }
+                let evaled_arg_values = PersistentList::iter(args)
+                    .map(|rc_arg| rc_arg.eval_to_rc(Rc::clone(environment)))
+                    .collect::<Vec<Rc<Value>>>();
+                let key = evaled_arg_values.get(0).unwrap();
+                // @TODO IPersistentMap::get to support optional default value
+                let _default = evaled_arg_values.get(1).map(|x| x.as_ref());
+                Some(map.get(key))
+            },
             //
             // Unless I'm mistaken, this is incorrect; instead of having a phase where
             // the macro expands, and then another phase where the whole expanded form
@@ -782,6 +797,136 @@ mod tests {
     use crate::persistent_list_map::IPersistentMap;
     use crate::maps::MapEntry;
     use crate::protocol::ProtocolCastable;
+    use crate::ifn::IFn;
+
+    /// ```clojure
+    /// ({:k "v"} :k) ;; => "v"
+    /// ```
+    #[test]
+    fn apply_map_to_keyword() {
+        let map = persistent_list_map!(map_entry!("k", "v"));
+        let args = list!(Keyword::intern("k"));
+        let result = Value::PersistentListMap(map).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::String("v".into()))),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// ({:k "v"} :x) ;; => nil
+    /// ```
+    #[test]
+    fn apply_map_to_keyword_not_in_map() {
+        let map = persistent_list_map!(map_entry!("k", "v"));
+        let args = list!(Keyword::intern("x"));
+        let result = Value::PersistentListMap(map).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Nil)),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// ({:k :v}) ;; => arity error
+    /// ```
+    #[test]
+    fn apply_map_too_few_args() {
+        let map = persistent_list_map!(map_entry!("k", Keyword::intern("v")));
+        let args = list!();
+        let result = Value::PersistentListMap(map).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Condition(
+                "Wrong number of arguments given to function (Given: 0, Expected: [1, 2])".to_string()
+            ))),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// ({:k :v} :k :not-found :too-many) ;; => arity error
+    /// ```
+    #[test]
+    fn apply_map_too_many_args() {
+        let map = persistent_list_map!(map_entry!("k", "v"));
+        let args = list!(
+            Keyword::intern("k")
+            Keyword::intern("not-found")
+            Keyword::intern("too-many")
+        );
+        let result = Value::PersistentListMap(map).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Condition(
+                "Wrong number of arguments given to function (Given: 3, Expected: [1, 2])".to_string()
+            ))),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// ({:k :v} :x :not-found) ;; => :not-found
+    /// ```
+    #[test]
+    #[ignore = "IPersistentMap::get to support optional default value"]
+    fn apply_map_default() {
+        let map = persistent_list_map!(map_entry!("k", Keyword::intern("v")));
+        let args = list!(
+            Keyword::intern("x")
+            Keyword::intern("not-found")
+        );
+        let result = Value::PersistentListMap(map).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Keyword(Keyword::intern("not-found")))),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// ({:k "v"} ((fn [] :k))) ;; => "v"
+    /// ```
+    #[test]
+    fn apply_map_evals_arg() {
+        #[derive(Debug, Clone)]
+        struct FnReturningKeyword {}
+        impl IFn for FnReturningKeyword {
+            fn invoke(&self, _args: Vec<Rc<Value>>) -> Value {
+                Value::Keyword(Keyword::intern("k"))
+            }
+        }
+        impl ToValue for FnReturningKeyword {
+            fn to_value(&self) -> Value {
+                Value::IFn(Rc::new(self.clone()))
+            }
+        }
+        let fn_returning_keyword = FnReturningKeyword {};
+
+        let map = persistent_list_map!(map_entry!("k", "v"));
+        let args = list!(list!(fn_returning_keyword));
+        let result = Value::PersistentListMap(map).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::String("v".into()))),
+            result,
+        );
+    }
+
     // (def ^{:cat 1 :dog 2} a "Docstring" 1)
     // ==>
     // a with meta of {:cat 1 :dog 2 :doc "Docstring"} ?
