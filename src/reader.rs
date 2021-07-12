@@ -55,9 +55,6 @@ use std::io::BufRead;
 
 /// Returns the first character of a string slice.
 ///
-/// If `input` is not empty, then its first char will be returned. Otherwise,
-/// `None` is returned.
-///
 /// # Panics
 ///
 /// This function will panic if `input` is an empty string slice.
