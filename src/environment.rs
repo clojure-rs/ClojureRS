@@ -498,6 +498,7 @@ impl Environment {
         environment.insert(Symbol::intern("nth"), nth_fn.to_rc_value());
         environment.insert(Symbol::intern("assoc"), assoc_fn.to_rc_value());
         environment.insert(Symbol::intern("get"), get_fn.to_rc_value());
+        environment.insert(Symbol::intern("map"), map_fn.to_rc_value());
         environment.insert(Symbol::intern("concat"), concat_fn.to_rc_value());
         environment.insert(Symbol::intern("more"), more_fn.to_rc_value());
         environment.insert(Symbol::intern("first"), first_fn.to_rc_value());
