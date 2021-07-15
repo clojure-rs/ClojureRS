@@ -3,7 +3,7 @@ use crate::persistent_list_map::IPersistentMap;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
-// General assoc fn; however,  currently just implemented
+// General get fn; however,  currently just implemented
 // for our one map type, PersistentListMap
 #[derive(Debug, Clone)]
 pub struct GetFn {}
