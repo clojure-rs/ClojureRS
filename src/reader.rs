@@ -878,6 +878,13 @@ mod tests {
                 try_read_symbol("- ").unwrap().1
             );
         }
+        #[test]
+        fn try_read_namespaced_symbol_test() {
+            assert_eq!(
+                Value::Symbol(Symbol::intern_with_ns("a","b")),
+                try_read_symbol("a/b").unwrap().1
+            );
+        }
     }
 
     mod try_read_tests {
