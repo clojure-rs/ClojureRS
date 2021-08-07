@@ -358,6 +358,7 @@ impl Environment {
         environment.insert(Symbol::intern("rand"), rand_fn.to_rc_value());
         environment.insert(Symbol::intern("rand-int"), rand_int_fn.to_rc_value());
         environment.insert(Symbol::intern("let"), let_macro.to_rc_value());
+        environment.insert(Symbol::intern("map"), map_fn.to_rc_value());
         environment.insert(Symbol::intern("str"), str_fn.to_rc_value());
         environment.insert(Symbol::intern("quote"), quote_macro.to_rc_value());
         environment.insert(Symbol::intern("def"), def_macro.to_rc_value());

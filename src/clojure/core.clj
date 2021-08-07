@@ -11,8 +11,16 @@
         (list (quote fn) args 
               (concat (list (quote do)) body))))
 
+
+";; @TODO Make more like Clojure Proper's apply"
+
 (defn apply [f args]
-  (lexical-eval (concat (list f) args)))
+  (lexical-eval
+    (concat
+      (list f)
+      (map
+        (fn [arg] (list quote arg))
+        args))))
 
 (defn newline
   []
