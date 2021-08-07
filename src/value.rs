@@ -1,11 +1,11 @@
 use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::keyword::Keyword;
-use crate::lambda;
+use crate::{error_message, lambda};
 use crate::maps::MapEntry;
 use crate::persistent_list::PersistentList::Cons;
 use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListIter};
-use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
+use crate::persistent_list_map::{IPersistentMap, PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
 use crate::var::Var;
@@ -281,6 +281,25 @@ impl Value {
                 let evaled_arg = evaled_arg_values.get(0).unwrap();
 
                 Some(evaled_arg.eval_to_rc(Rc::clone(environment)))
+            }
+            Value::Keyword(keyword) => {
+                if args.len() != 1 && args.len() != 2 {
+                    return Some(error_message::wrong_varg_count(
+                        &[1, 2],
+                        args.len() as usize,
+                    ).to_rc_value());
+                }
+                let evaled_arg_values = PersistentList::iter(args)
+                    .map(|rc_arg| rc_arg.eval_to_rc(Rc::clone(environment)))
+                    .collect::<Vec<Rc<Value>>>();
+                let map = evaled_arg_values.get(0).unwrap().as_ref();
+                // @TODO IPersistentMap::get to support optional default value
+                let _default = evaled_arg_values.get(1).map(|x| x.as_ref());
+
+                Some(match map {
+                    Value::PersistentListMap(map) => map.get(&keyword.to_rc_value()),
+                    _ => Rc::new(Value::Nil),
+                })
             }
             //
             // Unless I'm mistaken, this is incorrect; instead of having a phase where
@@ -782,6 +801,148 @@ mod tests {
     use crate::persistent_list_map::IPersistentMap;
     use crate::maps::MapEntry;
     use crate::protocol::ProtocolCastable;
+    use crate::ifn::IFn;
+
+    /// ```clojure
+    /// (:k {:k "v"}) ;; => "v"
+    /// ```
+    #[test]
+    fn apply_keyword_to_map() {
+        let keyword = Keyword::intern("k");
+        let args = list!(persistent_list_map!( map_entry!("k", "v") ));
+        let result = Value::Keyword(keyword).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::String("v".into()))),
+            result,
+        );
+    }
+
+    // @TODO non-Map types other than String
+    /// ```clojure
+    /// (:k "does not eval to map") ;; => nil
+    /// ```
+    #[test]
+    fn apply_keyword_to_non_map() {
+        let keyword = Keyword::intern("k");
+        let args = list!(Value::String("does not eval to map".into()));
+        let result = Value::Keyword(keyword).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Nil)),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// (:x {:k "v"}) ;; => nil
+    /// ```
+    #[test]
+    fn apply_keyword_to_map_without_key() {
+        let keyword = Keyword::intern("x");
+        let args = list!(persistent_list_map!( map_entry!("k", "v") ));
+        let result = Value::Keyword(keyword).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Nil)),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// (:k) ;; => arity error
+    /// ```
+    #[test]
+    fn apply_keyword_too_few_args() {
+        let keyword = Keyword::intern("k");
+        let args = list!();
+        let result = Value::Keyword(keyword).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Condition("Wrong number of arguments given to function (Given: 0, Expected: [1, 2])".into()))),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// (:k a b c) ;; => arity error
+    /// ```
+    #[test]
+    fn apply_keyword_too_many_args() {
+        let keyword = Keyword::intern("k");
+        let args = list!(sym!("a") sym!("b") sym!("c"));
+        let result = Value::Keyword(keyword).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::Condition("Wrong number of arguments given to function (Given: 3, Expected: [1, 2])".into()))),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// (:k {} "default") ;; => "default"
+    /// ```
+    #[test]
+    #[ignore = "IPersistentMap::get to support optional default value"]
+    fn apply_keyword_default() {
+        let keyword = Keyword::intern("k");
+        let args = list!(
+            persistent_list_map!()
+            Value::String("default".into())
+        );
+        let result = Value::Keyword(keyword).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::String("default".into()))),
+            result,
+        );
+    }
+
+    /// ```clojure
+    /// (:k ((fn [] {:k "v"}))) ;; => "v"
+    /// ```
+    #[test]
+    fn apply_keyword_evals_arg() {
+        #[derive(Debug, Clone)]
+        struct FnReturningMapWithKey {}
+        impl IFn for FnReturningMapWithKey {
+            fn invoke(&self, _args: Vec<Rc<Value>>) -> Value {
+                persistent_list_map!(map_entry!("k", "v")).to_value()
+            }
+        }
+        impl ToValue for FnReturningMapWithKey {
+            fn to_value(&self) -> Value {
+                Value::IFn(Rc::new(self.clone()))
+            }
+        }
+        let fn_returning_map_with_key = FnReturningMapWithKey {};
+
+        let keyword = Keyword::intern("k");
+        let args = list!(
+            list!(fn_returning_map_with_key) // fn application to eval
+        );
+        let result = Value::Keyword(keyword).apply_to_persistent_list(
+            &Rc::new(Environment::new_main_environment()),
+            &Rc::new(args),
+        );
+        assert_eq!(
+            Some(Rc::new(Value::String("v".into()))),
+            result,
+        );
+    }
+
     // (def ^{:cat 1 :dog 2} a "Docstring" 1)
     // ==>
     // a with meta of {:cat 1 :dog 2 :doc "Docstring"} ?
