@@ -1,3 +1,4 @@
+/examples/codegen_*
 /target
 **/*.rs.bk
 

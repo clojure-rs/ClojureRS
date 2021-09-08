@@ -15,9 +15,10 @@ pub struct Symbol {
     pub ns: String,
     pub meta: PersistentListMap,
 }
+#[macro_export]
 macro_rules! sym {
     ($x:expr) => {
-        Symbol::intern($x)
+        $crate::symbol::Symbol::intern($x)
     }
 }
 impl Hash for Symbol {

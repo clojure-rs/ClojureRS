@@ -1,0 +1,17 @@
+#[macro_use]
+extern crate rust_clojure;
+
+use rust_clojure::environment::Environment;
+use rust_clojure::value::{Evaluable, ToValue, Value};
+use std::rc::Rc;
+
+use rust_clojure::persistent_vector::{PersistentVector};
+
+fn main() {
+    let v = %%;
+
+    let environment = Rc::new(Environment::clojure_core_environment());
+    for val in v.into_iter() {
+        val.eval(Rc::clone(&environment));
+    }
+}
