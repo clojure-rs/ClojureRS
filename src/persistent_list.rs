@@ -25,7 +25,7 @@ macro_rules! list {
             $(
                 temp_list_as_vec.push($val.to_rc_value());
             )*
-            temp_list_as_vec.into_iter().collect::<crate::persistent_list::PersistentList>()
+            temp_list_as_vec.into_iter().collect::<$crate::persistent_list::PersistentList>()
         }
     };
 }
@@ -40,7 +40,7 @@ macro_rules! list_val {
             $(
                 temp_list_as_vec.push($val.to_rc_value());
             )*
-            temp_list_as_vec.into_iter().collect::<crate::persistent_list::PersistentList>().to_value()
+            temp_list_as_vec.into_iter().collect::<$crate::persistent_list::PersistentList>().to_value()
         }
     };
 }
