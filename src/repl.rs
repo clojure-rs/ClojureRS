@@ -34,7 +34,7 @@ impl Repl {
     }
     pub fn run(&self) {
         let stdin = io::stdin();
-
+        crate::clojure_editor::main::main();
         loop {
             print!("{}=> ", self.environment.get_current_namespace_name());
             let _ = io::stdout().flush();

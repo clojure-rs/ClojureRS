@@ -32,6 +32,8 @@ mod util;
 mod value;
 mod protocols;
 mod traits;
+
+mod clojure_editor;
 fn main() {
     let cli_args: user_action::Action = user_action::parse_args(std::env::args().collect());
 
