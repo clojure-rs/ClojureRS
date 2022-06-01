@@ -74,28 +74,28 @@ impl PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
         //
         match (self, other) {
-            (I32(i), I32(i2)) => i == i2,
-            (F64(d), F64(d2)) => d == d2,
-            (Boolean(b), Boolean(b2)) => b == b2,
-            (Symbol(sym), Symbol(sym2)) => sym == sym2,
-            (Var(var), Var(var2)) => var == var2,
-            (Keyword(kw), Keyword(kw2)) => kw == kw2,
+            (Value::I32(i), Value::I32(i2)) => i == i2,
+            (Value::F64(d), Value::F64(d2)) => d == d2,
+            (Value::Boolean(b), Value::Boolean(b2)) => b == b2,
+            (Value::Symbol(sym), Value::Symbol(sym2)) => sym == sym2,
+            (Value::Var(var), Value::Var(var2)) => var == var2,
+            (Value::Keyword(kw), Value::Keyword(kw2)) => kw == kw2,
             // Equality not defined on functions, similar to Clojure
             // Change this perhaps? Diverge?
-            (IFn(_), IFn(_)) => false,
+            (Value::IFn(_), Value::IFn(_)) => false,
             // Is it misleading for equality to sometimes work?
-            (LexicalEvalFn, LexicalEvalFn) => true,
-            (PersistentList(plist), PersistentList(plist2)) => plist == plist2,
-            (PersistentVector(pvector), PersistentVector(pvector2)) => *pvector == *pvector2,
-            (PersistentListMap(plistmap), PersistentListMap(plistmap2)) => *plistmap == *plistmap2,
-            (Condition(msg), Condition(msg2)) => msg == msg2,
-            (QuoteMacro, QuoteMacro) => true,
-            (DefmacroMacro, DefmacroMacro) => true,
-            (DefMacro, DefMacro) => true,
-            (LetMacro, LetMacro) => true,
-            (String(string), String(string2)) => string == string2,
-            (Nil, Nil) => true,
-            (Pattern(p1), Pattern(p2)) => p1.as_str() == p2.as_str(),
+            (Value::LexicalEvalFn, Value::LexicalEvalFn) => true,
+            (Value::PersistentList(plist), Value::PersistentList(plist2)) => plist == plist2,
+            (Value::PersistentVector(pvector), Value::PersistentVector(pvector2)) => *pvector == *pvector2,
+            (Value::PersistentListMap(plistmap), Value::PersistentListMap(plistmap2)) => *plistmap == *plistmap2,
+            (Value::Condition(msg), Value::Condition(msg2)) => msg == msg2,
+            (Value::QuoteMacro, Value::QuoteMacro) => true,
+            (Value::DefmacroMacro, Value::DefmacroMacro) => true,
+            (Value::DefMacro, Value::DefMacro) => true,
+            (Value::LetMacro, Value::LetMacro) => true,
+            (Value::String(string), Value::String(string2)) => string == string2,
+            (Value::Nil, Value::Nil) => true,
+            (Value::Pattern(p1), Value::Pattern(p2)) => p1.as_str() == p2.as_str(),
             _ => false,
         }
     }
@@ -118,39 +118,39 @@ impl Eq for Value {}
 impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            I32(i) => i.hash(state),
-            F64(d) => d.to_value().hash(state),
-            Boolean(b) => b.hash(state),
-            Symbol(sym) => sym.hash(state),
-            Var(var) => var.hash(state),
-            Keyword(kw) => kw.hash(state),
-            IFn(_) => {
+            Value::I32(i) => i.hash(state),
+            Value::F64(d) => d.to_value().hash(state),
+            Value::Boolean(b) => b.hash(state),
+            Value::Symbol(sym) => sym.hash(state),
+            Value::Var(var) => var.hash(state),
+            Value::Keyword(kw) => kw.hash(state),
+            Value::IFn(_) => {
                 let mut rng = rand::thread_rng();
                 let n2: u16 = rng.gen();
                 n2.hash(state)
             }
-            LexicalEvalFn => (ValueHash::LexicalEvalFn).hash(state),
-            PersistentList(plist) => plist.hash(state),
-            PersistentVector(pvector) => pvector.hash(state),
-            PersistentListMap(plistmap) => plistmap.hash(state),
-            Condition(msg) => msg.hash(state),
+            Value::LexicalEvalFn => (ValueHash::LexicalEvalFn).hash(state),
+            Value::PersistentList(plist) => plist.hash(state),
+            Value::PersistentVector(pvector) => pvector.hash(state),
+            Value::PersistentListMap(plistmap) => plistmap.hash(state),
+            Value::Condition(msg) => msg.hash(state),
             // Random hash is temporary;
             // @TODO implement hashing for functions / macros
-            Macro(_) => {
+            Value::Macro(_) => {
                 let mut rng = rand::thread_rng();
                 let n2: u16 = rng.gen();
                 n2.hash(state)
             }
-            QuoteMacro => ValueHash::QuoteMacro.hash(state),
-            DefmacroMacro => ValueHash::DefmacroMacro.hash(state),
-            DefMacro => ValueHash::DefMacro.hash(state),
-            FnMacro => ValueHash::FnMacro.hash(state),
-            LetMacro => ValueHash::LetMacro.hash(state),
-            IfMacro => ValueHash::IfMacro.hash(state),
+            Value::QuoteMacro => ValueHash::QuoteMacro.hash(state),
+            Value::DefmacroMacro => ValueHash::DefmacroMacro.hash(state),
+            Value::DefMacro => ValueHash::DefMacro.hash(state),
+            Value::FnMacro => ValueHash::FnMacro.hash(state),
+            Value::LetMacro => ValueHash::LetMacro.hash(state),
+            Value::IfMacro => ValueHash::IfMacro.hash(state),
 
-            String(string) => string.hash(state),
-            Pattern(p) => p.as_str().hash(state),
-            Nil => ValueHash::Nil.hash(state),
+            Value::String(string) => string.hash(state),
+            Value::Pattern(p) => p.as_str().hash(state),
+            Value::Nil => ValueHash::Nil.hash(state),
         }
         // self.id.hash(state);
         // self.phone.hash(state);
@@ -159,30 +159,30 @@ impl Hash for Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let str = match self {
-            I32(val) => val.to_string(),
-            F64(val) => val.to_string(),
-            Boolean(val) => val.to_string(),
-            Symbol(sym) => sym.to_string(),
-            Var(var) => var.to_string(),
-            Keyword(kw) => kw.to_string(),
-            IFn(_) => String::from("#function[]"),
-            LexicalEvalFn => String::from("#function[lexical-eval*]"),
-            PersistentList(plist) => plist.to_string(),
-            PersistentVector(pvector) => pvector.to_string(),
-            PersistentListMap(plistmap) => plistmap.to_string(),
-            Condition(msg) => format!("#Condition[\"{}\"]", msg),
-            Macro(_) => String::from("#macro[]"),
-            QuoteMacro => String::from("#macro[quote*]"),
-            DefMacro => String::from("#macro[def*]"),
-            DefmacroMacro => String::from("#macro[defmacro*]"),
-            FnMacro => String::from("#macro[fn*]"),
-            IfMacro => String::from("#macro[if*]"),
-            LetMacro => String::from("#macro[let*]"),
+            Value::I32(val) => val.to_string(),
+            Value::F64(val) => val.to_string(),
+            Value::Boolean(val) => val.to_string(),
+            Value::Symbol(sym) => sym.to_string(),
+            Value::Var(var) => var.to_string(),
+            Value::Keyword(kw) => kw.to_string(),
+            Value::IFn(_) => String::from("#function[]"),
+            Value::LexicalEvalFn => String::from("#function[lexical-eval*]"),
+            Value::PersistentList(plist) => plist.to_string(),
+            Value::PersistentVector(pvector) => pvector.to_string(),
+            Value::PersistentListMap(plistmap) => plistmap.to_string(),
+            Value::Condition(msg) => format!("#Condition[\"{}\"]", msg),
+            Value::Macro(_) => String::from("#macro[]"),
+            Value::QuoteMacro => String::from("#macro[quote*]"),
+            Value::DefMacro => String::from("#macro[def*]"),
+            Value::DefmacroMacro => String::from("#macro[defmacro*]"),
+            Value::FnMacro => String::from("#macro[fn*]"),
+            Value::IfMacro => String::from("#macro[if*]"),
+            Value::LetMacro => String::from("#macro[let*]"),
             Value::String(string) => string.clone(),
-            Pattern(pattern) => String::from(
+            Value::Pattern(pattern) => String::from(
                 "#\"".to_owned() + &pattern.as_str().escape_default().to_string().clone() + "\"",
             ),
-            Nil => String::from("nil"),
+            Value::Nil => String::from("nil"),
         };
         write!(f, "{}", str)
     }
@@ -267,7 +267,7 @@ impl Value {
                 // Invoke fn on arguments
                 Some(Rc::new(ifn.invoke(evaled_arg_refs)))
             }
-            LexicalEvalFn => {
+            Value::LexicalEvalFn => {
                 if args.len() != 1 {
                     return Some(Rc::new(Value::Condition(format!(
                         "Wrong number of arguments (Given: {}, Expected: 1)",
@@ -318,7 +318,7 @@ impl Value {
             //   as an implementation of the generic Value::Macro(Rc<IFn>)
             //
             // (def symbol doc-string? init?)
-            DefMacro => {
+            Value::DefMacro => {
                 let arg_rc_values = PersistentList::iter(args)
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
@@ -365,7 +365,7 @@ impl Value {
                     )))),
                 }
             }
-            DefmacroMacro => {
+            Value::DefmacroMacro => {
                 let arg_rc_values = PersistentList::iter(args)
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
@@ -410,7 +410,7 @@ impl Value {
             //
             // @TODO Rename for* everywhere, define for in terms of for* in
             //       ClojureRS
-            FnMacro => {
+            Value::FnMacro => {
                 let arg_rc_values = PersistentList::iter(args)
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
@@ -470,7 +470,7 @@ impl Value {
                     )))),
                 }
             }
-            LetMacro => {
+            Value::LetMacro => {
                 let arg_rc_values = PersistentList::iter(args)
                     .map(|rc_arg| rc_arg)
                     .collect::<Vec<Rc<Value>>>();
@@ -520,7 +520,7 @@ impl Value {
             // Quote is simply a primitive, a macro base case; trying to define quote without
             // quote just involves an infinite loop of macroexpansion. Or so it seems
             //
-            QuoteMacro => {
+            Value::QuoteMacro => {
                 match args.len().cmp(&1) {
                     Ordering::Greater => Some(Rc::new(Value::Condition(format!(
                         "Wrong number of arguments (Given: {}, Expected: 1)",
@@ -533,7 +533,7 @@ impl Value {
                     Ordering::Equal => Some(args.nth(0)),
                 }
             }
-            IfMacro => {
+            Value::IfMacro => {
                 if args.len() != 2 && args.len() != 3 {
                     return Some(Rc::new(Value::Condition(format!(
                         "Wrong number of arguments (Given: {}, Expected: 2 or 3)",
