@@ -15,6 +15,7 @@ use core::fmt::Display;
 extern crate rand;
 use rand::Rng;
 
+use std::string::String;
 use std::cmp::{Ord, Ordering};
 use std::fmt;
 use std::fmt::Debug;
@@ -48,7 +49,7 @@ pub enum Value {
     PersistentVector(PersistentVector),
     PersistentListMap(PersistentListMap),
 
-    Condition(std::string::String),
+    Condition(String),
     // Macro body is still a function, that will be applied to our unevaled arguments
     Macro(Rc<dyn IFn>),
     //
@@ -61,7 +62,7 @@ pub enum Value {
     LetMacro,
     IfMacro,
 
-    String(std::string::String),
+    String(String),
     Nil,
     Pattern(regex::Regex),
 }
@@ -164,24 +165,24 @@ impl fmt::Display for Value {
             Symbol(sym) => sym.to_string(),
             Var(var) => var.to_string(),
             Keyword(kw) => kw.to_string(),
-            IFn(_) => std::string::String::from("#function[]"),
-            LexicalEvalFn => std::string::String::from("#function[lexical-eval*]"),
+            IFn(_) => String::from("#function[]"),
+            LexicalEvalFn => String::from("#function[lexical-eval*]"),
             PersistentList(plist) => plist.to_string(),
             PersistentVector(pvector) => pvector.to_string(),
             PersistentListMap(plistmap) => plistmap.to_string(),
             Condition(msg) => format!("#Condition[\"{}\"]", msg),
-            Macro(_) => std::string::String::from("#macro[]"),
-            QuoteMacro => std::string::String::from("#macro[quote*]"),
-            DefMacro => std::string::String::from("#macro[def*]"),
-            DefmacroMacro => std::string::String::from("#macro[defmacro*]"),
-            FnMacro => std::string::String::from("#macro[fn*]"),
-            IfMacro => std::string::String::from("#macro[if*]"),
-            LetMacro => std::string::String::from("#macro[let*]"),
+            Macro(_) => String::from("#macro[]"),
+            QuoteMacro => String::from("#macro[quote*]"),
+            DefMacro => String::from("#macro[def*]"),
+            DefmacroMacro => String::from("#macro[defmacro*]"),
+            FnMacro => String::from("#macro[fn*]"),
+            IfMacro => String::from("#macro[if*]"),
+            LetMacro => String::from("#macro[let*]"),
             Value::String(string) => string.clone(),
-            Pattern(pattern) => std::string::String::from(
+            Pattern(pattern) => String::from(
                 "#\"".to_owned() + &pattern.as_str().escape_default().to_string().clone() + "\"",
             ),
-            Nil => std::string::String::from("nil"),
+            Nil => String::from("nil"),
         };
         write!(f, "{}", str)
     }
@@ -195,7 +196,7 @@ impl Value {
     // with a \"\" and all.
     // Everything else we print as is.
     //
-    pub fn to_string_explicit(&self) -> std::string::String {
+    pub fn to_string_explicit(&self) -> String {
         match self {
             Value::String(string) => format!("\"{}\"", string),
             _ => self.to_string(),
@@ -359,7 +360,7 @@ impl Value {
                         // @TODO return var
                         Some(sym.to_rc_value())
                     }
-                    _ => Some(Rc::new(Value::Condition(std::string::String::from(
+                    _ => Some(Rc::new(Value::Condition(String::from(
                         "First argument to def must be a symbol",
                     )))),
                 }
@@ -392,7 +393,7 @@ impl Value {
                     .eval(Rc::clone(&environment));
                 let macro_value = match &macro_invokable_body {
 		    Value::IFn(ifn) => Rc::new(Value::Macro(Rc::clone(&ifn))),
-		    _ => Rc::new(Value::Condition(std::string::String::from("Compiler Error: your macro_value somehow compiled into something else entirely.  I don't even know how that happened,  this behavior is hardcoded, that's impressive")))
+		    _ => Rc::new(Value::Condition(String::from("Compiler Error: your macro_value somehow compiled into something else entirely.  I don't even know how that happened,  this behavior is hardcoded, that's impressive")))
 		};
                 Some(
                     vec![
@@ -464,7 +465,7 @@ impl Value {
                             .to_value(),
                         ))
                     }
-                    _ => Some(Rc::new(Value::Condition(std::string::String::from(
+                    _ => Some(Rc::new(Value::Condition(String::from(
                         "First argument to def must be a symbol",
                     )))),
                 }
@@ -475,7 +476,7 @@ impl Value {
                     .collect::<Vec<Rc<Value>>>();
                 if arg_rc_values.is_empty() || arg_rc_values.len() > 2 {
                     // @TODO: we give 0 but it may be 3, 4, 5...
-                    return Some(Rc::new(Value::Condition(std::string::String::from(
+                    return Some(Rc::new(Value::Condition(String::from(
                         "Wrong number of arguments given to let (Given: 0, Expecting: 1 or 2)",
                     ))));
                 }
@@ -510,7 +511,7 @@ impl Value {
                             Some(Rc::new(Value::Nil))
                         }
                     }
-                    _ => Some(Rc::new(Value::Condition(std::string::String::from(
+                    _ => Some(Rc::new(Value::Condition(String::from(
                         "Bindings to let should be a vector",
                     )))),
                 }
@@ -526,7 +527,7 @@ impl Value {
                         args.len()
                     )))),
                     // @TODO define is_empty()
-                    Ordering::Less => Some(Rc::new(Value::Condition(std::string::String::from(
+                    Ordering::Less => Some(Rc::new(Value::Condition(String::from(
                         "Wrong number of arguments (Given: 0, Expected: 1)",
                     )))),
                     Ordering::Equal => Some(args.nth(0)),
@@ -610,7 +611,7 @@ impl ToValue for bool {
     }
 }
 
-impl ToValue for std::string::String {
+impl ToValue for String {
     fn to_value(&self) -> Value {
         Value::String(self.clone())
     }
@@ -619,13 +620,13 @@ impl ToValue for std::string::String {
 // Not sure why this has to be done separately from the `str` implementation
 impl ToValue for &str {
     fn to_value(&self) -> Value {
-        Value::String(std::string::String::from(*self))
+        Value::String(String::from(*self))
     }
 }
 
 impl ToValue for str {
     fn to_value(&self) -> Value {
-        Value::String(std::string::String::from(self))
+        Value::String(String::from(self))
     }
 }
 
