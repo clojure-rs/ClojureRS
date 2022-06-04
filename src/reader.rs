@@ -8,27 +8,27 @@
 //! not;  since this is about being a 'free-er' Clojure, especially since it can't compete with it in raw
 //! power, neither speed or ecosystem,  it might be worth it to leave in reader macros.
 
-use nom::combinator::{verify};
+use nom::combinator::verify;
 use nom::{
     branch::alt, bytes::complete::tag, combinator::opt, map, sequence::preceded, take_until,
-    Err::Incomplete, IResult
+    Err::Incomplete, IResult,
 };
 
+use crate::error_message;
 use crate::keyword::Keyword;
 use crate::maps::MapEntry;
 use crate::persistent_list::ToPersistentList;
-use crate::persistent_list_map::{PersistentListMap,ToPersistentListMap, ToPersistentListMapIter};
+use crate::persistent_list_map::{PersistentListMap, ToPersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::ToPersistentVector;
-use crate::protocol::ProtocolCastable;
 use crate::protocol::Protocol;
-use crate::symbol::Symbol;
-use crate::error_message;
-use crate::value::{ToValue, Value};
-use std::rc::Rc;
+use crate::protocol::ProtocolCastable;
 use crate::protocols;
-use crate::traits::IObj;
+use crate::symbol::Symbol;
 use crate::traits::IMeta;
+use crate::traits::IObj;
+use crate::value::{ToValue, Value};
 use std::io::BufRead;
+use std::rc::Rc;
 //
 // Note; the difference between ours 'parsers'
 //   identifier_parser
@@ -252,7 +252,7 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
     // Because if we do get the '/blah', we want to know and actively fail, otherwise '/blah'
     // will just count as two valid reads; one for '/' and one for 'blah'
     // So, we call these parsers 'maybe_valid_identifier_..',  as they are also trying to catch
-    // this one invalid case 
+    // this one invalid case
     named!(maybe_invalid_identifier_head_parser<&str, char>,
        map!(
            take_while_m_n!(1, 1, is_non_numeric_identifier_char_or_slash),
@@ -261,7 +261,7 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
     );
 
     // identifier_tail<&str,&str> defined above so it can be a 'completion' parser instead of a
-    // 'streaming' parser -- look into nom's documentation for more info 
+    // 'streaming' parser -- look into nom's documentation for more info
 
     named!(maybe_invalid_identifier_parser <&str, String>,
          do_parse!(
@@ -272,10 +272,10 @@ pub fn identifier_parser(input: &str) -> IResult<&str, String> {
     );
 
     named!(valid_identifier_parser <&str,String>,
-           verify!(maybe_invalid_identifier_parser,|identifier| {
-               first_char(&identifier) != '/' ||
-               identifier == "/"
-           }));
+    verify!(maybe_invalid_identifier_parser,|identifier| {
+        first_char(&identifier) != '/' ||
+        identifier == "/"
+    }));
 
     valid_identifier_parser(input)
 }
@@ -489,7 +489,7 @@ pub fn try_read_var(input: &str) -> IResult<&str, Value> {
     let (rest_input, val) = try_read(rest_input)?;
     // #'x just expands to (var x), just like 'x is just a shorthand for (quote x)
     // So here we return (var val)
-    Ok((rest_input,list_val!(sym!("var") val)))
+    Ok((rest_input, list_val!(sym!("var") val)))
 }
 
 // @TODO Perhaps generalize this, or even generalize it as a reader macro
@@ -521,54 +521,55 @@ pub fn try_read_meta(input: &str) -> IResult<&str, Value> {
     named!(meta_start<&str, &str>, preceded!(consume_clojure_whitespaces_parser, tag!("^")));
     let (rest_input, _) = meta_start(input)?;
 
-    let (rest_input,meta_value) = try_read(rest_input)?;
+    let (rest_input, meta_value) = try_read(rest_input)?;
     let mut meta = PersistentListMap::Empty;
     match &meta_value {
         Value::Symbol(symbol) => {
             // @TODO Note; do NOT hardcode this, make some global for TAG_KEY, like Clojure does
-            meta = persistent_list_map!{"tag" => symbol};
-        },
+            meta = persistent_list_map! {"tag" => symbol};
+        }
         Value::Keyword(keyword) => {
-            meta = persistent_list_map!(
-                MapEntry {
-                    key: meta_value.to_rc_value(),
-                    val: true.to_rc_value()
-                }
-            );
-        },
+            meta = persistent_list_map!(MapEntry {
+                key: meta_value.to_rc_value(),
+                val: true.to_rc_value()
+            });
+        }
         Value::String(string) => {
             // @TODO Note; do NOT hardcode this, make some global for TAG_KEY, like Clojure does
-            meta = persistent_list_map!{"tag" => string};
-        },
+            meta = persistent_list_map! {"tag" => string};
+        }
         Value::PersistentListMap(plist_map) => {
             meta = plist_map.clone();
-         // Then we're already set
+            // Then we're already set
         }
         _ => {
             // @TODO check instanceof IPersistentMap here instead
             // @TODO Clojure has basically this one off error here, but another thing we wish to do
-            //       is write clear errors 
-            return Ok((rest_input,error_message::custom("When trying to read meta: metadata must be Symbol, Keyword, String, or Map")))
+            //       is write clear errors
+            return Ok((
+                rest_input,
+                error_message::custom(
+                    "When trying to read meta: metadata must be Symbol, Keyword, String, or Map",
+                ),
+            ));
         }
     }
-    let (rest_input,iobj_value) = try_read(rest_input)?;
+    let (rest_input, iobj_value) = try_read(rest_input)?;
 
-    // Extra clone, implement these functions for plain Values 
-    if let Some(iobj_value) =  iobj_value.to_rc_value().try_as_protocol::<protocols::IObj>() {
+    // Extra clone, implement these functions for plain Values
+    if let Some(iobj_value) = iobj_value
+        .to_rc_value()
+        .try_as_protocol::<protocols::IObj>()
+    {
         // @TODO get actual line and column info
         let line = 1;
         let column = 1;
         // @TODO merge the meta iobj_value *already* has
-        // @TODO define some better macros and / or functions for map handling 
-        meta = conj!(
-            meta,
-            map_entry!("line",line),
-            map_entry!("column",column)
-        );
-        meta = merge!(meta,iobj_value.meta());
-        Ok((rest_input,iobj_value.with_meta(meta).unwrap().to_value()))
-    }
-    else {
+        // @TODO define some better macros and / or functions for map handling
+        meta = conj!(meta, map_entry!("line", line), map_entry!("column", column));
+        meta = merge!(meta, iobj_value.meta());
+        Ok((rest_input, iobj_value.with_meta(meta).unwrap().to_value()))
+    } else {
         Ok((rest_input,error_message::custom("In meta reader: metadata can only be applied to types who are an instance of IMeta")))
     }
 }
@@ -881,15 +882,15 @@ mod tests {
     }
 
     mod try_read_tests {
+        use crate::keyword::Keyword;
         use crate::persistent_list;
         use crate::persistent_list_map;
         use crate::persistent_list_map::IPersistentMap;
-        use crate::keyword::Keyword;
         use crate::persistent_vector;
         use crate::reader::try_read;
         use crate::symbol::Symbol;
-        use crate::value::{ToValue,Value};
         use crate::value::Value::{PersistentList, PersistentListMap, PersistentVector};
+        use crate::value::{ToValue, Value};
 
         #[test]
         fn try_read_empty_map_test() {
@@ -997,16 +998,18 @@ mod tests {
         }
         #[test]
         fn try_read_meta_symbol() {
-           let with_meta = "^cat a";
+            let with_meta = "^cat a";
             match try_read(with_meta).ok().unwrap().1 {
                 Value::Symbol(symbol) => {
-                    assert!(symbol.meta().contains_key(&Keyword::intern("tag").to_rc_value()));
+                    assert!(symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("tag").to_rc_value()));
                     assert_eq!(
                         Symbol::intern("cat").to_value(),
                         *symbol.meta().get(&Keyword::intern("tag").to_rc_value())
                     );
-                },
-                _ => panic!("try_read_meta \"^cat a\" should return a symbol")
+                }
+                _ => panic!("try_read_meta \"^cat a\" should return a symbol"),
             }
         }
         #[test]
@@ -1014,14 +1017,16 @@ mod tests {
             let with_meta = "^\"cat\" a";
             match try_read(with_meta).ok().unwrap().1 {
                 Value::Symbol(symbol) => {
-                    assert_eq!(String::from("a"),symbol.name);
-                    assert!(symbol.meta().contains_key(&Keyword::intern("tag").to_rc_value()));
+                    assert_eq!(String::from("a"), symbol.name);
+                    assert!(symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("tag").to_rc_value()));
                     assert_eq!(
                         "cat".to_value(),
                         *symbol.meta().get(&Keyword::intern("tag").to_rc_value())
                     );
-                },
-                _ => panic!("try_read_meta '^\"cat\" a' should return a symbol")
+                }
+                _ => panic!("try_read_meta '^\"cat\" a' should return a symbol"),
             }
         }
         #[test]
@@ -1029,13 +1034,25 @@ mod tests {
             let with_meta = "^{:cat 1 :dog 2} a";
             match try_read(with_meta).ok().unwrap().1 {
                 Value::Symbol(symbol) => {
-                    assert!(symbol.meta().contains_key(&Keyword::intern("cat").to_rc_value()));
-                    assert_eq!(Value::I32(1),*symbol.meta().get(&Keyword::intern("cat").to_rc_value()));
-                    assert!(symbol.meta().contains_key(&Keyword::intern("dog").to_rc_value()));
-                    assert_eq!(Value::I32(2),*symbol.meta().get(&Keyword::intern("dog").to_rc_value()));
-                    assert!(!symbol.meta().contains_key(&Keyword::intern("chicken").to_rc_value()));
-                },
-                _ => panic!("try_read_meta \"^{:cat 1 :dog 2} a\" should return a symbol")
+                    assert!(symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("cat").to_rc_value()));
+                    assert_eq!(
+                        Value::I32(1),
+                        *symbol.meta().get(&Keyword::intern("cat").to_rc_value())
+                    );
+                    assert!(symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("dog").to_rc_value()));
+                    assert_eq!(
+                        Value::I32(2),
+                        *symbol.meta().get(&Keyword::intern("dog").to_rc_value())
+                    );
+                    assert!(!symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("chicken").to_rc_value()));
+                }
+                _ => panic!("try_read_meta \"^{:cat 1 :dog 2} a\" should return a symbol"),
             }
         }
         #[test]
@@ -1043,10 +1060,14 @@ mod tests {
             let with_meta = "^:cat ^:dog a";
             match try_read(with_meta).ok().unwrap().1 {
                 Value::Symbol(symbol) => {
-                    assert!(symbol.meta().contains_key(&Keyword::intern("cat").to_rc_value()));
-                    assert!(symbol.meta().contains_key(&Keyword::intern("dog").to_rc_value()));
-                },
-                _ => panic!("try_read_meta \"^:cat a\" should return a symbol")
+                    assert!(symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("cat").to_rc_value()));
+                    assert!(symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("dog").to_rc_value()));
+                }
+                _ => panic!("try_read_meta \"^:cat a\" should return a symbol"),
             }
         }
         #[test]
@@ -1054,9 +1075,11 @@ mod tests {
             let with_meta = "^:cat a";
             match try_read(with_meta).ok().unwrap().1 {
                 Value::Symbol(symbol) => {
-                   assert!(symbol.meta().contains_key(&Keyword::intern("cat").to_rc_value()));
-                },
-                _ => panic!("try_read_meta \"^:cat a\" should return a symbol")
+                    assert!(symbol
+                        .meta()
+                        .contains_key(&Keyword::intern("cat").to_rc_value()));
+                }
+                _ => panic!("try_read_meta \"^:cat a\" should return a symbol"),
             }
         }
         #[test]
@@ -1078,7 +1101,7 @@ mod tests {
                 try_read(":/ ").ok().unwrap().1
             );
         }
-        
+
         #[test]
         fn try_read_forward_slash_keyword_with_letters_and_fails_test() {
             assert!(try_read(":/ab ").ok().is_none());
@@ -1091,7 +1114,7 @@ mod tests {
                 try_read(":core// ").ok().unwrap().1
             );
         }
-        
+
         #[test]
         fn try_read_forward_slash_keyword_with_ns_with_letters_and_fails_test() {
             assert!(try_read(":core//ab ").ok().is_none());

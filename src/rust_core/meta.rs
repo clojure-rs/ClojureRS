@@ -1,10 +1,10 @@
 use crate::environment::Environment;
 use crate::error_message;
- use crate::ifn::IFn;
-use crate::type_tag::TypeTag;
+use crate::ifn::IFn;
 use crate::protocol::ProtocolCastable;
 use crate::protocols;
 use crate::traits::IMeta;
+use crate::type_tag::TypeTag;
 use crate::value::{ToValue, Value};
 use std::rc::Rc;
 
@@ -42,9 +42,8 @@ impl IFn for MetaFn {
             _ => error_message::custom(&format!(
                 "In (meta ..), .. must be an instance of IMeta, and {} is of type {}, which is not",
                 args.get(0).unwrap(),
-                args.get(0).unwrap().type_tag())
-            )
-            //error_message::cast_error(Cast("IMeta"), TypeTag::PersistentListMap)
+                args.get(0).unwrap().type_tag()
+            )), //error_message::cast_error(Cast("IMeta"), TypeTag::PersistentListMap)
         }
     }
 }

@@ -3,9 +3,9 @@ use std::fmt::Debug;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use crate::value::{ToValue, Value};
 use crate::persistent_list_map::PersistentListMap;
 use crate::traits;
+use crate::value::{ToValue, Value};
 use std::hash::Hash;
 
 #[derive(Debug, Clone, PartialEq, Hash)]
@@ -16,7 +16,7 @@ pub enum PersistentList {
 }
 // Experimental
 /// list!(sym!("+") 1 2);
-/// Meant to look closer to Clojure's native list syntax, to give us some Clojuresque sugar 
+/// Meant to look closer to Clojure's native list syntax, to give us some Clojuresque sugar
 #[macro_export]
 macro_rules! list {
     ( $($val:expr) *) => {
@@ -105,7 +105,7 @@ impl traits::IMeta for PersistentList {
     }
 }
 impl traits::IObj for PersistentList {
-    fn with_meta(&self,meta: PersistentListMap) -> PersistentList {
+    fn with_meta(&self, meta: PersistentListMap) -> PersistentList {
         // @TODO implement
         self.clone()
     }

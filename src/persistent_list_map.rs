@@ -14,8 +14,8 @@
 //! b => {:a 1 :b 3}
 
 use crate::maps::MapEntry;
-use crate::value::Value;
 use crate::traits;
+use crate::value::Value;
 
 use std::collections::HashMap;
 use std::convert::From;
@@ -102,7 +102,7 @@ macro_rules! merge {
 pub trait IPersistentMap {
     fn get(&self, key: &Rc<Value>) -> Rc<Value>;
     fn assoc(&self, key: Rc<Value>, value: Rc<Value>) -> Self;
-    fn contains_key(&self,key: &Rc<Value>) -> bool;
+    fn contains_key(&self, key: &Rc<Value>) -> bool;
 }
 impl IPersistentMap for PersistentListMap {
     // @TODO make fn of ILookup
@@ -120,15 +120,15 @@ impl IPersistentMap for PersistentListMap {
     fn assoc(&self, key: Rc<Value>, val: Rc<Value>) -> PersistentListMap {
         PersistentListMap::Map(Rc::new(self.clone()), MapEntry { key, val })
     }
-    fn contains_key(&self,key: &Rc<Value>) -> bool {
+    fn contains_key(&self, key: &Rc<Value>) -> bool {
         match self {
             PersistentListMap::Map(parent, entry) => {
                 if entry.key == *key {
                     return true;
                 }
                 parent.contains_key(key)
-            },
-            PersistentListMap::Empty => false
+            }
+            PersistentListMap::Empty => false,
         }
     }
 }
@@ -152,15 +152,15 @@ impl IPersistentMap for Rc<PersistentListMap> {
             MapEntry { key, val },
         ))
     }
-    fn contains_key(&self,key: &Rc<Value>) -> bool {
+    fn contains_key(&self, key: &Rc<Value>) -> bool {
         match &**self {
             PersistentListMap::Map(parent, entry) => {
                 if entry.key == *key {
                     return true;
                 }
                 parent.contains_key(key)
-            },
-            PersistentListMap::Empty => false
+            }
+            PersistentListMap::Empty => false,
         }
     }
 }
@@ -245,7 +245,7 @@ impl traits::IMeta for PersistentListMap {
     }
 }
 impl traits::IObj for PersistentListMap {
-    fn with_meta(&self,meta: PersistentListMap) -> PersistentListMap {
+    fn with_meta(&self, meta: PersistentListMap) -> PersistentListMap {
         // @TODO implement
         self.clone()
     }
@@ -273,9 +273,9 @@ impl fmt::Display for PersistentListMap {
 }
 #[cfg(test)]
 mod tests {
+    use crate::keyword::Keyword;
     use crate::persistent_list_map::*;
     use crate::symbol::Symbol;
-    use crate::keyword::Keyword;
     use crate::value::ToValue;
 
     #[test]
@@ -308,7 +308,7 @@ mod tests {
     }
     #[test]
     fn contains_key() {
-        let map1 = persistent_list_map!{ "a" => 12, "b" => 13 };
+        let map1 = persistent_list_map! { "a" => 12, "b" => 13 };
         assert!(map1.contains_key(&Keyword::intern("a").to_rc_value()));
         assert!(map1.contains_key(&Keyword::intern("b").to_rc_value()));
         assert!(!map1.contains_key(&Keyword::intern("c").to_rc_value()));

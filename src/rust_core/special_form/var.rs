@@ -33,11 +33,11 @@ impl IFn for VarFn {
             Value::Symbol(s) => match &*self.enclosing_environment.get_var(&s) {
                 var @ Value::Var(_) => var.clone(),
                 error @ Value::Condition(_) => error.clone(),
-                _ => panic!("environment.get_var didn't return Var or Condition in var special form")
+                _ => {
+                    panic!("environment.get_var didn't return Var or Condition in var special form")
+                }
             },
-            _ => {
-                error_message::type_mismatch(TypeTag::Symbol, args.get(0).unwrap())
-            }
+            _ => error_message::type_mismatch(TypeTag::Symbol, args.get(0).unwrap()),
         }
     }
 }

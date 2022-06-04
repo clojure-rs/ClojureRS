@@ -1,7 +1,7 @@
 use crate::persistent_list_map::PersistentListMap;
 use crate::symbol::Symbol;
-use crate::var::Var;
 use crate::value::{ToValue, Value};
+use crate::var::Var;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -163,22 +163,18 @@ impl Namespace {
             .replace_with(|refers| refers.add_referred_namespaces(namespaces));
     }
 
-    fn contains_key(&self,sym: &Symbol) -> bool {
+    fn contains_key(&self, sym: &Symbol) -> bool {
         self.mappings.borrow_mut().contains_key(sym)
     }
     pub fn insert(&self, sym: &Symbol, val: Rc<Value>) {
         if !self.contains_key(sym) {
-            let var = var!(&self.name.name,&sym.name);
+            let var = var!(&self.name.name, &sym.name);
             var.bind_root(val);
             var.set_meta(sym.meta());
-            self.mappings
-                .borrow_mut()
-                .insert(sym.unqualified(), var);
+            self.mappings.borrow_mut().insert(sym.unqualified(), var);
         } else {
             let mappings = self.mappings.borrow_mut();
-            let var = mappings
-                .get(&sym.unqualified())
-                .unwrap();
+            let var = mappings.get(&sym.unqualified()).unwrap();
 
             var.bind_root(val);
             var.set_meta(sym.meta());
@@ -186,7 +182,12 @@ impl Namespace {
     }
 
     pub fn get_var(&self, sym: &Symbol) -> Rc<Value> {
-        match self.mappings.borrow_mut().get(&sym.unqualified()).map(|var| var.clone()) {
+        match self
+            .mappings
+            .borrow_mut()
+            .get(&sym.unqualified())
+            .map(|var| var.clone())
+        {
             Some(var) => Rc::new(Value::Var(var)),
             None => Rc::new(Value::Condition(format!("Undefined symbol {}", sym.name))),
         }
@@ -295,7 +296,7 @@ impl Namespaces {
         }
     }
 
-    // TODO write this similar to try_get, and rewrite try_get in terms of this 
+    // TODO write this similar to try_get, and rewrite try_get in terms of this
     pub fn get_var(&self, namespace_sym: &Symbol, sym: &Symbol) -> Rc<Value> {
         // When storing / retrieving from namespaces, we want
         // namespace_sym unqualified keys

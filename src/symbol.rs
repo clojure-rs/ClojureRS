@@ -18,11 +18,11 @@ pub struct Symbol {
 macro_rules! sym {
     ($x:expr) => {
         Symbol::intern($x)
-    }
+    };
 }
 impl Hash for Symbol {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&self.name,&self.ns).hash(state);
+        (&self.name, &self.ns).hash(state);
     }
 }
 impl Symbol {
@@ -58,7 +58,7 @@ impl Symbol {
         }
     }
     pub fn unqualified(&self) -> Symbol {
-        // So we can keep the same meta 
+        // So we can keep the same meta
         let mut retval = self.clone();
         retval.ns = String::from("");
         retval
@@ -69,22 +69,22 @@ impl Symbol {
     pub fn name(&self) -> &str {
         &self.name
     }
-    // @TODO use IPersistentMap instead perhaps 
+    // @TODO use IPersistentMap instead perhaps
     pub fn meta(&self) -> PersistentListMap {
         self.meta.clone()
     }
     pub fn with_meta(&self, meta: PersistentListMap) -> Symbol {
         Symbol {
             name: self.name.clone(), // String::from(self.name.clone()),
-            ns: self.ns.clone(),        // String::from(self.ns.clone()),
+            ns: self.ns.clone(),     // String::from(self.ns.clone()),
             meta,
         }
     }
 }
 impl PartialEq for Symbol {
     // Remember; meta doesn't factor into equality
-    fn eq(&self,other: &Self) -> bool {
-        self.name == other.name && self.ns == other.ns 
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.ns == other.ns
     }
 }
 impl traits::IMeta for Symbol {
@@ -93,7 +93,7 @@ impl traits::IMeta for Symbol {
     }
 }
 impl traits::IObj for Symbol {
-    fn with_meta(&self,meta: PersistentListMap) -> Symbol {
+    fn with_meta(&self, meta: PersistentListMap) -> Symbol {
         self.with_meta(meta)
     }
 }
@@ -184,12 +184,8 @@ mod tests {
         #[test]
         fn test_with_meta() {
             assert_eq!(
-                Symbol::intern_with_ns(
-                    "namespace",
-                    "name"
-                ).with_meta(
-                    persistent_list_map!(map_entry!("key", "value"))
-                ),
+                Symbol::intern_with_ns("namespace", "name")
+                    .with_meta(persistent_list_map!(map_entry!("key", "value"))),
                 Symbol {
                     ns: String::from("namespace"),
                     name: String::from("name"),
@@ -197,22 +193,12 @@ mod tests {
                 }
             );
             assert_eq!(
-                Symbol::intern_with_ns(
-                    "namespace",
-                    "name"
-                ).with_meta(
-                    conj!(
-                        PersistentListMap::Empty,
-                        map_entry!("key", "value")
-                    )
-                ),
+                Symbol::intern_with_ns("namespace", "name")
+                    .with_meta(conj!(PersistentListMap::Empty, map_entry!("key", "value"))),
                 Symbol {
                     ns: String::from("namespace"),
                     name: String::from("name"),
-                    meta: conj!(
-                        PersistentListMap::Empty,
-                        map_entry!("key", "value")
-                    )
+                    meta: conj!(PersistentListMap::Empty, map_entry!("key", "value"))
                 }
             );
         }

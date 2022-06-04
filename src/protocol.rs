@@ -22,13 +22,12 @@ pub trait Protocol: Sized {
     /// whether its valid or not
     fn raw_unwrap(&self) -> Rc<Value>;
 
-    // @TODO consider renaming downcast 
+    // @TODO consider renaming downcast
     fn try_as_protocol(val: &Rc<Value>) -> Option<Self> {
         if Self::instanceof(val) {
             Some(Self::raw_wrap(val))
-        }
-        else {
-            None 
+        } else {
+            None
         }
     }
 
@@ -37,17 +36,16 @@ pub trait Protocol: Sized {
         Self::try_as_protocol(val).unwrap()
     }
 
-    fn try_unwrap(&self) -> Option<Rc<Value>>{
+    fn try_unwrap(&self) -> Option<Rc<Value>> {
         let inner_value = self.raw_unwrap();
         if Self::instanceof(&inner_value) {
             Some(inner_value)
-        }
-        else {
-            None 
+        } else {
+            None
         }
     }
     // Realistically, the fact that you unwrap to get an upcast is just an implementation detail, so
-    // @TODO change to upcast 
+    // @TODO change to upcast
     /// Panics if Value not instance of Protocol
     fn unwrap(&self) -> Rc<Value> {
         self.try_unwrap().unwrap()
@@ -73,7 +71,7 @@ impl ProtocolCastable for Rc<Value> {
 
 // @TODO Consider changing syntax to differentiate protocol from variants
 // @TODO Consider trade offs of having a very plain function like macro of macro!(a,b,c)
-// and having a clearer one like define_protocol(Iterable = A | B | C) 
+// and having a clearer one like define_protocol(Iterable = A | B | C)
 #[macro_export]
 macro_rules! define_protocol {
     // define_protocol!(Protocol = A | B)

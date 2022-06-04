@@ -1,3 +1,4 @@
+use crate::define_protocol;
 use crate::persistent_list::PersistentListIter;
 use crate::persistent_list::ToPersistentListIter;
 use crate::persistent_list_map::PersistentListMapIter;
@@ -5,14 +6,18 @@ use crate::persistent_list_map::ToPersistentListMapIter;
 use crate::persistent_vector::PersistentVectorIter;
 use crate::persistent_vector::ToPersistentVector;
 use crate::persistent_vector::ToPersistentVectorIter;
-use crate::define_protocol;
 use crate::protocol::Protocol;
 use crate::value::ToValue;
 use crate::value::Value;
 use std::rc::Rc;
 // @TODO move to protocols::iterable
 
-define_protocol!(Iterable,PersistentList,PersistentListMap,PersistentVector);
+define_protocol!(
+    Iterable,
+    PersistentList,
+    PersistentListMap,
+    PersistentVector
+);
 
 pub enum IterableIter {
     PersistentList(PersistentListIter),

@@ -5,9 +5,9 @@ use std::hash::Hash;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use crate::value::{ToValue, Value};
 use crate::persistent_list_map::PersistentListMap;
 use crate::traits;
+use crate::value::{ToValue, Value};
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct PersistentVector {
     pub vals: Vec<Rc<Value>>,
@@ -19,7 +19,7 @@ impl traits::IMeta for PersistentVector {
     }
 }
 impl traits::IObj for PersistentVector {
-    fn with_meta(&self,meta: PersistentListMap) -> PersistentVector {
+    fn with_meta(&self, meta: PersistentListMap) -> PersistentVector {
         // @TODO implement
         self.clone()
     }

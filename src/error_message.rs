@@ -64,7 +64,7 @@ pub fn unknown_err(error: String) -> Value {
 // (or, if we wish to be a bit more flexible and basically forgo the type system, we can use a plain string).
 // In my case, I think really expressing either as either is fine, as long as the same error produces
 // the same message each time, which can be enforced with functions; ie
-// 
+//
 // pub weird_error() -> String {
 //    "This always returns the same weird error"
 // }
@@ -74,8 +74,8 @@ pub fn unknown_err(error: String) -> Value {
 
 // We currently don't have any type that represents an interface type name, so we
 pub struct Cast<'a>(pub &'a str);
-pub fn cast(expected: Cast,found: TypeTag) -> Value {
-    Value::Condition(format!("Cannot cast {} to {}",found,expected.0))
+pub fn cast(expected: Cast, found: TypeTag) -> Value {
+    Value::Condition(format!("Cannot cast {} to {}", found, expected.0))
 }
 
 /// For one off errors

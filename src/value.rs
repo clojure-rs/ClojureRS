@@ -8,8 +8,8 @@ use crate::persistent_list::{PersistentList, ToPersistentList, ToPersistentListI
 use crate::persistent_list_map::{PersistentListMap, ToPersistentListMapIter};
 use crate::persistent_vector::PersistentVector;
 use crate::symbol::Symbol;
-use crate::var::Var;
 use crate::type_tag::TypeTag;
+use crate::var::Var;
 use core::fmt::Display;
 
 extern crate rand;
@@ -351,7 +351,7 @@ impl Value {
                         let mut meta = sym.meta();
 
                         if doc_string != Value::Nil {
-                            meta = conj!(meta,map_entry!("doc",doc_string));
+                            meta = conj!(meta, map_entry!("doc", doc_string));
                         }
 
                         let sym = sym.with_meta(meta);
@@ -770,42 +770,46 @@ impl Evaluable for Value {
     }
 }
 mod tests {
-    use crate::keyword::Keyword;
-    use crate::symbol::Symbol;
-    use crate::protocols;
-    use crate::value::Value;
-    use crate::value::ToValue;
-    use crate::traits::IMeta;
-    use std::rc::Rc;
     use crate::environment::Environment;
-    use crate::persistent_list_map::PersistentListMap;
-    use crate::persistent_list_map::IPersistentMap;
+    use crate::keyword::Keyword;
     use crate::maps::MapEntry;
+    use crate::persistent_list_map::IPersistentMap;
+    use crate::persistent_list_map::PersistentListMap;
     use crate::protocol::ProtocolCastable;
+    use crate::protocols;
+    use crate::symbol::Symbol;
+    use crate::traits::IMeta;
+    use crate::value::ToValue;
+    use crate::value::Value;
+    use std::rc::Rc;
     // (def ^{:cat 1 :dog 2} a "Docstring" 1)
     // ==>
     // a with meta of {:cat 1 :dog 2 :doc "Docstring"} ?
     #[test]
     fn def_with_docstring() {
-        let sym_meta = persistent_list_map!{
+        let sym_meta = persistent_list_map! {
             "cat" => 1,
             "dog" => 2
         };
         let a = sym!("a").with_meta(sym_meta);
         let result = Value::DefMacro.apply_to_persistent_list(
             &Rc::new(Environment::new_main_environment()),
-            &Rc::new(list!(a "Docstring" 1))
+            &Rc::new(list!(a "Docstring" 1)),
         );
 
-        let final_sym_meta =
-            result
-            .unwrap()
-            .as_protocol::<protocols::IMeta>()
-            .meta();
+        let final_sym_meta = result.unwrap().as_protocol::<protocols::IMeta>().meta();
 
-        assert_eq!(Value::I32(1),*final_sym_meta.get(&Keyword::intern("cat").to_rc_value()));
-        assert_eq!(Value::I32(2),*final_sym_meta.get(&Keyword::intern("dog").to_rc_value()));
-        assert_eq!(Value::String("Docstring".to_string()),*final_sym_meta.get(&Keyword::intern("doc").to_rc_value()));
-
-    }  
+        assert_eq!(
+            Value::I32(1),
+            *final_sym_meta.get(&Keyword::intern("cat").to_rc_value())
+        );
+        assert_eq!(
+            Value::I32(2),
+            *final_sym_meta.get(&Keyword::intern("dog").to_rc_value())
+        );
+        assert_eq!(
+            Value::String("Docstring".to_string()),
+            *final_sym_meta.get(&Keyword::intern("doc").to_rc_value())
+        );
+    }
 }

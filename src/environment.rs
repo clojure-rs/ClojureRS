@@ -376,12 +376,12 @@ impl Environment {
         );
 
         // Interop to read real clojure.core
-        environment.insert(Symbol::intern("lt"),lt_fn.to_rc_value());
+        environment.insert(Symbol::intern("lt"), lt_fn.to_rc_value());
 
-        environment.insert(Symbol::intern("gt"),gt_fn.to_rc_value());
-        environment.insert(Symbol::intern("lte"),lte_fn.to_rc_value());
+        environment.insert(Symbol::intern("gt"), gt_fn.to_rc_value());
+        environment.insert(Symbol::intern("lte"), lte_fn.to_rc_value());
 
-        environment.insert(Symbol::intern("gte"),gte_fn.to_rc_value());
+        environment.insert(Symbol::intern("gte"), gte_fn.to_rc_value());
 
         // Thread namespace
         environment.insert_into_namespace(
