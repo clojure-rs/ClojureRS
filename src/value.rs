@@ -85,8 +85,12 @@ impl PartialEq for Value {
             // Is it misleading for equality to sometimes work?
             (Value::LexicalEvalFn, Value::LexicalEvalFn) => true,
             (Value::PersistentList(plist), Value::PersistentList(plist2)) => plist == plist2,
-            (Value::PersistentVector(pvector), Value::PersistentVector(pvector2)) => *pvector == *pvector2,
-            (Value::PersistentListMap(plistmap), Value::PersistentListMap(plistmap2)) => *plistmap == *plistmap2,
+            (Value::PersistentVector(pvector), Value::PersistentVector(pvector2)) => {
+                *pvector == *pvector2
+            }
+            (Value::PersistentListMap(plistmap), Value::PersistentListMap(plistmap2)) => {
+                *plistmap == *plistmap2
+            }
             (Value::Condition(msg), Value::Condition(msg2)) => msg == msg2,
             (Value::QuoteMacro, Value::QuoteMacro) => true,
             (Value::DefmacroMacro, Value::DefmacroMacro) => true,
