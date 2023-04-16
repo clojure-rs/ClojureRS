@@ -1,3 +1,4 @@
+use std::env::var;
 use crate::environment::Environment;
 use crate::ifn::IFn;
 use crate::persistent_list::ToPersistentList;
@@ -36,6 +37,13 @@ impl IFn for Fn {
             }
         }
 
+        if var_args && args.len() < argc -  2 {
+            return Value::Condition(format!(
+                "Wrong number of arguments given to function (Given: {}, Expected: {} or more)",
+                args.len(),
+                argc - 2
+            ));
+        }
         if !var_args && args.len() != argc {
             return Value::Condition(format!(
                 "Wrong number of arguments given to function (Given: {}, Expected: {})",
